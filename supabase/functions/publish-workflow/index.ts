@@ -9,7 +9,8 @@ const body = z.object({ workflow_id: z.uuid() })
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-methods': 'POST, OPTIONS',
 }
 const reply = (status: number, b: Record<string, unknown>) => {
   const res = json(status, b)

@@ -16,6 +16,7 @@ const MESSAGES: Record<string, string> = {
   forbidden: 'Only platform admins can create tenants.',
   user_creation_failed: 'The login could not be created. Check the email and password.',
   tenant_creation_failed: 'The workspace could not be created. Nothing was saved.',
+  unauthenticated: 'Your session has expired. Sign out and sign in again.',
 }
 
 async function readError(error: unknown): Promise<string> {
@@ -26,6 +27,8 @@ async function readError(error: unknown): Promise<string> {
   } catch {
     // fall through
   }
+  // No HTTP response at all: the request never reached the function (network, CORS, or the function is not deployed).
+  if (!(error as { context?: unknown } | null)?.context) return 'Could not reach the server. Check your connection and that the function is deployed.'
   return 'Something went wrong. Please try again.'
 }
 

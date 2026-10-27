@@ -8,7 +8,8 @@ const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { au
 
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'authorization, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-methods': 'POST, OPTIONS',
 }
 const reply = (status: number, b: Record<string, unknown>) => {
   const res = json(status, b)
