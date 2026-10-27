@@ -19,7 +19,7 @@ Either connect the repo (Project Settings -> Integrations -> GitHub, working dir
 Or use the CLI: `npx supabase link --project-ref <ref>`, `npx supabase db push`, and
 `npx supabase functions deploy <bind|order-webhook|publish-workflow|run-engine> --no-verify-jwt`.
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically in hosted functions;
-there are no function secrets to set. The service-role key must never appear in the frontend or in GitHub variables.
+there are no function secrets to set. The service-role key must never appear in the frontend or in any committed file.
 
 ## 4. Start the execution engine (pg_cron)
 The engine endpoint is protected by a secret stored in Supabase Vault, generated inside Postgres so it never leaves the
@@ -47,13 +47,14 @@ If the engine stops, nothing is lost: pending runs wait, and crashed leases expi
 To stop it: `select cron.unschedule('workrelay-engine');`
 
 ## 5. Auth settings (Dashboard -> Authentication)
-- URL Configuration: Site URL = your Pages URL (`https://<user>.github.io/<repo>/`); add it and `http://localhost:5173` to Redirect URLs.
+- URL Configuration: Site URL = the URL where the frontend is hosted; add it and `http://localhost:5173` to Redirect URLs.
 - Providers -> Email: keep enabled. Decide whether "Confirm email" is on (recommended in production).
 
 ## 6. Frontend environment
 Dashboard -> Project Settings -> API: copy the **Project URL** and the **anon** key.
 - Local: put them in `.env.local` (see `.env.example`), then `npm run dev`.
-- GitHub: repo Settings -> Secrets and variables -> Actions -> Variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+- Hosting: the frontend is a static Vite build (`npm run build` -> `dist/`, hash routing, no server needed). Set the same two
+  variables in whichever static host you choose. No CI workflow is included; Supabase deploys via its GitHub integration.
 
 ## 7. First run through the UI
 1. Sign up, create a workspace.
