@@ -10,25 +10,25 @@ supabase.com -> New project. Save the database password. Note the **project ref*
 ```bash
 npx supabase login
 npx supabase link --project-ref <ref>
-npx supabase db push        # applies supabase/migrations/0001..0005
+npx supabase db push        # applies supabase/migrations/0001..0006
 ```
 
-## 3. Secrets and Edge Functions
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically in hosted functions.
-The only secret you add is the one that protects the engine endpoint:
-```bash
-npx supabase secrets set ENGINE_SECRET=$(openssl rand -hex 32)   # keep a copy for step 4
-npx supabase functions deploy bind --no-verify-jwt
-npx supabase functions deploy order-webhook --no-verify-jwt
-npx supabase functions deploy publish-workflow --no-verify-jwt   # validates the caller's JWT itself
-npx supabase functions deploy run-engine --no-verify-jwt         # authenticated by x-engine-secret
-```
-The service-role key must never appear in the frontend, committed `.env` files, or GitHub variables.
+## 3. Deploy migrations and Edge Functions
+Either connect the repo (Project Settings -> Integrations -> GitHub, working directory `.`, **Deploy to production**, branch
+`main`): every push to `main` then applies new migrations and deploys the functions declared in `supabase/config.toml`.
+Or use the CLI: `npx supabase link --project-ref <ref>`, `npx supabase db push`, and
+`npx supabase functions deploy <bind|order-webhook|publish-workflow|run-engine> --no-verify-jwt`.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically in hosted functions;
+there are no function secrets to set. The service-role key must never appear in the frontend or in GitHub variables.
 
 ## 4. Start the execution engine (pg_cron)
-In the SQL editor (Database -> Extensions: enable `pg_cron` and `pg_net` first), replacing the two placeholders:
+The engine endpoint is protected by a secret stored in Supabase Vault, generated inside Postgres so it never leaves the
+database. Run once in the SQL editor:
 ```sql
-select vault.create_secret('<ENGINE_SECRET from step 3>', 'engine_secret');
+create extension if not exists pg_cron;
+create extension if not exists pg_net with schema extensions;
+
+select vault.create_secret(encode(extensions.gen_random_bytes(32), 'hex'), 'engine_secret');
 select vault.create_secret('https://<ref>.supabase.co', 'project_url');
 
 select cron.schedule('workrelay-engine', '10 seconds', $$

@@ -24,7 +24,7 @@ done
 for f in supabase/tests/*.sql; do
   [ "$(basename "$f")" = "00_auth_shim.sql" ] && continue
   echo "test: $f"
-  psql_run < "$f" 2>&1 | grep -E "ERROR|FAIL|PASSED|ok-summary" || true
+  psql_run < "$f" 2>&1 | grep -E "ERROR|FAIL|PASSED|skip - |engine secret verification" || true
   psql_run < "$f" >/dev/null 2>"/tmp/$NAME.err" || { cat "/tmp/$NAME.err"; exit 1; }
 done
 echo "all database tests passed"

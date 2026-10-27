@@ -8,20 +8,16 @@ import { createHttpClient } from './http-client.ts'
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
 })
-const secret = Deno.env.get('ENGINE_SECRET') ?? ''
 const deps = { store: createEngineStore(db), http: createHttpClient(), log: consoleLogger }
-
-function sameSecret(a: string, b: string): boolean {
-  if (!b || a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return diff === 0
-}
 
 // Called by pg_cron (via pg_net) every few seconds. Each call is one short, bounded tick.
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
-  if (!sameSecret(req.headers.get('x-engine-secret') ?? '', secret)) return json(401, { error: 'unauthorized' })
+  // The secret lives in Supabase Vault; the database does the comparison.
+  const { data: authorized, error: authError } = await db.rpc('verify_engine_secret', {
+    p_secret: req.headers.get('x-engine-secret') ?? '',
+  })
+  if (authError || authorized !== true) return json(401, { error: 'unauthorized' })
   try {
     const result = await tick(deps)
     return json(200, result as unknown as Record<string, unknown>)
