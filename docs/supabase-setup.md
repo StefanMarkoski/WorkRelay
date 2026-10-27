@@ -53,8 +53,9 @@ To stop it: `select cron.unschedule('workrelay-engine');`
 ## 6. Frontend environment
 Dashboard -> Project Settings -> API: copy the **Project URL** and the **anon** key.
 - Local: put them in `.env.local` (see `.env.example`), then `npm run dev`.
-- Hosting: the frontend is a static Vite build (`npm run build` -> `dist/`, hash routing, no server needed). Set the same two
-  variables in whichever static host you choose. No CI workflow is included; Supabase deploys via its GitHub integration.
+- Hosting (GitHub Pages, no Actions needed): `GIT_PUSH_AUTH_USER=<gh account> scripts/deploy-pages.sh` builds with the
+  values from `.env.local`, publishes `dist/` to the `gh-pages` branch and requests a Pages build. Pages source must be
+  "Deploy from a branch: gh-pages / (root)". Re-run it after frontend changes. Supabase itself deploys via its GitHub integration.
 
 ## 7. First run through the UI
 1. Sign up, create a workspace.
