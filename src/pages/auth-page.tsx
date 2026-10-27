@@ -97,7 +97,7 @@ export function ConfigMissing() {
         <h1 className="font-semibold">Supabase is not configured</h1>
         <p className="text-sm text-muted-foreground">
           Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in <code>.env.local</code> (see{' '}
-          <code>docs/supabase-setup.md</code>) and restart the dev server.
+          <code>documentation/supabase-setup.md</code>) and restart the dev server.
         </p>
       </div>
     </div>
