@@ -1,0 +1,21 @@
+project_id = "work-relay"
+
+# Lets the GitHub integration apply config (functions) to the production project.
+[remotes.production]
+project_id = "wayktzmupzrdcwosgnfg"
+
+# Minimal config; run `supabase init` locally if you want the full generated file.
+# The commerce app authenticates with the WorkRelay key, not a Supabase JWT.
+[functions.order-webhook]
+verify_jwt = false
+
+[functions.bind]
+verify_jwt = false
+
+# Validates the caller's JWT itself so it can return structured errors with CORS headers.
+[functions.publish-workflow]
+verify_jwt = false
+
+# Authenticated with the ENGINE_SECRET header instead of a Supabase JWT (called by pg_cron).
+[functions.run-engine]
+verify_jwt = false
