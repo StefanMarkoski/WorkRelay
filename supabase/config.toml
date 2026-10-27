@@ -19,3 +19,7 @@ verify_jwt = false
 # Authenticated with the x-engine-secret header (checked against Vault) instead of a Supabase JWT (called by pg_cron).
 [functions.run-engine]
 verify_jwt = false
+
+# Validates the caller's JWT and platform-admin status itself, so it can return structured errors with CORS headers.
+[functions.admin-create-tenant]
+verify_jwt = false

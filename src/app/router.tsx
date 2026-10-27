@@ -1,6 +1,7 @@
 import { Navigate, createHashRouter } from 'react-router-dom'
 import { AppShell } from '@/components/layout/app-shell'
 import { ModulePage } from '@/pages/module-placeholder'
+import { AdminTenantsPage } from '@/pages/admin-tenants-page'
 import { ApprovalsPage } from '@/pages/approvals-page'
 import { ExecutionDetailPage } from '@/pages/execution-detail-page'
 import { ExecutionsPage } from '@/pages/executions-page'
@@ -27,6 +28,7 @@ export const router = createHashRouter([
       { path: 'orders/:id', element: <OrderDetailPage /> },
       { path: 'inventory', element: <ModulePage title="Inventory" description="Planned for a future phase. Nothing to configure yet." /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'admin/tenants', element: <AdminTenantsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },
