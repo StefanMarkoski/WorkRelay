@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { createTenantSchema } from '../_shared/admin-schema.ts'
+import { getCaller } from '../_shared/auth.ts'
 import { json } from '../_shared/keys.ts'
 import { consoleLogger } from '../_shared/log.ts'
 
@@ -25,15 +26,16 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors })
   if (req.method !== 'POST') return reply(405, { error: 'method_not_allowed' })
 
-  const user = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
-    global: { headers: { authorization: req.headers.get('authorization') ?? '' } },
-    auth: { persistSession: false },
-  })
-  const { data: auth } = await user.auth.getUser()
-  if (!auth.user) return reply(401, { error: 'unauthenticated' })
+  const caller = await getCaller(req, admin)
+  if (!caller.ok) return reply(401, { error: 'unauthenticated', reason: caller.reason })
 
-  const { data: isAdmin } = await user.rpc('is_platform_admin')
-  if (isAdmin !== true) return reply(403, { error: 'forbidden' })
+  const { data: adminRow, error: adminError } = await admin
+    .from('platform_admins').select('user_id').eq('user_id', caller.id).maybeSingle()
+  if (adminError) {
+    consoleLogger.error('platform admin lookup failed', { message: adminError.message })
+    return reply(500, { error: 'internal_error' })
+  }
+  if (!adminRow) return reply(403, { error: 'forbidden' })
 
   const parsed = createTenantSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) {
@@ -52,7 +54,7 @@ Deno.serve(async (req) => {
   const newUser = created.data.user
 
   const { data: orgId, error } = await admin.rpc('admin_create_tenant', {
-    p_caller: auth.user.id,
+    p_caller: caller.id,
     p_owner: newUser.id,
     p_org_name: org_name,
   })
@@ -63,6 +65,6 @@ Deno.serve(async (req) => {
     return reply(500, { error: 'tenant_creation_failed' })
   }
 
-  consoleLogger.info('tenant created', { organization_id: orgId, created_by: auth.user.id })
+  consoleLogger.info('tenant created', { organization_id: orgId, created_by: caller.id })
   return reply(200, { organization_id: orgId, user_id: newUser.id, email: newUser.email })
 })

@@ -23,6 +23,7 @@ async function readError(error: unknown): Promise<string> {
   try {
     const body = await (error as { context?: Response }).context?.json()
     if (body?.error === 'invalid_payload') return String(body.detail ?? 'Check the form values.')
+    if (body?.error === 'unauthenticated') return `${MESSAGES.unauthenticated}${body.reason ? ` (${body.reason})` : ''}`
     if (body?.error && MESSAGES[body.error]) return MESSAGES[body.error]
   } catch {
     // fall through
