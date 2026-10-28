@@ -45,6 +45,7 @@ export function AuthPage() {
   return (
     <div className="grid min-h-dvh place-items-center bg-background p-4">
       <div className="w-full max-w-sm space-y-6">
+        <a href="#/" className="inline-block text-sm text-muted-foreground hover:text-foreground">← Back to home</a>
         <div className="flex items-center gap-2">
           <div className="grid size-7 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">W</div>
           <span className="text-base font-semibold tracking-tight">WorkRelay</span>
