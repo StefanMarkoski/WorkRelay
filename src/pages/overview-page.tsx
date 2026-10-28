@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Inbox, Play, Plug, ShieldCheck, ShoppingCart, TriangleAlert, Zap, type LucideIcon } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import type { CSSProperties } from "react"
+import { Link } from "react-router-dom"
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { NumberTicker } from '@/components/ui/number-ticker'
@@ -20,7 +21,8 @@ const TILE: Record<'violet' | 'success' | 'danger' | 'warning', string> = {
   warning: 'border-warning/20 bg-warning/10 text-warning',
 }
 
-function Stat({ label, value, caption, note, tone, icon: Icon, to }: {
+function Stat({ label, value, caption, note, tone, icon: Icon, to, index }: {
+  index: number
   label: string
   value: number
   caption?: string
@@ -30,7 +32,7 @@ function Stat({ label, value, caption, note, tone, icon: Icon, to }: {
   to: string
 }) {
   return (
-    <Link to={to} className="rounded-xl border bg-card p-4 outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring">
+    <Link to={to} style={{ '--i': index } as CSSProperties} className="reveal rounded-xl border bg-card p-4 outline-none transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -99,17 +101,17 @@ export function OverviewPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Automations" value={d.workflows} tone="violet" icon={Zap} to="/automations"
+        <Stat index={0} label="Automations" value={d.workflows} tone="violet" icon={Zap} to="/automations"
           note={d.workflows === 0 ? 'None set up yet' : `${d.activeWorkflows} of ${d.workflows} turned on`} />
-        <Stat label="Successful runs (7d)" value={d.runsOk} tone="success" icon={CheckCircle2} to="/executions" note="Last 7 days" />
-        <Stat label="Failed runs (7d)" value={d.runsFailed} caption={d.runsFailed === 0 ? 'none' : undefined} tone="danger" icon={TriangleAlert} to="/executions"
+        <Stat index={1} label="Successful runs (7d)" value={d.runsOk} tone="success" icon={CheckCircle2} to="/executions" note="Last 7 days" />
+        <Stat index={2} label="Failed runs (7d)" value={d.runsFailed} caption={d.runsFailed === 0 ? 'none' : undefined} tone="danger" icon={TriangleAlert} to="/executions"
           note={d.runsFailed === 0 ? 'Nothing needs a look' : 'Open Executions to see why'} />
-        <Stat label="Pending approvals" value={d.pendingApprovals} caption={d.pendingApprovals === 0 ? 'queue clear' : undefined} tone="warning" icon={ShieldCheck} to="/approvals"
+        <Stat index={3} label="Pending approvals" value={d.pendingApprovals} caption={d.pendingApprovals === 0 ? 'queue clear' : undefined} tone="warning" icon={ShieldCheck} to="/approvals"
           note={d.pendingApprovals === 0 ? 'Nothing is waiting' : 'Waiting for a decision'} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <Card className="lg:col-span-7">
+        <Card className="reveal lg:col-span-7" style={{ '--i': 4 } as CSSProperties}>
           <CardHeader>
             <CardTitle>Recent orders</CardTitle>
             <Link to="/orders" className="text-xs font-medium text-primary hover:underline">View all →</Link>
@@ -136,7 +138,7 @@ export function OverviewPage() {
           )}
         </Card>
 
-        <Card className="lg:col-span-5">
+        <Card className="reveal lg:col-span-5" style={{ '--i': 5 } as CSSProperties}>
           <CardHeader>
             <CardTitle>Order status</CardTitle>
             <span className="text-xs text-muted-foreground">Total: {totalOrders}</span>

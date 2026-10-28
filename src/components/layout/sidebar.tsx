@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react'
+import { MotionConfig, motion } from 'motion/react'
 import { NavLink } from 'react-router-dom'
 import { useIsPlatformAdmin } from '@/features/admin/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
@@ -7,9 +8,19 @@ import { NAV_ITEMS, type NavItem } from './nav-items'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'flex items-center justify-between rounded-lg border border-transparent px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors outline-none hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',
-    isActive && 'border-primary/30 bg-primary/15 text-accent-foreground hover:bg-primary/15 hover:text-accent-foreground',
+    'group relative flex items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground outline-none transition-[color,background-color,transform] duration-150 hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]',
+    isActive && 'text-accent-foreground hover:bg-transparent hover:text-accent-foreground',
   )
+
+/** One highlight shared by all items: it glides from the old item to the new one (layout animation). */
+const ActiveGlide = () => (
+  <motion.span
+    layoutId="nav-active"
+    aria-hidden
+    className="absolute inset-0 rounded-lg border border-primary/30 bg-primary/15"
+    transition={{ type: 'spring', stiffness: 520, damping: 38 }}
+  />
+)
 
 const Label = ({ children }: { children: string }) => (
   <p className="px-2 pt-4 pb-1.5 text-xs font-medium text-muted-foreground/70 first:pt-0">{children}</p>
@@ -24,14 +35,15 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <NavLink key={to} to={to} end={to === '/'} onClick={onNavigate} className={linkClass}>
       {({ isActive }) => (
         <>
-          <span className="flex items-center gap-3">
-            <Icon className="size-4" />
+          {isActive && <ActiveGlide />}
+          <span className="relative flex items-center gap-3">
+            <Icon className={cn('size-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:scale-110', isActive && 'text-primary')} />
             {label}
           </span>
           {comingSoon ? (
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">Soon</span>
+            <span className="relative rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">Soon</span>
           ) : (
-            isActive && <span aria-hidden className="size-1.5 rounded-full bg-primary" />
+            isActive && <motion.span aria-hidden initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 500, damping: 20 }} className="relative size-1.5 rounded-full bg-primary" />
           )}
         </>
       )}
@@ -39,6 +51,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   )
 
   return (
+    <MotionConfig reducedMotion="user">
     <nav aria-label="Main" className="flex-1 space-y-1 overflow-y-auto p-4">
       <Label>Main menu</Label>
       {visible('main').map(item)}
@@ -48,13 +61,19 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <>
           <Label>Platform</Label>
           <NavLink to="/admin/tenants" onClick={onNavigate} className={linkClass}>
-            <span className="flex items-center gap-3">
-              <ShieldCheck className="size-4" />
-              Tenants
-            </span>
+            {({ isActive }) => (
+              <>
+                {isActive && <ActiveGlide />}
+                <span className="relative flex items-center gap-3">
+                  <ShieldCheck className={cn('size-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:scale-110', isActive && 'text-primary')} />
+                  Tenants
+                </span>
+              </>
+            )}
           </NavLink>
         </>
       )}
     </nav>
+    </MotionConfig>
   )
 }

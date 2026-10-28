@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useRealtimeSync } from '@/features/realtime/use-realtime-sync'
 import { ThemeSwitcher } from '@/features/theme/theme-switcher'
@@ -10,6 +10,7 @@ import { SignOutButton, WorkspaceSwitcher } from './user-menu'
 export function AppShell() {
   const [open, setOpen] = useState(false)
   const live = useRealtimeSync()
+  const { pathname } = useLocation()
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-sidebar px-4 lg:px-6">
@@ -49,7 +50,9 @@ export function AppShell() {
           </div>
         </aside>
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          <div key={pathname} className="page-in">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

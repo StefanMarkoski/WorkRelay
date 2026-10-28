@@ -208,3 +208,11 @@
   75%, 100% { transform: scale(2.6); opacity: 0; }
 }
 .live-ring { animation: live-ring 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+/* Page transitions and the Overview's staggered reveal. Short, once per navigation; reduced motion removes them. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page-in { animation: page-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.reveal { animation: page-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
