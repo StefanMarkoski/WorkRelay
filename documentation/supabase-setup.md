@@ -71,7 +71,9 @@ curl -X POST $BASE/order-webhook -H "Authorization: Bearer $KEY" -H 'X-Store-Id:
   -d '{"event_id":"evt_1","event_type":"order.created","occurred_at":"2026-10-27T10:00:00Z","order":{"external_id":"1001","order_number":"#1001","currency":"EUR","totals":{"total_minor":4999}}}'
 ```
 Repeating the second call returns `{"status":"duplicate"}`. The order appears under Orders.
-4. Workflows -> New workflow -> choose trigger "Order created", add a step, Publish, enable it, then use **Run test**.
+4. Automations -> Add automation -> "Order notifications" (a Discord or Slack webhook URL) or "Review large orders", then send
+   another order. The run appears under Executions within about 10 seconds. Automations are visible to owners and admins only,
+   because a destination URL works like a secret.
 
 ## Testing locally
 ```bash

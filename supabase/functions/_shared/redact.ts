@@ -14,11 +14,11 @@ export function redact(value: unknown, depth = 0): unknown {
   )
 }
 
-/** Query strings often carry tokens; keep the path for diagnostics and mask the rest. */
+/** Webhook URLs (Discord, Slack, ...) carry their secret in the path or query, so only the origin is kept. */
 export function redactUrl(raw: string): string {
   try {
     const u = new URL(raw)
-    return `${u.origin}${u.pathname}${u.search ? '?[redacted]' : ''}`
+    return `${u.origin}${u.pathname === '/' && !u.search ? '' : '/[redacted]'}`
   } catch {
     return '[invalid url]'
   }

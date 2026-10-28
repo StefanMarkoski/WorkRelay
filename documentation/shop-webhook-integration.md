@@ -196,8 +196,8 @@ The smallest valid event:
   one that last set it. A late, older event is recorded on the order's timeline as outdated and does not overwrite newer data.
   Make sure `occurred_at` reflects when the change happened in the shop.
 - **Unknown order**: any event for an unseen `external_id` creates the order, so a missed `order.created` self-heals.
-- **Workflows**: `order.created` can start "Order created" workflows, and a status change that was applied can start
-  "Order status changed" workflows. Replayed or duplicate events do not start a workflow twice.
+- **Automations**: `order.created` can trigger the tenant's new-order automations (for example a Discord notification), and a
+  status change that was applied can trigger status automations. Replayed or duplicate events do not trigger one twice.
 - **Data quality flags** shown on the order: `missing_currency` (amounts without a currency), `missing_total`,
   `no_items`, `no_customer_contact`. They never block ingestion.
 
@@ -244,7 +244,8 @@ Delivery guidance for the shop:
   **full order snapshot** is simplest and always correct; partial updates also work.
 - Send `order.status_changed` in addition to (or instead of) `order.updated` when only the status changes.
 - **Backfilling history**: send `order.created` for old orders with `occurred_at` set to the order's real time. Note that
-  if the tenant has an enabled "Order created" workflow, each backfilled order will trigger it. Disable such workflows first.
+  if the tenant has an automation for new orders turned on (for example a notification), each backfilled order will trigger it.
+  Turn such automations off first.
 - WorkRelay never writes back to the shop in this version, and it does not process payments, refunds or shipments.
 
 ## 9. Testing the connection

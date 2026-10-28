@@ -1,4 +1,4 @@
-import { AlertTriangle, GitBranch, Inbox, Play, Plug, ShoppingCart } from 'lucide-react'
+import { AlertTriangle, Inbox, Play, Plug, ShoppingCart, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,7 +50,7 @@ export function OverviewPage() {
           <EmptyState
             icon={Plug}
             title="Connect your first store"
-            description="Create a connection, paste its secret key into your commerce app, and orders will start appearing here. Then build workflows to automate them."
+            description="Create a connection, paste its secret key into your commerce app, and orders will start appearing here. Then turn on automations to act on them."
             action={<Link to="/integrations"><Button>Go to integrations</Button></Link>}
           />
         </Card>
@@ -67,7 +67,7 @@ export function OverviewPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Workflows" value={d.workflows} hint={`${d.activeWorkflows} active`} to="/workflows" />
+        <Stat label="Automations" value={d.workflows} hint={`${d.activeWorkflows} on`} to="/automations" />
         <Stat label="Successful runs (7d)" value={d.runsOk} to="/executions" />
         <Stat label="Failed runs (7d)" value={d.runsFailed} to="/executions" />
         <Stat label="Pending approvals" value={d.pendingApprovals} to="/approvals" />
@@ -115,9 +115,9 @@ export function OverviewPage() {
         <Card>
           <CardHeader><CardTitle>Recent executions</CardTitle><Link to="/executions" className="text-xs text-primary hover:underline">View all</Link></CardHeader>
           {d.recentRuns.length === 0 ? (
-            <EmptyState icon={d.workflows === 0 ? GitBranch : Play} title="No executions yet"
-              description={d.workflows === 0 ? 'Create and publish a workflow to see runs here.' : 'Runs appear when an enabled workflow is triggered.'}
-              action={d.workflows === 0 ? <Link to="/workflows"><Button variant="outline">Create a workflow</Button></Link> : undefined} />
+            <EmptyState icon={d.workflows === 0 ? Zap : Play} title="No executions yet"
+              description={d.workflows === 0 ? 'Turn on an automation to see runs here.' : 'Runs appear when an automation is triggered.'}
+              action={d.workflows === 0 ? <Link to="/automations"><Button variant="outline">Set up an automation</Button></Link> : undefined} />
           ) : (
             <ul className="divide-y">
               {d.recentRuns.map((r) => (

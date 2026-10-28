@@ -2,6 +2,7 @@ import { evaluateCondition } from './conditions.ts'
 import type { Logger } from './log.ts'
 import { redact, redactUrl } from './redact.ts'
 import { checkOutboundUrl } from './ssrf.ts'
+import { renderTemplate, templateView } from './template.ts'
 import { validateDefinition, type WorkflowDefinition, type WorkflowStep } from './workflow-schema.ts'
 
 export type RunStatus = 'pending' | 'running' | 'waiting_approval' | 'succeeded' | 'failed' | 'skipped'
@@ -191,11 +192,13 @@ async function executeStep(
     }
 
     case 'http_request': {
-      const input = { method: step.method, url: redactUrl(step.url), body: step.body }
+      const view = templateView(ctx)
+      const body = step.body === undefined ? undefined : renderTemplate(step.body, view, { json: true })
+      const input = { method: step.method, url: redactUrl(step.url), body }
       const blocked = checkOutboundUrl(step.url)
       if (blocked) return { input, outcome: { kind: 'fail', error: `Destination blocked: ${blocked}` } }
       try {
-        const res = await deps.http.request({ method: step.method, url: step.url, body: step.body })
+        const res = await deps.http.request({ method: step.method, url: step.url, body })
         const output = { status: res.status, body: res.body }
         if (res.status >= 200 && res.status < 300) return { input, outcome: { kind: 'next', next: step.next, output } }
         if (res.status === 429 || res.status >= 500) return { input, outcome: { kind: 'retry', error: `HTTP ${res.status}` } }
@@ -209,14 +212,15 @@ async function executeStep(
 
     case 'create_approval': {
       const existing = await deps.store.getApproval(run.id, step.id)
+      const title = renderTemplate(step.title, templateView(ctx)).slice(0, 200)
       if (!existing) {
         await deps.store.createApproval({
-          organizationId: run.organization_id, runId: run.id, stepKey: step.id, title: step.title,
+          organizationId: run.organization_id, runId: run.id, stepKey: step.id, title,
           reviewerRole: step.reviewer_role, context: redact({ order: ctx.order, event: ctx.event }),
         })
-        return { input: { title: step.title, reviewer_role: step.reviewer_role }, outcome: { kind: 'wait_approval', output: { status: 'pending' } } }
+        return { input: { title, reviewer_role: step.reviewer_role }, outcome: { kind: 'wait_approval', output: { status: 'pending' } } }
       }
-      const input = { title: step.title }
+      const input = { title }
       if (existing.status === 'pending') return { input, outcome: { kind: 'wait_approval', output: { status: 'pending' } } }
       if (existing.status === 'approved') return { input, outcome: { kind: 'next', next: step.next, output: { decision: 'approved' } } }
       return { input, outcome: { kind: 'fail', error: 'Approval was rejected', output: { decision: 'rejected' } } }

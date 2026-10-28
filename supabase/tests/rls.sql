@@ -128,6 +128,9 @@ select rls_test.as_user('00000000-0000-0000-0000-00000000000a');
 select rls_test.eq('A sees own org only', (select count(*) from organizations), 1::bigint);
 select rls_test.eq('A sees own integration', (select count(*) from integrations), 1::bigint);
 select rls_test.eq('A sees own orders', (select count(*) from orders), 1::bigint);
+select rls_test.eq('owner can read workflows and versions', (select count(*) from workflows) + (select count(*) from workflow_versions), 2::bigint);
+select rls_test.eq('owner can create a preset workflow', rls_test.affected($$ insert into workflows (organization_id, name, preset, preset_config, draft_definition) values ('a0000000-0000-0000-0000-000000000001', 'P', 'notify', '{}', '{}') $$), 1::bigint);
+select rls_test.fails('unknown preset kinds are rejected', $$ insert into workflows (organization_id, name, preset) values ('a0000000-0000-0000-0000-000000000001', 'P2', 'evil') $$);
 select rls_test.eq('A sees own events metadata', (select count(*) from webhook_events), 1::bigint);
 select rls_test.fails('key_hash is not readable', $$ select key_hash from integrations $$, '42501');
 select rls_test.fails('select * on integrations is denied (hash column)', $$ select * from integrations $$, '42501');
@@ -160,6 +163,9 @@ select rls_test.eq('approval records the decider', (select decided_by::text from
 -- ---------------------------------------------------------------- plain member C
 select rls_test.as_user('00000000-0000-0000-0000-00000000000c');
 select rls_test.eq('member can read own org orders', (select count(*) from orders), 1::bigint);
+select rls_test.eq('member cannot read workflows (definitions may hold destination URLs)', (select count(*) from workflows), 0::bigint);
+select rls_test.eq('member cannot read workflow versions', (select count(*) from workflow_versions), 0::bigint);
+select rls_test.eq('member can still read runs', (select count(*) from workflow_runs), 1::bigint);
 select rls_test.fails('member cannot create integrations', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x') $$, '42501');
 select rls_test.fails('member cannot rotate keys', $$ select rotate_integration_key('a1000000-0000-0000-0000-000000000001') $$, '42501');
 select rls_test.fails('member cannot revoke', $$ select revoke_integration('a1000000-0000-0000-0000-000000000001') $$, '42501');

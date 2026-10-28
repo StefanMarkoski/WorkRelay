@@ -1,11 +1,13 @@
 import { ShieldCheck } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useIsPlatformAdmin } from '@/features/admin/queries'
+import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './nav-items'
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isAdmin = useIsPlatformAdmin().data === true
+  const { canManage } = useWorkspace()
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
@@ -15,7 +17,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <span className="text-sm font-semibold tracking-tight">WorkRelay</span>
       </div>
       <nav aria-label="Main" className="flex-1 space-y-0.5 p-2">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, comingSoon }) => (
+        {NAV_ITEMS.filter((item) => !item.adminOnly || canManage).map(({ to, label, icon: Icon, comingSoon }) => (
           <NavLink
             key={to}
             to={to}

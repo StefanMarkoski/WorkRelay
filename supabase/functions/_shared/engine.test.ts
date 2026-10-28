@@ -256,7 +256,7 @@ describe('redaction', () => {
     store.definition = def([http('call', null, { body: '{"x":1}' })])
     responses = [() => ({ status: 200, body: '{"token":"abc"}' })]
     await run()
-    expect(store.steps[0].input).toMatchObject({ url: 'https://api.example.com/hook?[redacted]' })
+    expect(store.steps[0].input).toMatchObject({ url: 'https://api.example.com/[redacted]' })
     expect(JSON.stringify(store.steps[0].input)).not.toContain('abc')
   })
 
@@ -266,7 +266,9 @@ describe('redaction', () => {
     expect(out.headers['x-api-key']).toBe('[redacted]')
     expect(out.nested[0]).toEqual({ password: '[redacted]', ok: 1 })
     expect(out.big.length).toBeLessThan(2100)
-    expect(redactUrl('https://a.com/p?secret=1')).toBe('https://a.com/p?[redacted]')
+    expect(redactUrl('https://a.com/p?secret=1')).toBe('https://a.com/[redacted]')
+    expect(redactUrl('https://discord.com/api/webhooks/1/abcSECRET')).toBe('https://discord.com/[redacted]')
+    expect(redactUrl('https://a.com')).toBe('https://a.com')
   })
 })
 

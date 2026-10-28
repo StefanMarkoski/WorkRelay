@@ -1,11 +1,11 @@
 import {
   Boxes,
   CheckSquare,
-  GitBranch,
   LayoutDashboard,
   Play,
   Plug,
   Settings,
+  Zap,
   ShoppingCart,
   type LucideIcon,
 } from 'lucide-react'
@@ -16,11 +16,13 @@ export interface NavItem {
   icon: LucideIcon
   /** Module is listed in navigation but not built in this phase. */
   comingSoon?: boolean
+  /** Hidden from plain members (UI hint; the database enforces access). */
+  adminOnly?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Overview', icon: LayoutDashboard },
-  { to: '/workflows', label: 'Workflows', icon: GitBranch },
+  { to: '/automations', label: 'Automations', icon: Zap, adminOnly: true },
   { to: '/executions', label: 'Executions', icon: Play },
   { to: '/approvals', label: 'Approvals', icon: CheckSquare },
   { to: '/integrations', label: 'Integrations', icon: Plug },
