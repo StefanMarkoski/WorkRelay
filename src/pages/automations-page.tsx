@@ -42,6 +42,8 @@ export function AutomationsPage() {
         .from('workflows')
         .select(AUTOMATION_COLUMNS)
         .eq('organization_id', current.id)
+        // Preset automations, plus any custom workflow that was actually published. Unpublished leftovers are hidden.
+        .or('preset.not.is.null,current_version_id.not.is.null')
         .order('created_at', { ascending: false })
       if (e) throw e
       return data as AutomationRow[]

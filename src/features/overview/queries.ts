@@ -5,6 +5,8 @@ import type { Approval, Integration, Order, WebhookEvent, WorkflowRun } from '@/
 
 const ORDER_STATUSES = ['pending', 'processing', 'completed', 'cancelled', 'unknown'] as const
 const DAY = 86_400_000
+/** Same rule as the Automations page: presets and published workflows; unpublished drafts do not count. */
+const VISIBLE_AUTOMATIONS = 'preset.not.is.null,current_version_id.not.is.null'
 
 export function useOverview() {
   const { current } = useWorkspace()
@@ -21,7 +23,7 @@ export function useOverview() {
         workflows, activeWorkflows, runsOk, runsFailed, pendingApprovals, pendingList,
         recentRuns, recentOrders, recentEvents, integrations, failedEvents, ...statusCounts
       ] = await Promise.all([
-        count('workflows'),
+        count('workflows').or(VISIBLE_AUTOMATIONS),
         count('workflows').eq('enabled', true),
         count('workflow_runs').eq('status', 'succeeded').gte('created_at', since7),
         count('workflow_runs').eq('status', 'failed').gte('created_at', since7),
