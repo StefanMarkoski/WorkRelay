@@ -11,7 +11,7 @@ const OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
 export function ThemeSwitcher() {
   const { preference, setPreference } = useTheme()
   return (
-    <div role="radiogroup" aria-label="Theme" className="inline-flex rounded-md border bg-secondary p-0.5">
+    <div role="radiogroup" aria-label="Theme" className="inline-flex gap-1 rounded-lg border bg-card p-1">
       {OPTIONS.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
@@ -22,8 +22,8 @@ export function ThemeSwitcher() {
           title={label}
           onClick={() => setPreference(value)}
           className={cn(
-            'rounded-[5px] p-1.5 text-muted-foreground transition-colors focus-visible:outline-2 focus-visible:outline-ring',
-            preference === value && 'bg-card text-foreground shadow-sm',
+            'rounded px-2 py-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring',
+            preference === value && 'bg-secondary text-accent-foreground',
           )}
         >
           <Icon className="size-4" />

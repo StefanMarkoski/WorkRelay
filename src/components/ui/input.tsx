@@ -3,10 +3,10 @@ import { useId } from 'react'
 import { cn } from '@/lib/utils'
 
 const control =
-  'w-full rounded-md border border-input bg-background px-2.5 text-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 outline-none disabled:opacity-50'
+  'w-full rounded-lg border border-input bg-background px-3 text-[13px] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 outline-none disabled:opacity-50'
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
-  return <input className={cn(control, 'h-8', className)} {...props} />
+  return <input className={cn(control, 'h-9', className)} {...props} />
 }
 
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
@@ -15,7 +15,7 @@ export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
 
 /** Native select: accessible, keyboard-friendly, themed. */
 export function Select({ className, ...props }: ComponentProps<'select'>) {
-  return <select className={cn(control, 'h-8 pr-6', className)} {...props} />
+  return <select className={cn(control, 'h-9 pr-6', className)} {...props} />
 }
 
 export function Field({

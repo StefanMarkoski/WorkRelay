@@ -88,6 +88,9 @@ Repeating the second call returns `{"status":"duplicate"}`. The order appears un
 ```bash
 npm test                 # unit tests (ingestion, engine, workflow schema, SSRF)
 scripts/test-db.sh       # throwaway Docker Postgres: all migrations + RLS/engine/ingestion SQL tests
+
+# Visual check of every screen with invented data (no login, no real data). Never used for production:
+MOCK_SUPABASE=1 npx vite build --outDir /tmp/wr-preview --emptyOutDir && npx vite preview --outDir /tmp/wr-preview --port 4174
 ```
 
 ## Known limits

@@ -116,34 +116,38 @@ export function AutomationsPage() {
       />
       {error && !editing && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
 
-      <Card>
-        {query.isLoading ? <TableSkeleton rows={3} /> : query.error ? <ErrorState onRetry={() => query.refetch()} /> :
-          query.data!.length === 0 ? (
-            <EmptyState icon={Zap} title="No automations yet" description="Start with order notifications or a review rule for large orders." action={addButton} />
-          ) : (
-            <ul className="divide-y">
-              {query.data!.map((a) => {
-                const d = a.preset && a.preset_config ? describePreset(a.preset, a.preset_config) : { title: a.name, summary: 'Custom workflow (read-only)' }
-                return (
-                  <li key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+      {query.isLoading ? <TableSkeleton rows={3} /> : query.error ? <Card><ErrorState onRetry={() => query.refetch()} /></Card> :
+        query.data!.length === 0 ? (
+          <Card><EmptyState icon={Zap} title="No automations yet" description="Start with order notifications or a review rule for large orders." action={addButton} /></Card>
+        ) : (
+          <ul className="space-y-3">
+            {query.data!.map((a) => {
+              const d = a.preset && a.preset_config ? describePreset(a.preset, a.preset_config) : { title: a.name, summary: 'Custom workflow (read-only)' }
+              const Icon = a.preset === 'review_large' ? ClipboardCheck : a.preset === 'notify' ? Bell : Zap
+              return (
+                <li key={a.id}>
+                  <Card className="flex flex-wrap items-center gap-4 p-4">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary"><Icon className="size-4" /></span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{d.title}</p>
-                      <p className="text-xs text-muted-foreground">{d.summary} · updated {timeAgo(a.updated_at)}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-[13px] font-semibold">{d.title}</h3>
+                        <Badge tone={a.enabled ? 'success' : 'neutral'}>{a.enabled ? 'On' : 'Off'}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{d.summary} · updated {timeAgo(a.updated_at)}</p>
                     </div>
-                    <Badge tone={a.enabled ? 'success' : 'neutral'}>{a.enabled ? 'On' : 'Off'}</Badge>
                     {a.preset && a.preset_config && (
-                      <Button variant="ghost" size="sm" onClick={() => {
+                      <Button variant="outline" size="sm" onClick={() => {
                         setError(null)
                         setEditing({ id: a.id, kind: a.preset!, config: Object.fromEntries(Object.entries(a.preset_config!).map(([k, v]) => [k, String(v)])) })
                       }}>Edit</Button>
                     )}
                     <Switch checked={a.enabled} disabled={!a.current_version_id} label={`${d.title}: ${a.enabled ? 'on' : 'off'}`} onChange={(next) => toggle(a, next)} />
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-      </Card>
+                  </Card>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       <p className="mt-3 text-xs text-muted-foreground">
         Automations notify, flag and create review tasks. They do not change anything in your shop. Results appear under Executions.
       </p>

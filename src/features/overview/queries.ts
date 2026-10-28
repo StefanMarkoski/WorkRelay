@@ -47,7 +47,7 @@ export function useOverview() {
         warnings.push({ id: `bind-${i.id}`, text: `"${i.name}" has not been bound by its store yet.`, to: '/integrations' })
       }
       if ((failedEvents.count ?? 0) > 0) warnings.push({ id: 'failed-events', text: `${failedEvents.count} webhook event(s) failed in the last 24 hours.`, to: '/integrations' })
-      if ((runsFailed.count ?? 0) > 0) warnings.push({ id: 'failed-runs', text: `${runsFailed.count} workflow run(s) failed in the last 7 days.`, to: '/executions' })
+      if ((runsFailed.count ?? 0) > 0) warnings.push({ id: 'failed-runs', text: `${runsFailed.count} automation run(s) failed in the last 7 days.`, to: '/executions' })
 
       return {
         workflows: workflows.count ?? 0,

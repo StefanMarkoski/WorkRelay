@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { Segmented } from '@/components/ui/segmented'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
@@ -84,21 +85,7 @@ export function IntegrationsPage() {
         }
       />
 
-      <div role="tablist" className="mb-4 flex gap-1 border-b">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              tab === t.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Segmented className="mb-4" label="Integrations sections" value={tab} onChange={setTab} options={TABS} />
 
       <Card>
         {tab === 'connections' && (

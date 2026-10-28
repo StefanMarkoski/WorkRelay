@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Field, Textarea } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { Segmented } from '@/components/ui/segmented'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { JsonView } from '@/components/common/json-view'
 import { PageHeader } from '@/components/common/page-header'
@@ -60,14 +61,13 @@ export function ApprovalsPage() {
   return (
     <>
       <PageHeader title="Approvals" description="Human decisions requested by workflows. A paused run resumes after a valid decision." />
-      <div role="tablist" className="mb-4 flex gap-1 border-b">
-        {(['pending', 'history'] as const).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring ${tab === t ? 'border-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}>
-            {humanize(t)}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        className="mb-4"
+        label="Approval views"
+        value={tab}
+        onChange={setTab}
+        options={[{ id: 'pending', label: 'Pending' }, { id: 'history', label: 'History' }]}
+      />
       <Card>
         {query.isLoading ? <TableSkeleton rows={4} /> : query.error ? <ErrorState onRetry={() => query.refetch()} /> :
           query.data!.length === 0 ? (

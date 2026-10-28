@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Search, ShoppingCart } from 'lucide-react'
+import { Search, ShoppingCart, Store } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -74,13 +74,13 @@ export function OrdersPage() {
   return (
     <>
       <PageHeader title="Orders" description="Orders received from your connected stores." />
-      <Card>
-        <div className="grid gap-2 border-b p-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-          <div className="relative sm:col-span-2">
-            <Search className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground" />
+      <Card className="mb-6 space-y-3 p-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="relative lg:col-span-2">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               aria-label="Search orders"
-              placeholder="Order, customer or email"
+              placeholder="Search order, customer, email…"
               className="pl-8"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -102,16 +102,21 @@ export function OrdersPage() {
             <option value="">Any source</option>
             {integrations.data?.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </Select>
-          <div className="flex items-center gap-1 sm:col-span-2 lg:col-span-2">
-            <Input aria-label="Placed from" type="date" value={filters.from} onChange={set('from')} />
-            <span className="text-muted-foreground">–</span>
-            <Input aria-label="Placed until" type="date" value={filters.to} onChange={set('to')} />
-          </div>
-          {filtered && (
-            <Button variant="ghost" onClick={() => { setFilters(EMPTY); setSearchInput(''); setPage(0) }}>Clear filters</Button>
-          )}
         </div>
+        <div className="flex flex-col gap-3 border-t pt-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground">Date:</span>
+            <Input aria-label="Placed from" type="date" className="h-8 w-auto text-xs" value={filters.from} onChange={set('from')} />
+            <span className="text-muted-foreground">—</span>
+            <Input aria-label="Placed until" type="date" className="h-8 w-auto text-xs" value={filters.to} onChange={set('to')} />
+          </div>
+          <Button variant="ghost" size="sm" disabled={!filtered} onClick={() => { setFilters(EMPTY); setSearchInput(''); setPage(0) }}>
+            Reset filters
+          </Button>
+        </div>
+      </Card>
 
+      <Card>
         {query.isLoading ? (
           <TableSkeleton rows={8} />
         ) : query.error ? (
@@ -141,14 +146,14 @@ export function OrdersPage() {
                       </Link>
                     </TD>
                     <TD>
-                      <div>{o.customer_name ?? '—'}</div>
-                      <div className="text-xs text-muted-foreground">{o.customer_email ?? ''}</div>
+                      <div className="font-medium">{o.customer_name ?? '—'}</div>
+                      <div className="text-[11px] text-muted-foreground">{o.customer_email ?? ''}</div>
                     </TD>
                     <TD className="whitespace-nowrap">{formatDate(o.placed_at)}</TD>
-                    <TD className="text-right tabular-nums">{formatMoney(o.total_minor, o.currency)}</TD>
+                    <TD className="text-right font-medium tabular-nums">{formatMoney(o.total_minor, o.currency)}</TD>
                     <TD><StatusBadge status={o.payment_status} /></TD>
                     <TD><StatusBadge status={o.fulfillment_status} /></TD>
-                    <TD className="text-muted-foreground">{o.integrations?.name ?? '—'}</TD>
+                    <TD>{o.integrations?.name ? <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-0.5 text-xs"><Store className="size-3 text-primary" />{o.integrations.name}</span> : '—'}</TD>
                     <TD className="whitespace-nowrap text-muted-foreground">{timeAgo(o.updated_at)}</TD>
                   </TR>
                 ))}
