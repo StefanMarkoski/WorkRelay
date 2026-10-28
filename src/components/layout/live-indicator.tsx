@@ -10,11 +10,11 @@ const COPY: Record<LiveStatus, { label: string; title: string; box: string; dot:
 export function LiveIndicator({ status }: { status: LiveStatus }) {
   const c = COPY[status]
   return (
-    <span title={c.title} role="status" className={cn('hidden items-center gap-2 rounded-md border px-2.5 py-1 text-xs font-medium md:inline-flex', c.box)}>
-      <span aria-hidden className="relative flex size-1.5">
+    <span title={c.title} role="status" className={cn('hidden items-center gap-2.5 rounded-lg border px-3 py-1.5 text-[13px] font-semibold md:inline-flex', c.box)}>
+      <span aria-hidden className="relative flex size-3 shrink-0">
         {/* Expanding ring while live. Reduced-motion users get a still dot (see the global rule in index.css). */}
-        {status === 'live' && <span className={cn('absolute inline-flex size-full animate-ping rounded-full opacity-75', c.dot)} />}
-        <span className={cn('relative inline-flex size-1.5 rounded-full', c.dot)} />
+        {status === 'live' && <span className={cn('live-ring absolute inline-flex size-full rounded-full', c.dot)} />}
+        <span className={cn('relative inline-flex size-3 rounded-full', c.dot, status === 'live' && 'shadow-[0_0_10px_2px] shadow-success/70')} />
       </span>
       {c.label}
     </span>
