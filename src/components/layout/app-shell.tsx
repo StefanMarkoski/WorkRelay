@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { ThemeSwitcher } from '@/features/theme/theme-switcher'
+import { useRealtimeSync } from '@/features/realtime/use-realtime-sync'
+import { LiveIndicator } from './live-indicator'
 import { Sidebar } from './sidebar'
 import { SignOutButton, WorkspaceSwitcher } from './user-menu'
 
 export function AppShell() {
   const [open, setOpen] = useState(false)
+  const live = useRealtimeSync()
   return (
     <div className="flex h-dvh bg-background">
       <aside className="hidden w-60 shrink-0 border-r border-sidebar-border md:block">
@@ -42,6 +45,7 @@ export function AppShell() {
             <WorkspaceSwitcher />
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <LiveIndicator status={live} />
             <ThemeSwitcher />
             <SignOutButton />
           </div>

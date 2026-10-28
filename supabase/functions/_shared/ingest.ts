@@ -3,6 +3,7 @@ import { json, parseBearer, sha256Hex } from './keys.ts'
 import type { Logger } from './log.ts'
 import { planOrderUpdate } from './normalize.ts'
 import { ORDER_EVENT_TYPES, orderWebhookSchema } from './order-contract.ts'
+import type { StoredOrder } from './normalize.ts'
 import type { IngestStore, IntegrationRef } from './store.ts'
 
 export interface HandlerDeps {
@@ -54,7 +55,6 @@ export async function handleOrderWebhook(req: Request, deps: HandlerDeps): Promi
   }
 
   const ctx = { integration_id: integration.id }
-  await deps.store.touchIntegration(integration.id)
 
   const body = await readJsonBody(req)
   const loose = body.ok
@@ -64,13 +64,21 @@ export async function handleOrderWebhook(req: Request, deps: HandlerDeps): Promi
   const eventId = loose?.success ? loose.data.event_id : `invalid:${crypto.randomUUID()}`
   const eventType = loose?.success ? (loose.data.event_type ?? null) : null
 
-  const recorded = await deps.store.recordEvent({
-    organizationId: integration.organizationId,
-    integrationId: integration.id,
-    eventId,
-    eventType,
-    rawPayload: body.ok ? body.value : { unparseable: true },
-  })
+  // These three do not depend on each other, so they run together (one round trip instead of three).
+  // The order read is only a head start: the final write checks the order's version and we re-read on a conflict.
+  const rawOrderId = body.ok ? (body.value as { order?: { external_id?: unknown } } | null)?.order?.external_id : undefined
+  const prefetchId = typeof rawOrderId === 'string' && rawOrderId.length > 0 && rawOrderId.length <= 200 ? rawOrderId : null
+  const [recorded, prefetched] = await Promise.all([
+    deps.store.recordEvent({
+      organizationId: integration.organizationId,
+      integrationId: integration.id,
+      eventId,
+      eventType,
+      rawPayload: body.ok ? body.value : { unparseable: true },
+    }),
+    prefetchId ? deps.store.getOrder(integration.id, prefetchId).catch(() => undefined) : Promise.resolve(undefined),
+    deps.store.touchIntegration(integration.id).catch(() => undefined), // last-seen is best effort
+  ])
 
   if (!recorded.isNew && (recorded.status === 'processed' || recorded.status === 'ignored')) {
     return json(200, { status: 'duplicate' })
@@ -98,8 +106,11 @@ export async function handleOrderWebhook(req: Request, deps: HandlerDeps): Promi
 
   try {
     const ev = parsed.data
+    // undefined = not prefetched (or a different id): read it. null = prefetched and the order does not exist yet.
+    let head: StoredOrder | null | undefined = ev.order.external_id === prefetchId ? prefetched : undefined
     for (let attempt = 0; attempt < MAX_APPLY_ATTEMPTS; attempt++) {
-      const existing = await deps.store.getOrder(integration.id, ev.order.external_id)
+      const existing = head !== undefined ? head : await deps.store.getOrder(integration.id, ev.order.external_id)
+      head = undefined // after the first attempt always re-read
       const plan = planOrderUpdate(existing, ev)
       const result = await deps.store.applyPlan({
         eventRowId: recorded.id,

@@ -46,6 +46,15 @@ Each tick is short and bounded: it fails overdue runs, claims up to 10 due runs 
 If the engine stops, nothing is lost: pending runs wait, and crashed leases expire and are re-claimed.
 To stop it: `select cron.unschedule('workrelay-engine');`
 
+**Instant automations:** as soon as an order event queues a run (or an approval is decided), a database function (`kick_engine`)
+asks `run-engine` to tick immediately, using the same two Vault secrets as the cron job. Typical delay from order to action is
+then 1 to 3 seconds instead of up to 10. If the secrets are missing it silently does nothing and the 10-second cron picks the
+work up, so this can never break ingestion. The cron job stays as the safety net for retries and crash recovery.
+
+**Live dashboard:** migration `0009` publishes `orders`, `order_events`, `workflow_runs`, `step_runs` and `approvals` to Supabase
+Realtime. Never add `webhook_events` (raw customer payloads) or `integrations` (key hashes) to that publication: Realtime does not
+apply column-level grants. The header shows a Live indicator; without it the screens still refresh on a timer.
+
 ## 5. Auth settings (Dashboard -> Authentication)
 - URL Configuration: Site URL = the URL where the frontend is hosted; add it and `http://localhost:5173` to Redirect URLs.
 - Providers -> Email: keep enabled. Decide whether "Confirm email" is on (recommended in production).

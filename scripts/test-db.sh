@@ -21,10 +21,12 @@ for f in supabase/migrations/*.sql; do
   echo "migrate: $f"
   psql_run < "$f"
 done
+# pg_net ships with the image but is not enabled by default; hosted Supabase has it after the setup guide.
+docker exec -i "$NAME" psql -U supabase_admin -d postgres -h localhost -q -c "create extension if not exists pg_net" >/dev/null
 for f in supabase/tests/*.sql; do
   [ "$(basename "$f")" = "00_auth_shim.sql" ] && continue
   echo "test: $f"
-  psql_run < "$f" 2>&1 | grep -E "ERROR|FAIL|PASSED|skip - |engine secret verification" || true
+  psql_run < "$f" 2>&1 | grep -E "ERROR|FAIL|PASSED|skip - |engine secret verification|skip - |ok   - .*kick|published" || true
   psql_run < "$f" >/dev/null 2>"/tmp/$NAME.err" || { cat "/tmp/$NAME.err"; exit 1; }
 done
 echo "all database tests passed"

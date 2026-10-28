@@ -46,6 +46,7 @@ export function OrdersPage() {
   const query = useQuery({
     queryKey: ['orders', current.id, filters, page],
     placeholderData: (prev) => prev,
+    refetchInterval: 30_000, // safety net if live updates are unavailable
     queryFn: async () => {
       let q = supabase
         .from('orders')

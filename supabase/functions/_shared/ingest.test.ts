@@ -117,6 +117,50 @@ describe('ingestion', () => {
   })
 })
 
+describe('round trips', () => {
+  it('records the event, reads the order and touches the integration concurrently', async () => {
+    const log2: string[] = []
+    const wrap = <T,>(name: string, fn: () => Promise<T>) => async () => {
+      log2.push(`start:${name}`)
+      await new Promise((r) => setTimeout(r, 5))
+      const v = await fn()
+      log2.push(`end:${name}`)
+      return v
+    }
+    const rec = store.recordEvent.bind(store), get = store.getOrder.bind(store), touch = store.touchIntegration.bind(store)
+    store.recordEvent = ((e: any) => wrap('record', () => rec(e))()) as any
+    store.getOrder = ((a: string, b: string) => wrap('get', () => get(a, b))()) as any
+    store.touchIntegration = (() => wrap('touch', () => touch())()) as any
+    expect((await handleOrderWebhook(post(ev()), deps())).status).toBe(200)
+    const firstEnd = log2.findIndex((l) => l.startsWith('end:'))
+    expect(log2.slice(0, firstEnd).sort()).toEqual(['start:get', 'start:record', 'start:touch'])
+  })
+
+  it('still produces correct results when the prefetched order is stale (concurrent change)', async () => {
+    await handleOrderWebhook(post(ev({}, { order_number: 'A' })), deps())
+    const real = store.getOrder.bind(store)
+    let calls = 0
+    // The first read returns a stale copy (as if another event landed in between); the version check must force a re-read.
+    store.getOrder = (async (a: string, b: string) => {
+      calls++
+      const o = await real(a, b)
+      return calls === 1 && o ? { ...o, version: o.version - 1 } : o
+    }) as any
+    const res = await handleOrderWebhook(post(ev({ event_id: 'e2', event_type: 'order.updated', occurred_at: '2026-10-27T11:00:00Z' }, { notes: 'later' })), deps())
+    expect(res.status).toBe(200)
+    expect(only()).toMatchObject({ order_number: 'A', notes: 'later' })
+    expect(calls).toBe(2)
+  })
+
+  it('does not apply a prefetched order for an invalid or duplicate event', async () => {
+    await handleOrderWebhook(post(ev()), deps())
+    const before = JSON.stringify(only())
+    expect(await (await handleOrderWebhook(post(ev({}, { order_number: 'CHANGED' })), deps())).json()).toEqual({ status: 'duplicate' })
+    expect((await handleOrderWebhook(post(ev({ event_id: 'bad' }, { totals: { total_minor: 1.5 } })), deps())).status).toBe(400)
+    expect(JSON.stringify(only())).toBe(before)
+  })
+})
+
 describe('failures', () => {
   it('records malformed JSON as a failed event', async () => {
     const res = await handleOrderWebhook(post('{nope'), deps())

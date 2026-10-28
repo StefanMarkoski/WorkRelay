@@ -20,6 +20,8 @@ export function EventHistory() {
 
   const query = useQuery({
     queryKey: ['webhook-events', current.id, status, page],
+    // webhook_events is not published to Realtime (raw payloads hold customer data), so this screen polls while visible.
+    refetchInterval: 5_000,
     queryFn: async () => {
       let q = supabase
         .from('webhook_events')

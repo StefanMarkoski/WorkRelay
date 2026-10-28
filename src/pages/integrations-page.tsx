@@ -28,7 +28,7 @@ const TABS: { id: Tab; label: string }[] = [
 export function IntegrationsPage() {
   const { current, canManage } = useWorkspace()
   const qc = useQueryClient()
-  const integrations = useIntegrations()
+  const integrations = useIntegrations({ poll: true })
   const [tab, setTab] = useState<Tab>('connections')
   const [creating, setCreating] = useState(false)
   const [secret, setSecret] = useState<string | null>(null)
