@@ -100,7 +100,7 @@ export function AdminTenantsPage() {
           ) : (
             <Table>
               <THead>
-                <tr><TH>Workspace</TH><TH>Owner</TH><TH className="text-right">Members</TH><TH className="text-right">Integrations</TH><TH className="text-right">Workflows</TH><TH className="text-right">Orders</TH><TH>Created</TH></tr>
+                <tr><TH>Workspace</TH><TH>Owner</TH><TH className="text-right">Members</TH><TH className="text-right">Integrations</TH><TH className="text-right">Automations</TH><TH className="text-right">Orders</TH><TH>Created</TH></tr>
               </THead>
               <tbody>
                 {tenants.data!.map((t) => (

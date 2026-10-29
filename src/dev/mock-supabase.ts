@@ -3,6 +3,9 @@
  * It serves invented data so every screen can be rendered and screenshotted without a login or real customer data.
  * It is never part of the production build.
  */
+import { mountDataToggle } from './data-toggle'
+import { buildDataset, readMode } from './mock-datasets'
+
 type Row = Record<string, any>
 
 const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
@@ -25,7 +28,7 @@ const orders: Row[] = [
   organization_id: ORG, integration_id: integ, integrations: { name: integ === 'i1' ? 'Game Store' : 'Game Store 2' },
 }))
 
-const DB: Record<string, Row[]> = {
+const DEMO_DB: Record<string, Row[]> = {
   memberships: [{ role: 'owner', user_id: 'u1', organization_id: ORG, organizations: { id: ORG, name: 'Game Shop' } }],
   orders,
   order_items: [{ id: 'it1', order_id: 'o1', position: 0, sku: 'GC-50', name: 'Gift card 50', quantity: 2, unit_price_minor: 7000000 }],
@@ -61,7 +64,7 @@ const DB: Record<string, Row[]> = {
   ],
 }
 
-const RPC: Record<string, unknown> = {
+const DEMO_RPC: Record<string, unknown> = {
   is_platform_admin: false,
   list_members: [
     { user_id: 'u1', email: 'owner@example.com', role: 'owner', created_at: ago(5000) },
@@ -69,6 +72,11 @@ const RPC: Record<string, unknown> = {
   ],
   admin_list_tenants: [],
 }
+
+// ?data=worst|empty|one|many swaps the whole dataset at this boundary; the components never know.
+const MODE = readMode()
+const { DB, RPC } = MODE === 'demo' ? { DB: DEMO_DB, RPC: DEMO_RPC } : buildDataset(MODE, DEMO_DB, DEMO_RPC)
+mountDataToggle(MODE)
 
 class Query {
   private filters: ((r: Row) => boolean)[] = []

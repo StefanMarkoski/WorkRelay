@@ -1,21 +1,26 @@
 import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 
-export type BadgeTone = 'neutral' | 'violet' | 'success' | 'warning' | 'danger'
+export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 
-const TONES: Record<BadgeTone, string> = {
-  neutral: 'border-border bg-secondary text-muted-foreground',
-  violet: 'border-primary/30 bg-primary/15 text-accent-foreground',
-  success: 'border-success/30 bg-success/15 text-success',
-  warning: 'border-warning/30 bg-warning/15 text-warning',
-  danger: 'border-destructive/30 bg-destructive/15 text-destructive',
+/** A status reads as a small lamp beside a label, the same part the relay unit is made of. Neutral shows no lamp. */
+const LAMP: Record<BadgeTone, string | null> = {
+  neutral: null,
+  info: 'bg-info',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger: 'bg-destructive',
 }
 
-export function Badge({ tone = 'neutral', className, ...props }: ComponentProps<'span'> & { tone?: BadgeTone }) {
+export function Badge({ tone = 'neutral', className, children, ...props }: ComponentProps<'span'> & { tone?: BadgeTone }) {
+  const lamp = LAMP[tone]
   return (
     <span
-      className={cn('inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium whitespace-nowrap', TONES[tone], className)}
+      className={cn('inline-flex items-center gap-1.5 rounded-md border bg-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap', tone === 'neutral' ? 'text-muted-foreground' : 'text-foreground', className)}
       {...props}
-    />
+    >
+      {lamp && <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', lamp)} />}
+      {children}
+    </span>
   )
 }

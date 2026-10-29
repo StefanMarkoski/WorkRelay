@@ -3,14 +3,14 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/geist-mono";
-@import "@fontsource-variable/bricolage-grotesque";
+@import "@fontsource-variable/archivo";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
-    --font-display: 'Bricolage Grotesque Variable', 'Geist Variable', sans-serif;
+    --font-display: 'Archivo Variable', 'Geist Variable', sans-serif;
     --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
@@ -27,6 +27,7 @@
     --color-chart-1: var(--chart-1);
     --color-ring: var(--ring);
     --color-success: var(--success);
+    --color-info: var(--info);
     --color-warning: var(--warning);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -75,77 +76,90 @@
     }
 }
 
+/* ---- The Matte Instrument world, app-wide ----
+   Tinted near-black housings, tonal steps instead of glow, one signal green for live state and the primary action.
+   Light is a pale grey housing. Only the instrument itself (.housing) stays dark in both themes. */
 :root {
-    --background: #f6f7fb;
-    --foreground: oklch(0.2 0.015 275);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.2 0.015 275);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.2 0.015 275);
-    --primary: oklch(0.55 0.22 285);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: #eef0f6;
-    --secondary-foreground: oklch(0.25 0.015 275);
-    --muted: #eef0f6;
-    --muted-foreground: oklch(0.5 0.02 275);
-    --accent: oklch(0.95 0.03 285);
-    --accent-foreground: oklch(0.4 0.18 285);
-    --destructive: oklch(0.577 0.22 27);
-    --success: oklch(0.55 0.15 150);
-    --warning: oklch(0.65 0.15 70);
-    --border: #e2e5ef;
-    --input: #d5d9e6;
-    --ring: oklch(0.55 0.22 285 / 50%);
-    --chart-1: oklch(0.55 0.22 285);
-    --chart-2: oklch(0.55 0.15 150);
-    --chart-3: oklch(0.65 0.15 70);
-    --chart-4: oklch(0.577 0.22 27);
-    --chart-5: oklch(0.5 0.02 275);
-    --radius: 0.5rem;
-    --sidebar: #ffffff;
-    --sidebar-foreground: oklch(0.25 0.015 275);
-    --sidebar-primary: oklch(0.55 0.22 285);
-    --sidebar-primary-foreground: oklch(0.99 0 0);
-    --sidebar-accent: oklch(0.94 0.03 285);
-    --sidebar-accent-foreground: oklch(0.4 0.18 285);
-    --sidebar-border: #e2e5ef;
-    --sidebar-ring: oklch(0.55 0.22 285 / 50%);
+    --radius: 0.375rem;
+    --background: oklch(0.935 0.006 140);
+    --foreground: oklch(0.2 0.01 150);
+    --card: oklch(0.965 0.004 140);
+    --card-foreground: oklch(0.2 0.01 150);
+    --popover: oklch(0.965 0.004 140);
+    --popover-foreground: oklch(0.2 0.01 150);
+    --primary: oklch(0.46 0.12 156);
+    --primary-foreground: oklch(0.985 0.005 150);
+    --secondary: oklch(0.9 0.008 140);
+    --secondary-foreground: oklch(0.25 0.01 150);
+    --muted: oklch(0.9 0.008 140);
+    --muted-foreground: oklch(0.42 0.014 150);
+    --accent: oklch(0.9 0.012 150);
+    --accent-foreground: oklch(0.25 0.01 150);
+    --destructive: oklch(0.5 0.19 27);
+    --success: oklch(0.46 0.12 156);
+    --warning: oklch(0.52 0.12 75);
+    --info: oklch(0.45 0.07 240);
+    --border: oklch(0.83 0.008 140);
+    --input: oklch(0.8 0.008 140);
+    --ring: oklch(0.46 0.12 156 / 55%);
+    --chart-1: oklch(0.46 0.12 156);
+    --chart-2: oklch(0.5 0.07 240);
+    --chart-3: oklch(0.58 0.12 75);
+    --chart-4: oklch(0.52 0.19 27);
+    --chart-5: oklch(0.5 0.014 150);
+    --sidebar: oklch(0.955 0.005 140);
+    --sidebar-foreground: oklch(0.2 0.01 150);
+    --sidebar-primary: oklch(0.46 0.12 156);
+    --sidebar-primary-foreground: oklch(0.985 0.005 150);
+    --sidebar-accent: oklch(0.9 0.012 150);
+    --sidebar-accent-foreground: oklch(0.25 0.01 150);
+    --sidebar-border: oklch(0.83 0.008 140);
+    --sidebar-ring: oklch(0.46 0.12 156 / 55%);
+    /* The instrument's own parts */
+    --housing: oklch(0.2 0.006 150);
+    --housing-edge: oklch(0.28 0.008 150);
+    --lamp-off: oklch(0.3 0.008 150);
+    --signal: oklch(0.78 0.16 156);
 }
 
 .dark {
-    --background: #090a0f;
-    --foreground: #e2e8f0;
-    --card: #12141e;
-    --card-foreground: #e2e8f0;
-    --popover: #12141e;
-    --popover-foreground: #e2e8f0;
-    --primary: oklch(0.62 0.2 285);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: #181c2b;
-    --secondary-foreground: #e2e8f0;
-    --muted: #181c2b;
-    --muted-foreground: #94a3b8;
-    --accent: oklch(0.28 0.06 285);
-    --accent-foreground: oklch(0.88 0.08 285);
-    --destructive: oklch(0.68 0.19 22);
-    --success: oklch(0.72 0.17 150);
-    --warning: oklch(0.8 0.15 80);
-    --border: #1f2438;
-    --input: #272d45;
-    --ring: oklch(0.62 0.2 285 / 60%);
-    --chart-1: oklch(0.7 0.17 285);
-    --chart-2: oklch(0.72 0.17 150);
-    --chart-3: oklch(0.8 0.15 80);
-    --chart-4: oklch(0.68 0.19 22);
-    --chart-5: #94a3b8;
-    --sidebar: #0d0e15;
-    --sidebar-foreground: #e2e8f0;
-    --sidebar-primary: oklch(0.62 0.2 285);
-    --sidebar-primary-foreground: oklch(0.99 0 0);
-    --sidebar-accent: oklch(0.26 0.05 285);
-    --sidebar-accent-foreground: oklch(0.9 0.07 285);
-    --sidebar-border: #1f2438;
-    --sidebar-ring: oklch(0.62 0.2 285 / 60%);
+    --background: oklch(0.15 0.006 150);
+    --foreground: oklch(0.93 0.005 150);
+    --card: oklch(0.19 0.007 150);
+    --card-foreground: oklch(0.93 0.005 150);
+    --popover: oklch(0.19 0.007 150);
+    --popover-foreground: oklch(0.93 0.005 150);
+    --primary: oklch(0.78 0.16 156);
+    --primary-foreground: oklch(0.16 0.02 156);
+    --secondary: oklch(0.22 0.008 150);
+    --secondary-foreground: oklch(0.93 0.005 150);
+    --muted: oklch(0.22 0.008 150);
+    --muted-foreground: oklch(0.7 0.012 150);
+    --accent: oklch(0.25 0.01 150);
+    --accent-foreground: oklch(0.93 0.005 150);
+    --destructive: oklch(0.68 0.19 25);
+    --success: oklch(0.78 0.16 156);
+    --warning: oklch(0.82 0.14 85);
+    --info: oklch(0.76 0.07 240);
+    --border: oklch(0.28 0.008 150);
+    --input: oklch(0.32 0.008 150);
+    --ring: oklch(0.78 0.16 156 / 60%);
+    --chart-1: oklch(0.78 0.16 156);
+    --chart-2: oklch(0.76 0.07 240);
+    --chart-3: oklch(0.82 0.14 85);
+    --chart-4: oklch(0.68 0.19 25);
+    --chart-5: oklch(0.7 0.012 150);
+    --sidebar: oklch(0.185 0.007 150);
+    --sidebar-foreground: oklch(0.93 0.005 150);
+    --sidebar-primary: oklch(0.78 0.16 156);
+    --sidebar-primary-foreground: oklch(0.16 0.02 156);
+    --sidebar-accent: oklch(0.25 0.01 150);
+    --sidebar-accent-foreground: oklch(0.93 0.005 150);
+    --sidebar-border: oklch(0.28 0.008 150);
+    --sidebar-ring: oklch(0.78 0.16 156 / 60%);
+    --housing: oklch(0.21 0.007 150);
+    --housing-edge: oklch(0.29 0.009 150);
+    --lamp-off: oklch(0.31 0.008 150);
 }
 
 @layer base {
@@ -167,40 +181,36 @@
   }
 }
 
-/* ---- Landing page ---- */
-@keyframes landing-rise {
-  from { opacity: 0; transform: translateY(14px); }
+/* ---- Matte Instrument details shared by the landing page and the app ---- */
+.world { background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+::selection { background: color-mix(in oklab, var(--primary) 35%, transparent); color: var(--foreground); }
+:root { scrollbar-color: var(--input) var(--background); }
+a, button { text-underline-offset: 0.25em; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* The relay unit: a matte housing with tonal steps, a hairline edge and a soft contact shadow. No glow. */
+.housing {
+  background: linear-gradient(var(--housing-edge), var(--housing) 1px, var(--housing));
+  border: 1px solid var(--housing-edge);
+  border-radius: 1rem;
+  box-shadow: 0 1px 0 oklch(1 0 0 / 5%) inset, 0 6px 12px -8px oklch(0 0 0 / 35%);
+  color: oklch(0.93 0.005 150);
+  /* The housing is dark in both themes, so the tokens inside it are always the dark ones. */
+  --foreground: oklch(0.93 0.005 150);
+  --muted-foreground: oklch(0.7 0.012 150);
+  --primary: oklch(0.78 0.16 156);
+  --primary-foreground: oklch(0.16 0.02 156);
+  --border: oklch(0.3 0.009 150);
+  --ring: oklch(0.78 0.16 156 / 60%);
+}
+.lamp { background: var(--lamp-off); transition: background-color 0.5s cubic-bezier(0.23, 1, 0.32, 1); }
+.lamp[data-on='true'] { background: var(--signal); transition-duration: 0.12s; }
+
+@keyframes world-rise {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
 }
-@keyframes landing-travel {
-  from { top: 0; opacity: 0; }
-  8% { opacity: 1; }
-  92% { opacity: 1; }
-  to { top: 100%; opacity: 0; }
-}
-.landing-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.landing-travel { animation: landing-travel 2.8s ease-in-out 0.6s 1 both; }
-
-/* Faint graph-paper grid that fades out away from the top, plus one soft violet glow. */
-.landing-backdrop {
-  background-image:
-    radial-gradient(60% 45% at 78% 0%, color-mix(in oklab, var(--primary) 20%, transparent), transparent 70%),
-    linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
-  background-size: auto, 64px 64px, 64px 64px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
-}
-
-/* A thermal-paper receipt: always paper-coloured, with a torn zigzag bottom edge. */
-.slip {
-  --paper: oklch(0.975 0.008 85);
-  background: var(--paper);
-  color: oklch(0.22 0.02 270);
-  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
-  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
-  padding-bottom: 1.6rem;
-}
+.world-rise { animation: world-rise 0.6s cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: calc(var(--i, 0) * 70ms); }
 
 /* The Live indicator: a ring that grows from the dot and fades out. */
 @keyframes live-ring {
@@ -216,3 +226,32 @@
 }
 .page-in { animation: page-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .reveal { animation: page-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+
+/* A thermal-paper receipt: always paper-coloured, with a torn zigzag bottom edge. */
+.slip {
+  --paper: oklch(0.975 0.008 85);
+  background: var(--paper);
+  color: oklch(0.22 0.02 270);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+  padding-bottom: 1.6rem;
+}
+
+@keyframes landing-travel {
+  from { top: 0; opacity: 0; }
+  8% { opacity: 1; }
+  92% { opacity: 1; }
+  to { top: 100%; opacity: 0; }
+}
+.landing-travel { animation: landing-travel 2.8s ease-in-out 0.6s 1 both; }
+@media (prefers-reduced-motion: reduce) { .landing-travel { animation: none; opacity: 0; } }
+
+/* Faint graph-paper squares behind the hero, fading out towards the bottom. Neutral: no glow. */
+.landing-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
+}

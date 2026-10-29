@@ -1,10 +1,20 @@
+/** How many decimals the currency's minor unit has (2 for EUR, 0 for JPY, 3 for KWD). */
+function minorDigits(currency: string): number {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2
+  } catch {
+    return 2
+  }
+}
+
 export function formatMoney(minor: number | null | undefined, currency: string | null | undefined): string {
   if (minor == null) return '—'
   if (!currency) return `${(minor / 100).toFixed(2)} (no currency)`
+  const digits = minorDigits(currency)
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(minor / 100)
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(minor / 10 ** digits)
   } catch {
-    return `${(minor / 100).toFixed(2)} ${currency}`
+    return `${(minor / 10 ** digits).toFixed(digits)} ${currency}`
   }
 }
 

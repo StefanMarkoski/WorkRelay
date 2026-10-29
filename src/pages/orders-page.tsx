@@ -104,7 +104,7 @@ export function OrdersPage() {
           </Select>
         </div>
         <div className="flex flex-col gap-3 border-t pt-3 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground">Date:</span>
             <Input aria-label="Placed from" type="date" className="h-8 w-auto text-xs" value={filters.from} onChange={set('from')} />
             <span className="text-muted-foreground">—</span>
@@ -133,28 +133,29 @@ export function OrdersPage() {
             <Table>
               <THead>
                 <tr>
-                  <TH>Order</TH><TH>Customer</TH><TH>Date</TH><TH className="text-right">Total</TH>
-                  <TH>Payment</TH><TH>Fulfillment</TH><TH>Source</TH><TH>Updated</TH>
+                  <TH>Order</TH><TH className="hidden sm:table-cell">Customer</TH><TH className="hidden lg:table-cell">Date</TH><TH className="text-right">Total</TH>
+                  <TH>Payment</TH><TH className="hidden lg:table-cell">Fulfillment</TH><TH className="hidden lg:table-cell">Source</TH><TH className="hidden lg:table-cell">Updated</TH>
                 </tr>
               </THead>
               <tbody>
                 {query.data!.rows.map((o) => (
                   <TR key={o.id}>
-                    <TD>
-                      <Link to={`/orders/${o.id}`} className="font-medium text-primary hover:underline">
+                    <TD className="min-w-28">
+                      <Link to={`/orders/${o.id}`} className="inline-block max-w-60 align-top font-medium [overflow-wrap:anywhere] text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">
                         {o.order_number ?? `#${o.external_id}`}
                       </Link>
+                      <div className="mt-0.5 max-w-36 truncate text-[11px] text-muted-foreground sm:hidden" title={o.customer_name ?? undefined}>{o.customer_name ?? ''}</div>
                     </TD>
-                    <TD>
+                    <TD className="hidden sm:table-cell">
                       <div className="font-medium">{o.customer_name ?? '—'}</div>
                       <div className="text-[11px] text-muted-foreground">{o.customer_email ?? ''}</div>
                     </TD>
-                    <TD className="whitespace-nowrap">{formatDate(o.placed_at)}</TD>
+                    <TD className="hidden whitespace-nowrap lg:table-cell">{formatDate(o.placed_at)}</TD>
                     <TD className="text-right font-medium tabular-nums">{formatMoney(o.total_minor, o.currency)}</TD>
                     <TD><StatusBadge status={o.payment_status} /></TD>
-                    <TD><StatusBadge status={o.fulfillment_status} /></TD>
-                    <TD>{o.integrations?.name ? <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-0.5 text-xs"><Store className="size-3 text-primary" />{o.integrations.name}</span> : '—'}</TD>
-                    <TD className="whitespace-nowrap text-muted-foreground">{timeAgo(o.updated_at)}</TD>
+                    <TD className="hidden lg:table-cell"><StatusBadge status={o.fulfillment_status} /></TD>
+                    <TD className="hidden lg:table-cell">{o.integrations?.name ? <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-0.5 text-xs whitespace-nowrap"><Store className="size-3 text-muted-foreground" />{o.integrations.name}</span> : '—'}</TD>
+                    <TD className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{timeAgo(o.updated_at)}</TD>
                   </TR>
                 ))}
               </tbody>

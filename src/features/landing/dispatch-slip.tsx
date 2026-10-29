@@ -3,14 +3,14 @@
  * Everything here is illustrative sample data, drawn in code so it follows the app's themes.
  */
 
-const Key = ({ children }: { children: string }) => <span className="text-[oklch(0.72_0.06_270)]">{children}</span>
-const Str = ({ children }: { children: string }) => <span className="text-[oklch(0.82_0.12_295)]">{children}</span>
+const Key = ({ children }: { children: string }) => <span className="text-white/60">{children}</span>
+const Str = ({ children }: { children: string }) => <span className="text-[oklch(0.82_0.1_150)]">{children}</span>
 
-function Stage({ label, delay, children }: { label: string; delay: string; children: React.ReactNode }) {
+function Stage({ label, delay, children }: { label: string; delay: number; children: React.ReactNode }) {
   return (
-    <li className="landing-rise relative" style={{ animationDelay: delay }}>
+    <li className="world-rise relative" style={{ '--i': delay } as React.CSSProperties}>
       <span aria-hidden className="absolute top-1 -left-9 grid size-6 place-items-center rounded-full border bg-background">
-        <span className="size-2 rounded-full bg-primary" />
+        <span className="lamp size-2 rounded-full bg-success" />
       </span>
       <p className="mb-2 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">{label}</p>
       {children}
@@ -20,16 +20,16 @@ function Stage({ label, delay, children }: { label: string; delay: string; child
 
 export function DispatchSlip() {
   return (
-    <figure aria-label="A sample order travelling from a shop to a Discord message" className="relative">
+    <figure aria-label="A sample order travelling from a shop to a Discord message" className="relative max-w-md">
       <ol className="relative space-y-6 pl-9">
         {/* the relay line, with one dot that travels down it once on load */}
-        <span aria-hidden className="absolute top-3 bottom-3 left-3 w-px border-l border-dashed border-primary/40">
-          <span className="landing-travel absolute -left-[3px] size-[7px] rounded-full bg-primary shadow-[0_0_12px_2px] shadow-primary/60" />
+        <span aria-hidden className="absolute top-3 bottom-3 left-3 w-px border-l border-dashed border-muted-foreground/40">
+          <span className="landing-travel absolute -left-[3px] size-[7px] rounded-full bg-success shadow-[0_0_10px_2px] shadow-success/50" />
         </span>
 
-        <Stage label="Your shop sends" delay="0.1s">
-          <pre className="overflow-x-auto rounded-lg border border-white/10 bg-[oklch(0.17_0.015_275)] p-4 font-mono text-[12px] leading-relaxed text-[oklch(0.86_0.01_275)]">
-            <span className="text-[oklch(0.7_0.1_160)]">POST</span> /order-webhook{'\n'}
+        <Stage label="Your shop sends" delay={1}>
+          <pre className="housing overflow-x-auto p-4 font-mono text-[12px] leading-relaxed text-white/85">
+            <span className="text-[oklch(0.82_0.1_150)]">POST</span> /order-webhook{'\n'}
             {'{\n'}
             {'  '}<Key>"event_type"</Key>: <Str>"order.created"</Str>,{'\n'}
             {'  '}<Key>"order"</Key>: {'{\n'}
@@ -41,7 +41,7 @@ export function DispatchSlip() {
           </pre>
         </Stage>
 
-        <Stage label="WorkRelay files it" delay="0.35s">
+        <Stage label="WorkRelay files it" delay={3}>
           <div className="slip max-w-sm -rotate-[0.6deg] px-5 pt-5 font-mono text-[12px] leading-relaxed shadow-xl">
             <div className="flex items-baseline justify-between">
               <span className="font-semibold tracking-wide">ORDER #1042</span>
@@ -60,14 +60,14 @@ export function DispatchSlip() {
           </div>
         </Stage>
 
-        <Stage label="Your team hears about it" delay="0.6s">
-          <div className="max-w-sm rounded-lg border bg-card p-3 shadow-sm">
+        <Stage label="Your team hears about it" delay={5}>
+          <div className="max-w-sm rounded-lg border bg-card p-3">
             <div className="flex items-center gap-2">
-              <span className="grid size-7 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">W</span>
+              <span className="grid size-7 place-items-center rounded-md bg-foreground text-xs font-bold text-background">W</span>
               <span className="text-sm font-medium">WorkRelay</span>
               <span className="text-xs text-muted-foreground"># orders · 10:42</span>
             </div>
-            <p className="mt-2 text-sm">New order <b>#1042</b> from Ana Petrova: 49.99 EUR</p>
+            <p className="mt-2 text-sm">New order <b className="font-semibold">#1042</b> from Ana Petrova: 49.99 EUR</p>
           </div>
         </Stage>
       </ol>

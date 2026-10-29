@@ -40,7 +40,7 @@ export function ExecutionsPage() {
 
   return (
     <>
-      <PageHeader title="Executions" description="Every workflow run, with the version that started it." />
+      <PageHeader title="Executions" description="Every automation run, with the version that started it." />
       <Card>
         <div className="border-b p-3">
           <Select aria-label="Filter by status" className="w-44" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0) }}>
@@ -51,16 +51,16 @@ export function ExecutionsPage() {
         {query.isLoading ? <TableSkeleton /> : query.error ? <ErrorState onRetry={() => query.refetch()} /> :
           query.data!.rows.length === 0 ? (
             <EmptyState icon={Play} title={status ? 'No executions with this status' : 'No executions yet'}
-              description="Runs appear here when an enabled, published workflow is triggered." />
+              description="Runs appear here when an enabled automation is triggered." />
           ) : (
             <>
               <Table>
-                <THead><tr><TH>Workflow</TH><TH>Status</TH><TH>Trigger</TH><TH>Started</TH><TH>Duration</TH><TH>Attempts</TH></tr></THead>
+                <THead><tr><TH>Automation</TH><TH>Status</TH><TH>Trigger</TH><TH>Started</TH><TH>Duration</TH><TH>Attempts</TH></tr></THead>
                 <tbody>
                   {query.data!.rows.map((r) => (
                     <TR key={r.id}>
                       <TD>
-                        <Link to={`/executions/${r.id}`} className="font-medium text-primary hover:underline">{r.workflows?.name ?? 'Workflow'}</Link>
+                        <Link to={`/executions/${r.id}`} className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{r.workflows?.name ?? 'Automation'}</Link>
                         <span className="ml-2 text-xs text-muted-foreground">v{r.workflow_versions?.version ?? '?'}</span>
                       </TD>
                       <TD><StatusBadge status={r.status} /></TD>

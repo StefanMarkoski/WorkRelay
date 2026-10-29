@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 
 export function Card({ className, ...props }: ComponentProps<'div'>) {
-  return <div className={cn('overflow-hidden rounded-xl border bg-card text-card-foreground', className)} {...props} />
+  return <div className={cn('overflow-hidden rounded-lg border bg-card text-card-foreground', className)} {...props} />
 }
 
 export function CardHeader({ className, ...props }: ComponentProps<'div'>) {

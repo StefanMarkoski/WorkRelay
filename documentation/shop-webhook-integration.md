@@ -114,7 +114,7 @@ Only `external_id` is required. **Everything else is optional**: send what you h
 | `items` | array, up to 1000 | Each: `external_id`, `sku`, `name`, `quantity` (integer 0 to 1,000,000), `unit_price_minor` (integer) |
 | `notes` | string, up to 5000 | Notes from the shop |
 
-**Money is always an integer in minor units**: `49.99 EUR` is `4999`. Decimal strings or floats are rejected.
+**Money is always an integer in minor units**: `49.99 EUR` is `4999`. The minor unit follows the currency: `5000 JPY` is ¥5,000 (yen have no decimals) and `12500 KWD` is 12.500 KWD (three decimals). Decimal strings or floats are rejected.
 Unknown extra fields are ignored (the original payload is kept for diagnostics).
 
 ### Examples

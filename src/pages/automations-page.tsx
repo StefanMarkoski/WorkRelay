@@ -127,7 +127,7 @@ export function AutomationsPage() {
               return (
                 <li key={a.id}>
                   <Card className="flex flex-wrap items-center gap-4 p-4">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary"><Icon className="size-4" /></span>
+                    <span className="grid size-10 shrink-0 place-items-center rounded-md border bg-secondary text-muted-foreground"><Icon className="size-4" /></span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-[13px] font-semibold">{d.title}</h3>

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { formatDateTime, humanize } from '@/lib/format'
 import type { OrderEvent } from '@/types/db'
 
@@ -13,17 +15,20 @@ function describe(e: OrderEvent): string {
   return parts.join(' · ')
 }
 
+const EVENT_CAP = 50
+
 export function OrderTimeline({ events }: { events: OrderEvent[] }) {
+  const [showAll, setShowAll] = useState(false)
   if (events.length === 0) return <p className="p-4 text-sm text-muted-foreground">No events recorded.</p>
   return (
     <ol className="space-y-4 p-4">
-      {events.map((e) => (
+      {(showAll ? events : events.slice(0, EVENT_CAP)).map((e) => (
         <li key={e.id} className="flex gap-3">
-          <span className={`mt-1.5 size-2 shrink-0 rounded-full ${e.source === 'external' ? 'bg-muted-foreground' : 'bg-primary'}`} aria-hidden />
+          <span className={`mt-1.5 size-2 shrink-0 rounded-full ${e.source === 'external' ? 'bg-muted-foreground' : 'bg-info'}`} aria-hidden />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm font-medium">{humanize(e.type.replace('.', ' '))}</span>
-              <Badge tone={e.source === 'external' ? 'neutral' : 'violet'}>
+              <Badge tone={e.source === 'external' ? 'neutral' : 'info'}>
                 {e.source === 'external' ? 'Reported by store' : 'Action in WorkRelay'}
               </Badge>
             </div>
@@ -32,6 +37,11 @@ export function OrderTimeline({ events }: { events: OrderEvent[] }) {
           </div>
         </li>
       ))}
+      {!showAll && events.length > EVENT_CAP && (
+        <li>
+          <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>Show all {events.length.toLocaleString()} events</Button>
+        </li>
+      )}
     </ol>
   )
 }

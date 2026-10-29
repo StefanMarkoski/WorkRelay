@@ -8,8 +8,8 @@ import { NAV_ITEMS, type NavItem } from './nav-items'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'group relative flex items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground outline-none transition-[color,background-color,transform] duration-150 hover:bg-card hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]',
-    isActive && 'text-accent-foreground hover:bg-transparent hover:text-accent-foreground',
+    'group relative flex items-center justify-between rounded-md px-3 py-2 text-[13px] font-medium text-muted-foreground outline-none transition-[color,background-color,transform] duration-150 hover:bg-accent/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]',
+    isActive && 'text-foreground hover:bg-transparent hover:text-foreground',
   )
 
 /** One highlight shared by all items: it glides from the old item to the new one (layout animation). */
@@ -17,13 +17,13 @@ const ActiveGlide = () => (
   <motion.span
     layoutId="nav-active"
     aria-hidden
-    className="absolute inset-0 rounded-lg border border-primary/30 bg-primary/15"
+    className="absolute inset-0 rounded-md bg-accent"
     transition={{ type: 'spring', stiffness: 520, damping: 38 }}
   />
 )
 
 const Label = ({ children }: { children: string }) => (
-  <p className="px-2 pt-4 pb-1.5 text-xs font-medium text-muted-foreground/70 first:pt-0">{children}</p>
+  <p className="px-2 pt-5 pb-1.5 font-mono text-[11px] tracking-wide text-muted-foreground uppercase first:pt-0">{children}</p>
 )
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {

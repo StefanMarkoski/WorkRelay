@@ -46,8 +46,8 @@ export function useOverview() {
       for (const i of integ.filter((x) => x.status === 'awaiting_bind')) {
         warnings.push({ id: `bind-${i.id}`, text: `"${i.name}" has not been bound by its store yet.`, to: '/integrations' })
       }
-      if ((failedEvents.count ?? 0) > 0) warnings.push({ id: 'failed-events', text: `${failedEvents.count} webhook event(s) failed in the last 24 hours.`, to: '/integrations' })
-      if ((runsFailed.count ?? 0) > 0) warnings.push({ id: 'failed-runs', text: `${runsFailed.count} automation run(s) failed in the last 7 days.`, to: '/executions' })
+      if ((failedEvents.count ?? 0) > 0) warnings.push({ id: 'failed-events', text: `${failedEvents.count} webhook ${failedEvents.count === 1 ? 'event' : 'events'} failed in the last 24 hours.`, to: '/integrations' })
+      if ((runsFailed.count ?? 0) > 0) warnings.push({ id: 'failed-runs', text: `${runsFailed.count} automation ${runsFailed.count === 1 ? 'run' : 'runs'} failed in the last 7 days.`, to: '/executions' })
 
       return {
         workflows: workflows.count ?? 0,

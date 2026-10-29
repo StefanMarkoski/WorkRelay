@@ -34,7 +34,7 @@ export function SignOutButton() {
   const initials = (email.split('@')[0] || '?').slice(0, 2).toUpperCase()
   return (
     <div className="flex items-center gap-2 border-l pl-3">
-      <span aria-hidden className="grid size-7 place-items-center rounded-md bg-primary text-xs font-medium text-primary-foreground">
+      <span aria-hidden className="grid size-7 place-items-center rounded-md border bg-secondary text-xs font-medium text-foreground">
         {initials}
       </span>
       <span className="hidden max-w-44 truncate text-xs font-medium xl:block" title={email}>

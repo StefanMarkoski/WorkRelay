@@ -7,7 +7,7 @@ const TONE: Record<string, BadgeTone> = {
   failed: 'danger', rejected: 'danger', revoked: 'danger', cancelled: 'danger', refunded: 'danger',
   pending: 'warning', waiting_approval: 'warning', awaiting_bind: 'warning', received: 'warning',
   unpaid: 'warning', unfulfilled: 'warning', partial: 'warning', authorized: 'warning', partially_refunded: 'warning',
-  running: 'violet', processing: 'violet', draft: 'neutral', ignored: 'neutral', skipped: 'neutral', unknown: 'neutral',
+  running: 'info', processing: 'info', draft: 'neutral', ignored: 'neutral', skipped: 'neutral', unknown: 'neutral',
 }
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {

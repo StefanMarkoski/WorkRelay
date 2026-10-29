@@ -1,24 +1,26 @@
-import { ArrowRight, Check } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { DispatchSlip } from './dispatch-slip'
 
 export const LOGIN_HREF = '#/login'
 
 export function LoginLink({ className, children = 'Continue with log in', size = 'default' }: { className?: string; children?: React.ReactNode; size?: 'default' | 'lg' }) {
   return (
-    <a href={LOGIN_HREF} className={cn(buttonVariants({ size }), 'font-medium', className)}>
+    <a href={LOGIN_HREF} className={cn(buttonVariants({ size }), 'font-medium', size === 'lg' && 'h-11 px-5 text-[0.9375rem]', className)}>
       {children}
       <ArrowRight data-icon="inline-end" />
     </a>
   )
 }
 
-const Eyebrow = ({ children }: { children: string }) => (
-  <p className="mb-3 font-mono text-[11px] tracking-[0.14em] text-primary uppercase">{children}</p>
-)
+/** One lit lamp, used wherever the page needs a bullet. The same part the relay unit is made of. */
+function Lamp() {
+  return <span aria-hidden className="mt-[0.55em] size-2 shrink-0 rounded-full bg-primary" />
+}
 
 const H2 = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <h2 className={cn('font-display text-balance text-3xl leading-[1.05] font-semibold tracking-tight sm:text-4xl', className)}>{children}</h2>
+  <h2 className={cn('font-display text-balance text-3xl leading-[1.05] font-semibold tracking-[-0.025em] sm:text-4xl lg:text-[2.75rem]', className)}>{children}</h2>
 )
 
 const QUESTIONS: { q: string; a: string }[] = [
@@ -32,16 +34,17 @@ const QUESTIONS: { q: string; a: string }[] = [
 
 export function Ledger() {
   return (
-    <section id="what-you-get" aria-labelledby="ledger-title" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:py-28">
-      <Eyebrow>What you get</Eyebrow>
-      <H2 className="max-w-2xl" >
-        <span id="ledger-title">The questions you ask about orders all day. Answered.</span>
-      </H2>
-      <dl className="mt-12 divide-y border-y">
+    <section id="what-you-get" aria-labelledby="ledger-title" className="mx-auto grid max-w-[1200px] scroll-mt-16 gap-12 px-6 py-20 sm:py-28 lg:grid-cols-12 lg:gap-8">
+      <div className="lg:col-span-5">
+        <H2 className="lg:sticky lg:top-28 lg:max-w-md">
+          <span id="ledger-title">The questions you ask about orders all day. Answered.</span>
+        </H2>
+      </div>
+      <dl className="divide-y border-y lg:col-span-7">
         {QUESTIONS.map(({ q, a }) => (
-          <div key={q} className="grid gap-2 py-6 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-10">
-            <dt className="font-display text-xl font-medium tracking-tight sm:text-2xl">{q}</dt>
-            <dd className="text-muted-foreground">{a}</dd>
+          <div key={q} className="grid gap-2 py-6 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-8">
+            <dt className="font-display text-lg font-medium tracking-tight sm:text-xl">{q}</dt>
+            <dd className="max-w-[60ch] text-muted-foreground">{a}</dd>
           </div>
         ))}
       </dl>
@@ -57,33 +60,28 @@ const STEPS = [
 
 export function Setup() {
   return (
-    <section id="how-it-works" aria-labelledby="setup-title" className="scroll-mt-20 border-y bg-muted/30">
-      <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:py-28 lg:grid-cols-2 lg:gap-16">
-        <div>
-          <Eyebrow>How it works</Eyebrow>
+    <section id="how-it-works" aria-labelledby="setup-title" className="scroll-mt-16 border-y bg-muted/40">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 px-6 py-20 sm:py-28 lg:grid-cols-12 lg:gap-8 [&>div]:min-w-0">
+        <div className="lg:col-span-5">
           <H2><span id="setup-title">Connect a shop in three steps.</span></H2>
-          <p className="mt-4 max-w-md text-muted-foreground">If your shop can send a webhook, it can connect. Custom-built shops need no extra software.</p>
-          <ol className="mt-10 space-y-7">
+          <p className="mt-5 max-w-[44ch] text-muted-foreground">If your shop can send a webhook, it can connect. Custom-built shops need no extra software.</p>
+          <ol className="mt-12 space-y-8">
             {STEPS.map((s, i) => (
               <li key={s.t} className="flex gap-4">
-                <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border font-mono text-xs text-muted-foreground">{i + 1}</span>
+                <span className="tnum mt-0.5 grid size-7 shrink-0 place-items-center rounded-md border font-mono text-xs text-muted-foreground">{i + 1}</span>
                 <div>
                   <h3 className="font-display text-lg font-medium">{s.t}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
+                  <p className="mt-1 max-w-[48ch] text-sm text-muted-foreground">{s.d}</p>
                 </div>
               </li>
             ))}
           </ol>
+          <p className="mt-8 text-sm">
+            <a href="https://github.com/StefanMarkoski/WorkRelay/blob/main/documentation/shop-webhook-integration.md" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Read the integration guide</a>
+          </p>
         </div>
-        <div className="self-center">
-          <p className="mb-2 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">For the developer</p>
-          <pre className="overflow-x-auto rounded-xl border border-white/10 bg-[oklch(0.17_0.015_275)] p-5 font-mono text-[12.5px] leading-relaxed text-[oklch(0.86_0.01_275)]">
-            <span className="text-[oklch(0.7_0.1_160)]">POST</span> https://…/order-webhook{'\n'}
-            <span className="text-[oklch(0.72_0.06_270)]">Authorization:</span> Bearer wr_live_••••••••{'\n'}
-            <span className="text-[oklch(0.72_0.06_270)]">X-Store-Id:</span> your-shop{'\n\n'}
-            {'{ '}<span className="text-[oklch(0.72_0.06_270)]">"event_type"</span>: <span className="text-[oklch(0.82_0.12_295)]">"order.created"</span>,{'\n'}
-            {'  '}<span className="text-[oklch(0.72_0.06_270)]">"order"</span>: {'{ … } }'}
-          </pre>
+        <div className="lg:col-span-6 lg:col-start-7">
+          <DispatchSlip />
         </div>
       </div>
     </section>
@@ -99,21 +97,20 @@ const FACTS = [
 
 export function Trust() {
   return (
-    <section id="trust" aria-labelledby="trust-title" className="mx-auto max-w-6xl scroll-mt-20 px-5 py-20 sm:py-28">
-      <Eyebrow>Built to be trusted</Eyebrow>
-      <H2 className="max-w-xl"><span id="trust-title">It watches your orders. It never touches your money.</span></H2>
-      <ul className="mt-12 grid gap-x-12 gap-y-8 sm:grid-cols-2">
+    <section id="trust" aria-labelledby="trust-title" className="mx-auto max-w-[1200px] scroll-mt-16 px-6 py-20 sm:py-28">
+      <H2 className="max-w-2xl"><span id="trust-title">It watches your orders. It never touches your money.</span></H2>
+      <ul className="mt-14 grid gap-x-16 gap-y-8 sm:grid-cols-2">
         {FACTS.map((f) => (
-          <li key={f.t} className="flex gap-3">
-            <Check className="mt-1 size-4 shrink-0 text-primary" aria-hidden />
-            <p>
+          <li key={f.t} className="flex gap-4">
+            <Lamp />
+            <p className="max-w-[48ch]">
               <span className="font-medium">{f.t}</span>{' '}
               <span className="text-muted-foreground">{f.d}</span>
             </p>
           </li>
         ))}
       </ul>
-      <p className="mt-10 max-w-xl text-sm text-muted-foreground">
+      <p className="mt-12 max-w-[56ch] text-sm text-muted-foreground">
         WorkRelay reads and reacts. It does not charge cards, issue refunds, or change orders in your shop.
       </p>
     </section>
@@ -122,13 +119,13 @@ export function Trust() {
 
 export function FinalCta() {
   return (
-    <section aria-labelledby="cta-title" className="px-5 pb-20 sm:pb-28">
-      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-2xl border bg-card px-7 py-10 sm:flex-row sm:items-center sm:px-12">
+    <section aria-labelledby="cta-title" className="px-6 pb-20 sm:pb-28">
+      <div className="housing mx-auto flex max-w-[1200px] flex-col items-start justify-between gap-8 px-8 py-12 sm:flex-row sm:items-center sm:px-12">
         <div>
-          <h2 id="cta-title" className="font-display text-balance text-3xl leading-tight font-semibold tracking-tight">Your next order is on its way.</h2>
+          <h2 id="cta-title" className="font-display text-balance text-3xl leading-tight font-semibold tracking-[-0.025em]">Your next order is on its way.</h2>
           <p className="mt-2 text-muted-foreground">Log in and see it arrive.</p>
         </div>
-        <LoginLink size="lg" />
+        <LoginLink size="lg">Log in</LoginLink>
       </div>
     </section>
   )

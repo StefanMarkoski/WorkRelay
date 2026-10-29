@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { Field, Input } from '@/components/ui/input'
 import { useAuth } from '@/features/auth/auth-provider'
 import { errorMessage, supabase } from '@/lib/supabase'
@@ -33,23 +32,15 @@ export function OnboardingPage() {
         <div>
           <h1 className="text-lg font-semibold">Create your workspace</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            A workspace holds your workflows, integrations and orders. You will be its owner.
+            A workspace holds your automations, integrations and orders. You will be its owner.
           </p>
         </div>
         <Field label="Workspace name" error={error}>
           {(id) => <Input id={id} name="name" placeholder="Acme Operations" maxLength={120} required autoFocus />}
         </Field>
-        <ShimmerButton
-          type="submit"
-          disabled={busy}
-          borderRadius="8px"
-          background="var(--primary)"
-          shimmerColor="oklch(0.95 0.05 285)"
-          shimmerDuration="4s"
-          className="h-9 w-full text-sm font-medium text-primary-foreground disabled:opacity-60"
-        >
+        <Button type="submit" disabled={busy} className="h-9 w-full text-sm font-medium">
           {busy ? 'Creating…' : 'Create workspace'}
-        </ShimmerButton>
+        </Button>
         <Button type="button" variant="ghost" size="sm" className="w-full" onClick={signOut}>
           Sign out
         </Button>

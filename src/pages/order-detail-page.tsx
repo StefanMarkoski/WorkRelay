@@ -24,14 +24,17 @@ function AddressBlock({ title, a }: { title: string; a: Order['billing_address']
   )
 }
 
+const ITEM_CAP = 50
+
 const Row = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex justify-between py-1 text-sm"><span className="text-muted-foreground">{label}</span><span className="tabular-nums">{value}</span></div>
+  <div className="flex justify-between gap-4 py-1 text-sm"><span className="shrink-0 text-muted-foreground">{label}</span><span className="min-w-0 text-right tabular-nums [overflow-wrap:anywhere]">{value}</span></div>
 )
 
 export function OrderDetailPage() {
   const { id } = useParams()
   const qc = useQueryClient()
   const [note, setNote] = useState('')
+  const [showAllItems, setShowAllItems] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -92,11 +95,11 @@ export function OrderDetailPage() {
               <Table>
                 <THead><tr><TH>Product</TH><TH>SKU</TH><TH className="text-right">Qty</TH><TH className="text-right">Unit price</TH><TH className="text-right">Line total</TH></tr></THead>
                 <tbody>
-                  {items.map((it) => (
+                  {(showAllItems ? items : items.slice(0, ITEM_CAP)).map((it) => (
                     <TR key={it.id}>
                       <TD>{it.name ?? '—'}</TD>
                       <TD className="font-mono text-xs">{it.sku ?? '—'}</TD>
-                      <TD className="text-right tabular-nums">{it.quantity ?? '—'}</TD>
+                      <TD className="text-right tabular-nums">{it.quantity != null ? it.quantity.toLocaleString() : '—'}</TD>
                       <TD className="text-right tabular-nums">{formatMoney(it.unit_price_minor, cur)}</TD>
                       <TD className="text-right tabular-nums">
                         {it.quantity != null && it.unit_price_minor != null ? formatMoney(it.quantity * it.unit_price_minor, cur) : '—'}
@@ -105,6 +108,11 @@ export function OrderDetailPage() {
                   ))}
                 </tbody>
               </Table>
+            )}
+            {!showAllItems && items.length > ITEM_CAP && (
+              <div className="border-t px-4 py-3">
+                <Button variant="outline" size="sm" onClick={() => setShowAllItems(true)}>Show all {items.length.toLocaleString()} items</Button>
+              </div>
             )}
             <CardBody className="border-t">
               <Row label="Subtotal" value={formatMoney(o.subtotal_minor, cur)} />

@@ -1,3 +1,4 @@
+import { BrandMark } from '@/components/common/brand-mark'
 import { useState, type FormEvent } from 'react'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -47,12 +48,12 @@ export function AuthPage() {
       <div className="w-full max-w-sm space-y-6">
         <a href="#/" className="inline-block text-sm text-muted-foreground hover:text-foreground">← Back to home</a>
         <div className="flex items-center gap-2">
-          <div className="grid size-7 place-items-center rounded-md bg-primary text-sm font-bold text-primary-foreground">W</div>
-          <span className="text-base font-semibold tracking-tight">WorkRelay</span>
+          <BrandMark />
+          <span className="font-display text-base font-semibold tracking-tight">WorkRelay</span>
         </div>
         <div>
           <h1 className="text-lg font-semibold">{mode === 'signin' ? 'Sign in to your workspace' : 'Create your account'}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Operations and workflow automation for your commerce stack.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Order operations and automation for your commerce stack.</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4 rounded-lg border bg-card p-4" noValidate>
           <Field label="Email" error={errors.email}>
@@ -76,7 +77,7 @@ export function AuthPage() {
           {mode === 'signin' ? 'New to WorkRelay?' : 'Already have an account?'}{' '}
           <button
             type="button"
-            className="text-primary underline-offset-4 hover:underline"
+            className="text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground"
             onClick={() => {
               setMode(mode === 'signin' ? 'signup' : 'signin')
               setMessage(null)

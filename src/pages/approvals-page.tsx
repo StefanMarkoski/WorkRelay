@@ -60,7 +60,7 @@ export function ApprovalsPage() {
 
   return (
     <>
-      <PageHeader title="Approvals" description="Human decisions requested by workflows. A paused run resumes after a valid decision." />
+      <PageHeader title="Approvals" description="Human decisions requested by automations. A paused run resumes after a valid decision." />
       <Segmented
         className="mb-4"
         label="Approval views"
@@ -72,7 +72,7 @@ export function ApprovalsPage() {
         {query.isLoading ? <TableSkeleton rows={4} /> : query.error ? <ErrorState onRetry={() => query.refetch()} /> :
           query.data!.length === 0 ? (
             <EmptyState icon={CheckSquare} title={tab === 'pending' ? 'Nothing waiting for you' : 'No decisions yet'}
-              description={tab === 'pending' ? 'Approval requests created by workflows will show up here.' : 'Approved and rejected requests are kept here.'} />
+              description={tab === 'pending' ? 'Approval requests created by automations will show up here.' : 'Approved and rejected requests are kept here.'} />
           ) : (
             <Table>
               <THead><tr><TH>Request</TH><TH>Status</TH><TH>Reviewer</TH><TH>{tab === 'pending' ? 'Requested' : 'Decided'}</TH><TH>Comment</TH><TH><span className="sr-only">Actions</span></TH></tr></THead>
@@ -81,7 +81,7 @@ export function ApprovalsPage() {
                   <TR key={a.id}>
                     <TD className="font-medium">
                       {a.title}
-                      {a.run_id && <Link to={`/executions/${a.run_id}`} className="ml-2 text-xs font-normal text-primary hover:underline">View run</Link>}
+                      {a.run_id && <Link to={`/executions/${a.run_id}`} className="ml-2 text-xs font-normal text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View run</Link>}
                     </TD>
                     <TD><StatusBadge status={a.status} /></TD>
                     <TD className="text-muted-foreground">{a.reviewer_user_id ? 'Specific reviewer' : humanize(a.reviewer_role === 'admin' ? 'owners and admins' : a.reviewer_role === 'owner' ? 'owners only' : 'any member')}</TD>
@@ -89,7 +89,7 @@ export function ApprovalsPage() {
                     <TD className="max-w-60 truncate text-muted-foreground" title={a.comment ?? undefined}>{a.comment ?? '—'}</TD>
                     <TD className="text-right">
                       {a.status === 'pending' && (
-                        <Button size="sm" variant="outline" disabled={!mayDecide(a, userId, current.role)}
+                        <Button size="sm" disabled={!mayDecide(a, userId, current.role)}
                           title={!mayDecide(a, userId, current.role) ? 'You are not a permitted reviewer' : undefined}
                           onClick={() => { setError(null); setComment(''); setTarget(a) }}>Review</Button>
                       )}
@@ -103,7 +103,9 @@ export function ApprovalsPage() {
 
       <Modal open={target !== null} onClose={() => setTarget(null)} title={target?.title ?? 'Review request'}>
         <div className="space-y-4">
-          <div><p className="mb-1 text-xs text-muted-foreground">Context</p><JsonView value={target?.context} /></div>
+          {target?.context && Object.keys(target.context as object).length > 0 && (
+            <div><p className="mb-1 text-xs text-muted-foreground">Context</p><JsonView value={target.context} /></div>
+          )}
           <Field label="Comment (optional)" error={error}>
             {(id) => <Textarea id={id} value={comment} maxLength={2000} onChange={(e) => setComment(e.target.value)} />}
           </Field>

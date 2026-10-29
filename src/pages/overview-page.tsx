@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Inbox, Play, Plug, ShieldCheck, ShoppingCart, TriangleAlert, Zap, type LucideIcon } from 'lucide-react'
+import { AlertTriangle, Inbox, Play, Plug, ShoppingCart, Zap } from 'lucide-react'
 import type { CSSProperties } from "react"
 import { Link } from "react-router-dom"
 import { Button } from '@/components/ui/button'
@@ -14,45 +14,41 @@ import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDuration, formatMoney, humanize, timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-const TILE: Record<'violet' | 'success' | 'danger' | 'warning', string> = {
-  violet: 'border-primary/20 bg-primary/10 text-primary',
-  success: 'border-success/20 bg-success/10 text-success',
-  danger: 'border-destructive/20 bg-destructive/10 text-destructive',
-  warning: 'border-warning/20 bg-warning/10 text-warning',
+/** Each cell carries one lamp. It is lit only when the number means something: work is running, or something needs a look. */
+const LAMP: Record<'success' | 'danger' | 'warning', string> = {
+  success: 'bg-success',
+  danger: 'bg-destructive',
+  warning: 'bg-warning',
 }
 
-function Stat({ label, value, caption, note, tone, icon: Icon, to, index }: {
+function Stat({ label, value, caption, note, tone, lit, to, index }: {
   index: number
   label: string
   value: number
   caption?: string
   note: string
-  tone: keyof typeof TILE
-  icon: LucideIcon
+  tone: keyof typeof LAMP
+  lit: boolean
   to: string
 }) {
   return (
-    <Link to={to} style={{ '--i': index } as CSSProperties} className="reveal rounded-xl border bg-card p-4 outline-none transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-muted/40 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-ring">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <p className="text-2xl font-bold tabular-nums">{value === 0 ? '0' : <NumberTicker value={value} />}</p>
-            {caption && <span className="text-xs text-muted-foreground">{caption}</span>}
-          </div>
-        </div>
-        <span className={cn('grid size-8 place-items-center rounded-lg border', TILE[tone])}>
-          <Icon className="size-4" />
-        </span>
+    <Link to={to} style={{ '--i': index } as CSSProperties} className="reveal bg-card p-5 outline-none transition-colors duration-150 hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+        <span aria-hidden className={cn('size-2 rounded-full', lit ? LAMP[tone] : 'bg-[var(--lamp-off)]')} />
       </div>
-      <p className="mt-3 border-t pt-2.5 text-xs text-muted-foreground">{note}</p>
+      <div className="mt-3 flex items-baseline gap-2">
+        <p className="tnum font-display text-4xl leading-none font-semibold tracking-[-0.03em]">{value === 0 ? '0' : <NumberTicker value={value} />}</p>
+        {caption && <span className="text-xs text-muted-foreground">{caption}</span>}
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">{note}</p>
     </Link>
   )
 }
 
 const STATUS_BAR: Record<string, string> = {
-  pending: 'bg-primary',
-  processing: 'bg-warning',
+  pending: 'bg-warning',
+  processing: 'bg-info',
   completed: 'bg-success',
   cancelled: 'bg-destructive',
   unknown: 'bg-muted-foreground',
@@ -100,13 +96,13 @@ export function OverviewPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat index={0} label="Automations" value={d.workflows} tone="violet" icon={Zap} to="/automations"
+      <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        <Stat index={0} label="Automations" value={d.workflows} tone="success" lit={d.activeWorkflows > 0} to="/automations"
           note={d.workflows === 0 ? 'None set up yet' : `${d.activeWorkflows} of ${d.workflows} turned on`} />
-        <Stat index={1} label="Successful runs (7d)" value={d.runsOk} tone="success" icon={CheckCircle2} to="/executions" note="Last 7 days" />
-        <Stat index={2} label="Failed runs (7d)" value={d.runsFailed} caption={d.runsFailed === 0 ? 'none' : undefined} tone="danger" icon={TriangleAlert} to="/executions"
+        <Stat index={1} label="Successful runs (7d)" value={d.runsOk} tone="success" lit={d.runsOk > 0} to="/executions" note="Last 7 days" />
+        <Stat index={2} label="Failed runs (7d)" value={d.runsFailed} caption={d.runsFailed === 0 ? 'none' : undefined} tone="danger" lit={d.runsFailed > 0} to="/executions"
           note={d.runsFailed === 0 ? 'Nothing needs a look' : 'Open Executions to see why'} />
-        <Stat index={3} label="Pending approvals" value={d.pendingApprovals} caption={d.pendingApprovals === 0 ? 'queue clear' : undefined} tone="warning" icon={ShieldCheck} to="/approvals"
+        <Stat index={3} label="Pending approvals" value={d.pendingApprovals} caption={d.pendingApprovals === 0 ? 'queue clear' : undefined} tone="warning" lit={d.pendingApprovals > 0} to="/approvals"
           note={d.pendingApprovals === 0 ? 'Nothing is waiting' : 'Waiting for a decision'} />
       </div>
 
@@ -114,26 +110,26 @@ export function OverviewPage() {
         <Card className="reveal lg:col-span-7" style={{ '--i': 4 } as CSSProperties}>
           <CardHeader>
             <CardTitle>Recent orders</CardTitle>
-            <Link to="/orders" className="text-xs font-medium text-primary hover:underline">View all →</Link>
+            <Link to="/orders" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View all →</Link>
           </CardHeader>
           {d.recentOrders.length === 0 ? (
             <EmptyState icon={ShoppingCart} title="No orders yet" description="Orders show up here as your store sends them." />
           ) : (
             <>
               <Table>
-                <THead><tr><TH>Order</TH><TH>Customer</TH><TH className="text-right">Amount</TH><TH className="text-center">Status</TH></tr></THead>
+                <THead><tr><TH>Order</TH><TH className="hidden sm:table-cell">Customer</TH><TH className="text-right">Amount</TH><TH className="text-center">Status</TH></tr></THead>
                 <tbody>
                   {d.recentOrders.map((o) => (
                     <TR key={o.id}>
-                      <TD><Link to={`/orders/${o.id}`} className="font-medium text-primary hover:underline">{o.order_number ?? `#${o.external_id}`}</Link></TD>
-                      <TD className="text-muted-foreground">{o.customer_name ?? '—'}</TD>
+                      <TD className="min-w-28"><Link to={`/orders/${o.id}`} className="inline-block max-w-60 align-top font-medium [overflow-wrap:anywhere] text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{o.order_number ?? `#${o.external_id}`}</Link></TD>
+                      <TD className="hidden text-muted-foreground sm:table-cell">{o.customer_name ?? '—'}</TD>
                       <TD className="text-right font-medium tabular-nums">{formatMoney(o.total_minor, o.currency)}</TD>
                       <TD className="text-center"><StatusBadge status={o.status} /></TD>
                     </TR>
                   ))}
                 </tbody>
               </Table>
-              <p className="border-t px-5 py-3 text-xs text-muted-foreground">Showing {d.recentOrders.length} of {totalOrders} orders</p>
+              <p className="border-t px-5 py-3 text-xs text-muted-foreground">Showing {d.recentOrders.length} of {totalOrders} {totalOrders === 1 ? 'order' : 'orders'}</p>
             </>
           )}
         </Card>
@@ -153,13 +149,13 @@ export function OverviewPage() {
                     <span className="flex items-center gap-2"><span className={cn('size-2 rounded-full', STATUS_BAR[s.status])} />{humanize(s.status)}</span>
                     <span className="tabular-nums text-muted-foreground">{s.count} ({Math.round((s.count / totalOrders) * 100)}%)</span>
                   </div>
-                  <div className="h-2 rounded-full border bg-muted" role="img" aria-label={`${s.count} of ${totalOrders} orders`}>
-                    <div className={cn('h-full rounded-full', STATUS_BAR[s.status])} style={{ width: `${(s.count / totalOrders) * 100}%` }} />
+                  <div className="h-2 rounded-sm border bg-muted" role="img" aria-label={`${s.count} of ${totalOrders} orders`}>
+                    <div className={cn('h-full rounded-[1px]', STATUS_BAR[s.status])} style={{ width: `${(s.count / totalOrders) * 100}%` }} />
                   </div>
                 </div>
               ))
             )}
-            <Link to="/orders" className="mt-2 block w-full rounded-lg border bg-muted/50 px-3 py-2 text-center text-xs font-medium hover:bg-muted">View all orders</Link>
+            <Link to="/orders" className="mt-2 block w-full rounded-md border bg-muted/50 px-3 py-2 text-center text-xs font-medium hover:bg-muted">View all orders</Link>
           </div>
         </Card>
       </div>
@@ -168,7 +164,7 @@ export function OverviewPage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent executions</CardTitle>
-            <Link to="/executions" className="text-xs font-medium text-primary hover:underline">View all</Link>
+            <Link to="/executions" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View all</Link>
           </CardHeader>
           {d.recentRuns.length === 0 ? (
             <EmptyState icon={Zap} title="No executions yet" description={d.workflows === 0 ? 'Turn on an automation to see runs here.' : 'Runs appear when an automation is triggered.'}
@@ -179,9 +175,9 @@ export function OverviewPage() {
                 <li key={r.id}>
                   <Link to={`/executions/${r.id}`} className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3 hover:bg-muted/70">
                     <span className="flex min-w-0 items-center gap-3">
-                      <span className="grid size-7 shrink-0 place-items-center rounded bg-primary/15 text-primary"><Play className="size-3.5" /></span>
+                      <span className="grid size-7 shrink-0 place-items-center rounded-md border bg-secondary text-muted-foreground"><Play className="size-3.5" /></span>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-medium">{r.workflows?.name ?? 'Automation'}</span>
+                        <span className="line-clamp-2 text-xs font-medium [overflow-wrap:anywhere]" title={r.workflows?.name ?? undefined}>{r.workflows?.name ?? 'Automation'}</span>
                         <span className="block text-[11px] text-muted-foreground">Started {timeAgo(r.started_at ?? r.created_at)}</span>
                       </span>
                     </span>
@@ -199,7 +195,7 @@ export function OverviewPage() {
         <Card>
           <CardHeader>
             <CardTitle>Integration events</CardTitle>
-            <Link to="/integrations" className="text-xs font-medium text-primary hover:underline">View all</Link>
+            <Link to="/integrations" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View all</Link>
           </CardHeader>
           {d.recentEvents.length === 0 ? (
             <EmptyState icon={Inbox} title="No events received" description="Webhook deliveries from connected stores are listed here." />
@@ -207,7 +203,7 @@ export function OverviewPage() {
             <ul className="space-y-2 p-4 text-xs">
               {d.recentEvents.map((e) => (
                 <li key={e.id} className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3">
-                  <span className="min-w-0 truncate"><span className="mr-2 font-medium text-primary">{e.event_type ?? 'unknown'}</span><span className="font-mono text-muted-foreground">{e.event_id}</span></span>
+                  <span className="min-w-0 truncate" title={`${e.event_type ?? 'unknown'} ${e.event_id}`}><span className="mr-2 font-medium">{e.event_type ?? 'unknown'}</span><span className="font-mono text-muted-foreground">{e.event_id}</span></span>
                   <span className="flex shrink-0 items-center gap-2"><span className="text-[11px] text-muted-foreground">{timeAgo(e.received_at)}</span><StatusBadge status={e.status} /></span>
                 </li>
               ))}
@@ -218,7 +214,7 @@ export function OverviewPage() {
 
       {d.pending.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Waiting for a decision</CardTitle><Link to="/approvals" className="text-xs font-medium text-primary hover:underline">Review</Link></CardHeader>
+          <CardHeader><CardTitle>Waiting for a decision</CardTitle><Link to="/approvals" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Review</Link></CardHeader>
           <ul className="divide-y">{d.pending.map((a) => <li key={a.id} className="flex justify-between px-5 py-3 text-[13px]"><span>{a.title}</span><span className="text-xs text-muted-foreground">{timeAgo(a.created_at)}</span></li>)}</ul>
         </Card>
       )}

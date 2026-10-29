@@ -36,19 +36,19 @@ export function ExecutionDetailPage() {
         <ArrowLeft className="size-4" /> Executions
       </Link>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">{run.workflows?.name ?? 'Workflow'}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{run.workflows?.name ?? 'Automation'}</h1>
         <StatusBadge status={run.status} />
         <span className="text-sm text-muted-foreground">v{run.workflow_versions?.version ?? '?'}</span>
       </div>
 
       <Card className="mb-4">
-        <CardBody className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <CardBody className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
           <div><p className="text-xs text-muted-foreground">Trigger</p>{humanize(run.trigger_source)}</div>
-          <div><p className="text-xs text-muted-foreground">Event</p><span className="font-mono text-xs">{run.event_id ?? '—'}</span></div>
+          <div><p className="text-xs text-muted-foreground">Event</p><span className="font-mono text-xs [overflow-wrap:anywhere]">{run.event_id ?? '—'}</span></div>
           <div><p className="text-xs text-muted-foreground">Started</p>{formatDateTime(run.started_at)}</div>
           <div><p className="text-xs text-muted-foreground">Duration</p>{formatDuration(run.started_at, run.finished_at)}</div>
         </CardBody>
-        {run.error && <p role="alert" className="border-t px-4 py-3 text-sm text-destructive">{run.error}</p>}
+        {run.error && <p role="alert" className="border-t px-4 py-3 text-sm text-destructive [overflow-wrap:anywhere]">{run.error}</p>}
       </Card>
 
       <Card>
@@ -66,10 +66,10 @@ export function ExecutionDetailPage() {
                   <span className="text-xs text-muted-foreground">{formatDuration(s.started_at, s.finished_at)}</span>
                   {s.attempt > 1 && <span className="text-xs text-warning">{s.attempt} attempts</span>}
                 </div>
-                {s.error && <p role="alert" className="mt-2 text-sm text-destructive">{s.error}</p>}
+                {s.error && <p role="alert" className="mt-2 text-sm text-destructive [overflow-wrap:anywhere]">{s.error}</p>}
                 <details className="mt-2">
                   <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Input and output (sensitive values redacted)</summary>
-                  <div className="mt-2 grid gap-2 md:grid-cols-2">
+                  <div className="mt-2 grid gap-2 md:grid-cols-2 [&>div]:min-w-0">
                     <div><p className="mb-1 text-xs text-muted-foreground">Input</p><JsonView value={s.input} /></div>
                     <div><p className="mb-1 text-xs text-muted-foreground">Output</p><JsonView value={s.output} /></div>
                   </div>
