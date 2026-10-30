@@ -15,7 +15,7 @@ export interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  group: 'main' | 'management'
+  group: 'main' | 'management' | 'shops'
   /** Module is listed in navigation but not built in this phase. */
   comingSoon?: boolean
   /** Hidden from plain members (UI hint; the database enforces access). */
@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/automations', label: 'Automations', icon: Zap, group: 'main', adminOnly: true },
   { to: '/executions', label: 'Executions', icon: Play, group: 'main' },
   { to: '/approvals', label: 'Approvals', icon: CheckSquare, group: 'main' },
-  { to: '/integrations', label: 'Integrations', icon: Plug, group: 'main' },
   { to: '/inventory', label: 'Inventory', icon: Boxes, group: 'management', comingSoon: true },
   { to: '/settings', label: 'Settings', icon: Settings, group: 'management' },
+  { to: '/integrations', label: 'Integrations', icon: Plug, group: 'shops' },
 ]

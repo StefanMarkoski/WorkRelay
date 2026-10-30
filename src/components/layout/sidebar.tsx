@@ -57,6 +57,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       {visible('main').map(item)}
       <Label>Management</Label>
       {visible('management').map(item)}
+      <Label>Shops</Label>
+      {visible('shops').map(item)}
       {isAdmin && (
         <>
           <Label>Platform</Label>
