@@ -103,9 +103,36 @@ select ps_test.check('an unknown shop is ignored quietly', ps_test.code($$select
 select ps_test.as_user('00000000-0000-0000-0000-0000000000a9');
 select ps_test.check('no workspace member can announce a sync by calling it directly',
   ps_test.code($$select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Fake', 'Person', 1)$$) like '%permission denied%');
-select ps_test.check('...or read or write the events table',
-  ps_test.code($$select * from product_sync_events$$) like '%permission denied%'
-  and ps_test.code($$insert into product_sync_events (organization_id, integration_id) values ('a0000000-0000-0000-0000-0000000000a9', 'a1000000-0000-0000-0000-0000000000a9')$$) like '%permission denied%');
+select ps_test.check('...or write, change or delete events (members can only read their own workspace''s)',
+  ps_test.code($$insert into product_sync_events (organization_id, integration_id) values ('a0000000-0000-0000-0000-0000000000a9', 'a1000000-0000-0000-0000-0000000000a9')$$) like '%permission denied%'
+  and ps_test.code($$update product_sync_events set products = 99$$) like '%permission denied%'
+  and ps_test.code($$delete from product_sync_events$$) like '%permission denied%');
+select ps_test.check('a member reads this workspace''s sync events: names, roles and counts',
+  (select count(*) = 2 and bool_or(by_name = 'Marko' and by_role = 'Admin') from product_sync_events));
+reset role;
+
+-- ------------------------------------------------------------------------------------------------ remembering the last push (0022)
+delete from integration_sync;
+select record_product_push('a1000000-0000-0000-0000-0000000000a9', 'Marko', 'Admin');
+select ps_test.check('the first push creates the shop''s sync row and remembers when and who',
+  (select count(*) = 1 and bool_and(last_push_by = 'Marko (Admin)' and last_push_at > now() - interval '1 minute') from integration_sync where integration_id = 'a1000000-0000-0000-0000-0000000000a9'));
+update integration_sync set last_push_at = now() - interval '2 hours' where integration_id = 'a1000000-0000-0000-0000-0000000000a9';
+select record_product_push('a1000000-0000-0000-0000-0000000000a9', null, null);
+select ps_test.check('a later push replaces it, and a push that names nobody clears the name instead of keeping an old one',
+  (select last_push_at > now() - interval '1 minute' and last_push_by is null from integration_sync where integration_id = 'a1000000-0000-0000-0000-0000000000a9'));
+select record_product_push('a1000000-0000-0000-0000-0000000000a9', 'Dimitar', null);
+select ps_test.check('a name alone, then a role alone, read naturally',
+  (select last_push_by = 'Dimitar' from integration_sync where integration_id = 'a1000000-0000-0000-0000-0000000000a9'));
+select record_product_push('a1000000-0000-0000-0000-0000000000a9', '  ', 'Manager');
+select ps_test.check('blank name counts as none', (select last_push_by = 'Manager' from integration_sync where integration_id = 'a1000000-0000-0000-0000-0000000000a9'));
+select ps_test.check('an unknown shop is ignored quietly', ps_test.code($$select record_product_push(gen_random_uuid(), 'x', 'y')$$) = 'ok');
+select ps_test.check('a push does not disturb the schedule fields of the same row',
+  (select calls is null and source_url is null and not push_enabled from integration_sync where integration_id = 'a1000000-0000-0000-0000-0000000000a9'));
+select ps_test.as_user('00000000-0000-0000-0000-0000000000a9');
+select ps_test.check('a member can read when and by whom the shop last pushed, but cannot record a push, and still cannot read the auth header',
+  (select last_push_by = 'Manager' from integration_sync where integration_id = 'a1000000-0000-0000-0000-0000000000a9')
+  and ps_test.code($$select record_product_push('a1000000-0000-0000-0000-0000000000a9', 'Fake', 'Person')$$) like '%permission denied%'
+  and ps_test.code($$select auth_header from integration_sync$$) like '%permission denied%');
 reset role;
 
 select 'PASSED' as products_synced;

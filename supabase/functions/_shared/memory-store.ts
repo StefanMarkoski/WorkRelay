@@ -106,6 +106,14 @@ export class MemoryStore implements IngestStore {
     return a.items.length
   }
 
+  /** The pushes the handler remembered (the real storage is the record_product_push SQL function). */
+  pushRecords: Parameters<IngestStore['recordProductPush']>[0][] = []
+  failPushRecords = false
+  async recordProductPush(a: Parameters<IngestStore['recordProductPush']>[0]) {
+    if (this.failPushRecords) throw new Error('db down')
+    this.pushRecords.push(a)
+  }
+
   /** What the push handler announced (the real merging is the announce_products_synced SQL function). */
   announcements: Parameters<IngestStore['announceProductSync']>[0][] = []
   failAnnouncements = false

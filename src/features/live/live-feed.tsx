@@ -1,4 +1,4 @@
-import { CheckSquare, Play, ShoppingCart } from 'lucide-react'
+import { CheckSquare, Play, RefreshCw, ShoppingCart } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
@@ -15,6 +15,7 @@ const ICON: Record<LiveItem['kind'], ReactNode> = {
   order: <ShoppingCart className="size-3.5" />,
   run: <Play className="size-3.5" />,
   approval: <CheckSquare className="size-3.5" />,
+  sync: <RefreshCw className="size-3.5" />,
 }
 
 /** Re-renders on a timer so "5s ago" keeps counting without a refetch. */

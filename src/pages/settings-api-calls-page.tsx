@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { useIntegrations } from '@/features/integrations/queries'
 import { useIntegrationSyncs } from '@/features/integrations/sync'
+import { lastSynced } from '@/features/integrations/sync-freshness'
 import { SyncNowControl } from '@/features/integrations/sync-now-button'
 import { shopLabel } from '@/features/integrations/shop-label'
 import { ApiCallsKinds, SettingsTabs } from '@/features/settings/settings-tabs'
@@ -63,6 +64,7 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
 
   const hasRate = sync?.calls != null && sync.days != null
+  const fresh = lastSynced(sync)
   const dirty =
     url.trim() !== (sync?.source_url ?? '') || header !== '' || clearHeader || paused !== (sync?.paused ?? false)
 
@@ -107,8 +109,9 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
             <dd className="text-xs text-muted-foreground">{hasRate ? formatSyncPace(sync!.calls, sync!.days) : 'Set by WorkRelay'}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Last successful check</dt>
-            <dd className="mt-0.5 font-medium" title={formatDateTime(sync?.last_sync_at)}>{sync?.last_sync_at ? timeAgo(sync.last_sync_at) : 'Never'}</dd>
+            <dt className="text-xs text-muted-foreground">Last synced</dt>
+            <dd className="mt-0.5 font-medium" title={fresh.at ? formatDateTime(fresh.at) : undefined}>{fresh.at ? timeAgo(fresh.at) : 'Never'}</dd>
+            {fresh.how && <dd className="text-xs text-muted-foreground">{fresh.how === 'push' ? `Sent by ${fresh.by ?? 'the shop'}` : 'Checked by WorkRelay'}</dd>}
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Next check</dt>

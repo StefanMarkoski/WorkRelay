@@ -106,12 +106,11 @@ describe('telling the team a shop synced', () => {
     expect(store.announcements.map((a) => [a.byName, a.byRole])).toEqual([[null, 'Manager'], ['Ana', null]])
   })
 
-  it('stays silent for a push marked quiet (an automatic background job)', async () => {
+  it('does not let the shop decide: a push that says "quiet" is applied and announced like any other', async () => {
     expect((await send({ products: [{ sku: 'A', stock: 1 }], quiet: true })).status).toBe(200)
-    expect(store.productReports).toHaveLength(1) // the stock was still applied
-    expect(store.announcements).toHaveLength(0)
-    await send({ products: [{ sku: 'A', stock: 1 }], quiet: false })
+    expect(store.productReports).toHaveLength(1)
     expect(store.announcements).toHaveLength(1)
+    expect(store.pushRecords).toHaveLength(1)
   })
 
   it('announces nothing when quick sync is not allowed, when the push is rejected, or when there was nothing in it', async () => {
@@ -131,13 +130,12 @@ describe('telling the team a shop synced', () => {
     expect(store.productReports).toHaveLength(1)
   })
 
-  it('rejects a malformed synced_by or quiet, naming the field and never the value', async () => {
+  it('rejects a malformed synced_by, naming the field and never the value', async () => {
     for (const body of [
       { products: [], synced_by: 'Marko' },
       { products: [], synced_by: { name: 5 } },
       { products: [], synced_by: { name: 'x'.repeat(121) } },
       { products: [], synced_by: { role: 'x'.repeat(61) } },
-      { products: [], quiet: 'yes' },
     ]) {
       const res = await send(body)
       expect(res.status, JSON.stringify(body).slice(0, 60)).toBe(400)
@@ -145,6 +143,29 @@ describe('telling the team a shop synced', () => {
     const detail = (await (await send({ products: [], synced_by: { name: 5 } })).json()).detail as string
     expect(detail).toContain('synced_by.name')
     expect(store.announcements).toHaveLength(0)
+  })
+})
+
+describe('remembering the last push', () => {
+  it('records every applied push with who pressed the button, for "synced X minutes ago"', async () => {
+    await send({ products: [{ sku: 'A', stock: 1 }], synced_by: { name: 'Marko', role: 'Admin' } })
+    expect(store.pushRecords).toEqual([{ integrationId: shop.id, byName: 'Marko', byRole: 'Admin' }])
+  })
+
+  it('records nothing when the push was not applied or had nothing in it', async () => {
+    store.pushEnabled.clear()
+    await send({ products: [{ sku: 'A', stock: 1 }] })
+    store.pushEnabled.add(shop.id)
+    await send({ products: [{ sku: 'A', stock: 'many' }] })
+    await send({ products: [] })
+    expect(store.pushRecords).toHaveLength(0)
+  })
+
+  it('never fails a push, and still announces it, when the record cannot be saved', async () => {
+    store.failPushRecords = true
+    const res = await send({ products: [{ sku: 'A', stock: 1 }], synced_by: { name: 'Marko' } })
+    expect(res.status).toBe(200)
+    expect(store.announcements).toHaveLength(1)
   })
 })
 

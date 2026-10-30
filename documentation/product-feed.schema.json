@@ -156,12 +156,6 @@
           "type": "null"
         }
       ]
-    },
-    "quiet": {
-      "type": [
-        "boolean",
-        "null"
-      ]
     }
   },
   "required": [

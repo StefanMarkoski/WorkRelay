@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import type { IntegrationSync } from '@/types/db'
 
 export const SYNC_COLUMNS =
-  'integration_id, source_url, has_auth_header, push_enabled, paused, calls, days, next_sync_at, last_sync_at, last_error, window_start, window_used'
+  'integration_id, source_url, has_auth_header, push_enabled, paused, calls, days, next_sync_at, last_sync_at, last_error, window_start, window_used, last_push_at, last_push_by'
 
 /** Every shop's feed settings in this workspace (the auth header is never part of it). */
 export function useIntegrationSyncs() {

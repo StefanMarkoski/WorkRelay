@@ -2,7 +2,6 @@ import { RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
-import { timeAgo } from '@/lib/format'
 import { useNow } from '@/lib/use-now'
 import { useIntegrations } from './queries'
 import { shopLabel } from './shop-label'
@@ -31,7 +30,6 @@ export function SyncNowControl({ shopId, className }: { shopId: string; classNam
     return { shop, sync, state: syncNowState(sync, now) }
   })
   const eligible = targets.filter((t) => t.state.available)
-  const lastChecked = targets.reduce<string | null>((latest, t) => (t.sync?.last_sync_at && (!latest || t.sync.last_sync_at > latest) ? t.sync.last_sync_at : latest), null)
   const cooling = now < coolUntil
   const firstRefusal = targets.find((t) => !t.state.available)?.state
 
@@ -59,12 +57,9 @@ export function SyncNowControl({ shopId, className }: { shopId: string; classNam
     <div className={className}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-xs text-muted-foreground" aria-live="polite">
-          {lastChecked ? `Stock checked ${timeAgo(lastChecked)}` : 'Stock has not been checked yet'}
-          {canManage && eligible.length === 1 && eligible[0].state.available && eligible[0].sync?.days
-            ? ` · ${callsLeftText(eligible[0].state, eligible[0].sync.days)}`
-            : ''}
+          {canManage && eligible.length === 1 && eligible[0].state.available && eligible[0].sync?.days ? callsLeftText(eligible[0].state, eligible[0].sync.days) : ''}
           {canManage && !shopId && eligible.length > 0 && eligible.length < targets.length
-            ? ` · ${targets.length - eligible.length} shop${targets.length - eligible.length === 1 ? '' : 's'} skipped (see Settings → API Calls → Inventory)`
+            ? `${eligible.length === 1 && eligible[0].sync?.days ? ' · ' : ''}${targets.length - eligible.length} shop${targets.length - eligible.length === 1 ? '' : 's'} skipped (see Settings → API Calls → Inventory)`
             : ''}
         </p>
         {canManage && (

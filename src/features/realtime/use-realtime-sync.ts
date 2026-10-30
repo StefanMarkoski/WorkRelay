@@ -16,6 +16,8 @@ const TABLES: Record<string, QueryKey[]> = {
   workflow_runs: [['runs'], ['run'], ['overview'], ['automations'], ['live'], ['insights']],
   step_runs: [['run']],
   approvals: [['approvals'], ['overview'], ['live']],
+  // A shop's push: the Live feed, the stock it just changed, and the "synced X ago" lines all refresh. (integration_sync is never published: it holds a secret.)
+  product_sync_events: [['live'], ['products'], ['product'], ['integration-sync'], ['insights']],
 }
 
 const DEBOUNCE_MS = 300

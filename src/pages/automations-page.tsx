@@ -226,6 +226,7 @@ export function AutomationsPage() {
                     Fires when a shop sends its products to WorkRelay, for example when someone presses the sync button in the shop's own admin.
                     The message says who did it, when the shop tells us, and a sync sent in several parts is announced once.
                     Scheduled checks and <span className="font-medium text-foreground">Sync now</span> from WorkRelay do not count. The shop needs quick sync switched on by WorkRelay.
+                    You decide who is notified, here: the shop cannot turn it off. To stop it for one shop, untick that shop below, or switch the automation off.
                   </p>
                 )}
                 {editing.config.event === 'low_stock' && (

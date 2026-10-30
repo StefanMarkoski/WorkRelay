@@ -13,11 +13,12 @@ begin
     raise notice 'skip - realtime publication not available'; return;
   end if;
   perform pg_temp.check('client-readable tables are published',
-    (select count(*) = 5 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public'
-       and tablename in ('orders', 'order_events', 'workflow_runs', 'step_runs', 'approvals')));
+    (select count(*) = 6 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public'
+       and tablename in ('orders', 'order_events', 'workflow_runs', 'step_runs', 'approvals', 'product_sync_events')));
   perform pg_temp.check('tables with secrets or raw customer data are NOT published',
     (select count(*) = 0 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public'
-       and tablename in ('webhook_events', 'integrations', 'workflows', 'workflow_versions', 'memberships', 'platform_admins')));
+       and tablename in ('webhook_events', 'integrations', 'workflows', 'workflow_versions', 'memberships', 'platform_admins',
+                        'integration_sync', 'products', 'stock_events', 'low_stock_events', 'customers')));
 end $$;
 
 -- fixtures: one enabled order-created workflow

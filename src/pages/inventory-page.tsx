@@ -15,6 +15,7 @@ import { useInventoryHealth } from '@/features/insights/queries'
 import { NotifyEdit } from '@/features/inventory/notify-edit'
 import { PRICE_SOURCE_LABEL } from '@/features/inventory/price-source'
 import { useIntegrations } from '@/features/integrations/queries'
+import { ShopFreshness } from '@/features/integrations/shop-freshness'
 import { SyncNowControl } from '@/features/integrations/sync-now-button'
 import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
@@ -83,7 +84,10 @@ export function InventoryPage() {
         </Card>
       )}
       <Card className="mb-6 flex flex-wrap items-center gap-3 p-4">
-        <div className="order-last ml-auto"><SyncNowControl shopId={shopId} /></div>
+        <div className="order-last flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t pt-3">
+          <ShopFreshness shopId={shopId} />
+          <SyncNowControl shopId={shopId} />
+        </div>
         {shops.length > 1 && (
           <Select aria-label="Shop" className="w-auto min-w-40" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
             <option value="">All shops</option>

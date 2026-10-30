@@ -56,9 +56,12 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'se2', product_id: 'pr1', stock_before: 12, stock_after: 9, source: 'pull', occurred_at: ago(60 * 20) },
     { id: 'se3', product_id: 'pr1', stock_before: null, stock_after: 12, source: 'pull', occurred_at: ago(60 * 24 * 3) },
   ],
+  product_sync_events: [
+    { id: 'ps1', organization_id: ORG, integration_id: SHOP_1, by_name: 'Marko', by_role: 'Admin', products: 1250, created_at: ago(12) },
+  ],
   integration_sync: [
-    { integration_id: SHOP_1, organization_id: ORG, source_url: 'https://pazarmax.example/workrelay/products', has_auth_header: true, push_enabled: true, paused: false, calls: 15, days: 1, next_sync_at: ago(-50), last_sync_at: ago(46), last_error: null, window_start: ago(60 * 5), window_used: 4 },
-    { integration_id: SHOP_2, organization_id: ORG, source_url: 'https://ignis.example/feed', has_auth_header: false, push_enabled: false, paused: false, calls: 4, days: 7, next_sync_at: ago(-60 * 20), last_sync_at: null, last_error: 'The shop answered with HTTP 503', window_start: ago(60 * 24), window_used: 4 },
+    { integration_id: SHOP_1, organization_id: ORG, source_url: 'https://pazarmax.example/workrelay/products', has_auth_header: true, push_enabled: true, paused: false, calls: 15, days: 1, next_sync_at: ago(-50), last_sync_at: ago(46), last_error: null, window_start: ago(60 * 5), window_used: 4, last_push_at: ago(12), last_push_by: 'Marko (Admin)' },
+    { integration_id: SHOP_2, organization_id: ORG, source_url: 'https://ignis.example/feed', has_auth_header: false, push_enabled: false, paused: false, calls: 4, days: 7, next_sync_at: ago(-60 * 20), last_sync_at: null, last_error: 'The shop answered with HTTP 503', window_start: ago(60 * 24), window_used: 4, last_push_at: null, last_push_by: null },
   ],
   order_events: [
     { id: 'e1', order_id: 'o1', source: 'external', type: 'order.created', occurred_at: ago(1), actor_user_id: null, data: { applied: ['status', 'totals'], status_to: 'pending' } },

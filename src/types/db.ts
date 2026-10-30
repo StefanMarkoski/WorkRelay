@@ -257,6 +257,9 @@ export interface IntegrationSync {
   /** The shop's current call window: started at its first call, renewed after `days`. */
   window_start: string | null
   window_used: number
+  /** When the shop last pushed its products, and who pressed the button when it said so. */
+  last_push_at: string | null
+  last_push_by: string | null
 }
 
 /** A row of admin_list_tenant_shops. */

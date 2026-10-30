@@ -29,9 +29,23 @@ describe('mergeLive', () => {
     expect(r.to).toBe('/executions/r')
     expect(r.status).toBe('succeeded')
   })
+  it('shows a shop pushing its products, naming who pressed the button and how many were sent', () => {
+    const sync = (over: object = {}) => ({ id: 's1', integration_id: 'shopA', by_name: 'Marko', by_role: 'Admin', products: 1250, created_at: '2026-10-30T10:00:00Z', ...over })
+    const [s] = mergeLive([], [], [], [sync()])
+    expect(s).toMatchObject({ kind: 'sync', id: 's-s1', to: '/inventory', shopId: 'shopA', title: 'Marko (Admin) synced their products: 1,250 products' })
+    expect(mergeLive([], [], [], [sync({ by_role: null })])[0].title).toBe('Marko synced their products: 1,250 products')
+    expect(mergeLive([], [], [], [sync({ by_name: null })])[0].title).toBe('Admin synced their products: 1,250 products')
+    expect(mergeLive([], [], [], [sync({ by_name: null, by_role: null, products: 0 })])[0].title).toBe('A shop synced their products')
+  })
+
+  it('puts a push among the other things, newest first', () => {
+    const items = mergeLive([order('1', '2026-10-30T10:00:00Z')], [], [], [{ id: 's', integration_id: 'shopA', by_name: null, by_role: null, products: 3, created_at: '2026-10-30T10:00:30Z' }])
+    expect(items.map((i) => i.kind)).toEqual(['sync', 'order'])
+  })
+
   it('keeps only the newest few', () => {
     const many = Array.from({ length: 30 }, (_, i) => order(String(i), `2026-10-30T10:${String(i).padStart(2, '0')}:00Z`))
-    const items = mergeLive(many, [], [], 14)
+    const items = mergeLive(many, [], [], [], 14)
     expect(items).toHaveLength(14)
     expect(items[0].id).toBe('o-29')
   })
