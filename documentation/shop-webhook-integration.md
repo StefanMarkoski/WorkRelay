@@ -407,7 +407,7 @@ Same key and the same `X-Store-Id` as the order webhook (the key is already boun
 **up to 500 products and 1 MB per request.**
 
 **Switching it on:** WorkRelay switches *quick sync* on for the shop (a platform setting, so ask WorkRelay; the workspace sees whether it is allowed under
-**Settings → API Calls**). It is off by default and per shop; until then pushes are answered with `202` and not applied.
+**Settings → API Calls → Inventory**). It is off by default and per shop; until then pushes are answered with `202` and not applied.
 
 ```bash
 curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" \
@@ -426,7 +426,7 @@ There is no `event_id`: reports are safe to repeat, so on a network error or 5xx
 
 ### Pull: WorkRelay calls the shop
 
-Under **Settings → API Calls**, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
+Under **Settings → API Calls → Inventory**, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
 value. WorkRelay then requests the URL on a schedule:
 
 ```
@@ -439,7 +439,7 @@ The shop answers `200` (any `2xx`) with the feed above, either `{"products":[...
 catalogue, or at least every product whose stock should be kept current.
 
 - **How often is set by WorkRelay**, per shop, as *calls per number of days* (for example 15 calls per day is about one call every
-  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on Settings → API Calls. The fastest possible is one
+  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on Settings → API Calls → Inventory. The fastest possible is one
   call every 5 minutes. A call that fails still counts, and is not retried before the next scheduled time.
 - **Limits:** up to **5,000 products and 5 MB** per answer, **15 seconds** to respond. Larger catalogues are not supported yet.
 - **Safety rules:** the URL must be `https`, must resolve to a public address (no private networks or `localhost`), and **redirects are not
@@ -447,7 +447,7 @@ catalogue, or at least every product whose stock should be kept current.
   sent only to that URL.
 - **Timestamps:** each product is stamped with the moment WorkRelay *sent* the request unless it carries its own `updated_at`, so a push
   that happened while the answer was on its way is not overwritten.
-- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on Settings → API Calls, and nothing from
+- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on Settings → API Calls → Inventory, and nothing from
   that answer is applied.
 - A schedule can be paused per shop. If no schedule has been set for a shop, WorkRelay does not call it; ask WorkRelay to set one.
 

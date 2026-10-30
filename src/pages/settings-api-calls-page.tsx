@@ -12,7 +12,7 @@ import { useIntegrations } from '@/features/integrations/queries'
 import { useIntegrationSyncs } from '@/features/integrations/sync'
 import { SyncNowControl } from '@/features/integrations/sync-now-button'
 import { shopLabel } from '@/features/integrations/shop-label'
-import { SettingsTabs } from '@/features/settings/settings-tabs'
+import { ApiCallsKinds, SettingsTabs } from '@/features/settings/settings-tabs'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatSyncPace, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
@@ -27,10 +27,14 @@ export function SettingsApiCallsPage() {
     <>
       <PageHeader title="Settings" description="Workspace details and who can access them." />
       <SettingsTabs />
-      <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
-        WorkRelay can ask each shop for its products and stock on a schedule, so Inventory stays correct even when the shop does not push updates.
-        You say where to ask; how often is set by WorkRelay for your plan.
-      </p>
+      <ApiCallsKinds />
+      <div className="mb-5 max-w-3xl">
+        <h2 className="font-display text-lg font-semibold tracking-[-0.01em]">Inventory API calls</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          How WorkRelay keeps each shop's products and stock up to date. It can ask the shop for them on a schedule, and the shop can also send them
+          to WorkRelay. You say where to ask; how often, and whether the shop may send, is set by WorkRelay for your plan.
+        </p>
+      </div>
       {integrations.isLoading || syncs.isLoading ? (
         <TableSkeleton rows={3} />
       ) : integrations.error || syncs.error ? (

@@ -29,8 +29,8 @@ export interface SyncNowDeps {
 /** What each refusal means, in words a shop owner can act on. The app shows these. */
 export const REFUSALS: Record<string, string> = {
   not_scheduled: 'WorkRelay has not set up scheduled checks for this shop yet, so Sync now is not available. Ask WorkRelay to set them up.',
-  no_url: 'This shop has no products URL yet. Add one under Settings → API Calls.',
-  paused: 'Checks for this shop are paused. Turn the pause off under Settings → API Calls.',
+  no_url: 'This shop has no products URL yet. Add one under Settings → API Calls → Inventory.',
+  paused: 'Checks for this shop are paused. Turn the pause off under Settings → API Calls → Inventory.',
   budget_used: 'This shop has used all its calls for now. They renew automatically.',
   too_soon: 'A check just started. Give it a minute.',
   not_connected: 'This shop is not connected.',
