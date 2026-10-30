@@ -56,3 +56,21 @@ export function formatDuration(start: string | null, end: string | null): string
 }
 
 export const humanize = (v: string) => v.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+
+/** The pace of "calls per days" in words: 15 per 1 day is "about every 1h 36m". */
+export function formatSyncPace(calls: number | null | undefined, days: number | null | undefined): string {
+  if (!calls || !days) return 'Not scheduled'
+  const minutes = Math.round((days * 1440) / calls)
+  if (minutes < 60) return `about every ${minutes}m`
+  if (minutes < 1440) {
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    return `about every ${h}h${m ? ` ${m}m` : ''}`
+  }
+  const d = Math.floor(minutes / 1440)
+  const h = Math.round((minutes % 1440) / 60)
+  return `about every ${d}d${h ? ` ${h}h` : ''}`
+}
+
+/** The fastest pace the database accepts: one call every 5 minutes. */
+export const maxSyncCalls = (days: number) => days * 288

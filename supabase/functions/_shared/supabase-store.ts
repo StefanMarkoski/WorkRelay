@@ -111,6 +111,17 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
       return data === 'ok' ? 'ok' : 'disabled'
     },
 
+    async applyProducts(a) {
+      const { data, error } = await db.rpc('apply_product_sync', {
+        p_integration: a.integrationId,
+        p_items: a.items,
+        p_source: a.source,
+        p_at: a.at,
+      })
+      if (error) throw new Error(error.message)
+      return typeof data === 'number' && data >= 0 ? data : 'disabled'
+    },
+
     async applyPlan({ eventRowId, organizationId, integrationId, externalId, plan }: {
       eventRowId: string
       organizationId: string

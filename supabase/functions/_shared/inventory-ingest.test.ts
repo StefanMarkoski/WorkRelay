@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { handleInventoryWebhook } from './inventory-ingest.ts'
+import type { Logger } from './log.ts'
+import { MemoryStore } from './memory-store.ts'
+
+const KEY = `wr_live_${'f'.repeat(64)}`
+const OTHER_KEY = `wr_live_${'a'.repeat(64)}`
+const log: Logger = { info() {}, error() {} }
+
+let store: MemoryStore
+let shop: Awaited<ReturnType<MemoryStore['addIntegration']>>
+const deps = () => ({ store, log })
+
+const post = (body: unknown, headers: Record<string, string> = {}) =>
+  new Request('https://x.test/inventory-webhook', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${KEY}`, 'x-store-id': 'shop-1', ...headers },
+    body: typeof body === 'string' ? body : JSON.stringify(body),
+  })
+const send = (body: unknown, headers?: Record<string, string>) => handleInventoryWebhook(post(body, headers), deps())
+
+beforeEach(async () => {
+  store = new MemoryStore()
+  shop = await store.addIntegration(KEY, { status: 'connected', externalStoreId: 'shop-1' })
+  store.pushEnabled.add(shop.id)
+})
+
+describe('authentication', () => {
+  it('rejects a missing, unknown or revoked key, a wrong store, and other methods', async () => {
+    expect((await send({ products: [] }, { authorization: '' })).status).toBe(401)
+    expect((await send({ products: [] }, { authorization: `Bearer ${OTHER_KEY}` })).status).toBe(401)
+    expect((await send({ products: [] }, { 'x-store-id': 'someone-else' })).status).toBe(403)
+    expect((await handleInventoryWebhook(new Request('https://x.test', { method: 'GET' }), deps())).status).toBe(405)
+    shop.status = 'revoked'
+    expect((await send({ products: [{ sku: 'A' }] })).status).toBe(401)
+    expect(store.productReports).toHaveLength(0)
+  })
+})
+
+describe('the opt-in', () => {
+  it('ignores a push from a shop that has not switched pushing on', async () => {
+    store.pushEnabled.clear()
+    const res = await send({ products: [{ sku: 'A', stock: 1 }] })
+    expect(res.status).toBe(202)
+    expect(await res.json()).toEqual({ status: 'ignored', reason: 'inventory_push_disabled' })
+    expect(store.productReports).toHaveLength(0)
+  })
+})
+
+describe('the payload', () => {
+  it('needs only a sku; everything else is optional and nulls mean "unchanged"', async () => {
+    const res = await send({ products: [{ sku: ' BIKE-1 ' }, { sku: 'NAIL-1', name: null, stock: null, notify_on: null, price_minor: null }] })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ status: 'processed', applied: 2 })
+    expect(store.productReports[0]).toMatchObject({ source: 'push', integrationId: shop.id })
+    expect(store.productReports[0].items).toEqual([{ sku: 'BIKE-1' }, { sku: 'NAIL-1' }])
+  })
+
+  it('passes the optional fields through, normalises the time and ignores unknown extras', async () => {
+    await send({
+      products: [{ sku: 'B', name: 'Bike', stock: 4, notify_on: 5, price_minor: 90000, currency: 'EUR', unit: 'pcs',
+        category: 'bikes', barcode: '123', updated_at: '2026-10-30T10:00:00+02:00', warehouse: 'north', anything: { a: 1 } }],
+    })
+    expect(store.productReports[0].items[0]).toEqual({
+      sku: 'B', name: 'Bike', stock: 4, notify_on: 5, price_minor: 90000, currency: 'EUR', unit: 'pcs', category: 'bikes',
+      barcode: '123', updated_at: '2026-10-30T08:00:00.000Z',
+    })
+  })
+
+  it('accepts zero stock and a negative stock, and an empty list', async () => {
+    expect((await send({ products: [{ sku: 'A', stock: 0 }, { sku: 'B', stock: -2 }] })).status).toBe(200)
+    expect((await send({ products: [] })).status).toBe(200)
+  })
+
+  it('rejects bad input with paths only, and applies nothing', async () => {
+    const cases: unknown[] = [
+      'not json{',
+      {},
+      { products: 'x' },
+      { products: [{ name: 'no sku' }] },
+      { products: [{ sku: '' }] },
+      { products: [{ sku: 'A', stock: 1.5 }] },
+      { products: [{ sku: 'A', notify_on: -1 }] },
+      { products: [{ sku: 'A', price_minor: 100 }] }, // price needs a currency
+      { products: [{ sku: 'A', updated_at: 'yesterday' }] },
+    ]
+    for (const c of cases) {
+      const res = await send(c)
+      expect(res.status).toBe(400)
+    }
+    expect(store.productReports).toHaveLength(0)
+    const detail = (await (await send({ products: [{ sku: 'secret@x.com', stock: 'many' }] })).json()).detail as string
+    expect(detail).toContain('products.0.stock')
+    expect(detail).not.toContain('secret@x.com')
+  })
+
+  it('refuses more than 500 products in one push', async () => {
+    const products = Array.from({ length: 501 }, (_, i) => ({ sku: `S${i}` }))
+    expect((await send({ products })).status).toBe(400)
+  })
+})

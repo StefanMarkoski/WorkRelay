@@ -150,6 +150,43 @@ describe('customer notifications', () => {
   })
 })
 
+describe('low-stock notifications', () => {
+  const product = { id: 'p1', sku: 'BIKE-1', name: 'Road "Pro" bike', stock: 5, threshold: 5, unit: 'pcs', shop: 'Game Store' }
+
+  it.each((['discord', 'slack', 'generic'] as const).map((c) => [c] as const))(
+    '%s builds a valid definition and valid JSON, even with hostile text in the product name',
+    (channel) => {
+      const r = buildPresetDefinition('notify', { channel, event: 'low_stock', url: URL_OK })
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(validateDefinition(r.definition).ok).toBe(true)
+      const rendered = renderTemplate((r.definition.steps[0] as any).body, templateView({ product }), { json: true })
+      const parsed = JSON.parse(rendered)
+      expect(rendered).toContain('Road \\"Pro\\" bike')
+      expect(rendered).toContain('BIKE-1')
+      expect(JSON.stringify(parsed)).toContain('5')
+    },
+  )
+
+  it('sends the structured fields to a generic webhook', () => {
+    const r = buildPresetDefinition('notify', { channel: 'generic', event: 'low_stock', url: URL_OK }) as any
+    const body = JSON.parse(renderTemplate(r.definition.steps[0].body, templateView({ product }), { json: true }))
+    expect(body).toMatchObject({ event: 'product.low_stock', product: 'Road "Pro" bike', sku: 'BIKE-1', stock: '5', notify_on: '5', shop: 'Game Store' })
+  })
+
+  it('maps to the low-stock trigger, for all shops or the chosen ones', () => {
+    const t = (config: object) => (buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'low_stock', ...config }) as any).definition.trigger
+    expect(t({})).toEqual({ type: 'low_stock' })
+    const A = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11'
+    expect(t({ integration_ids: [A] })).toEqual({ type: 'low_stock', integration_ids: [A] })
+    expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'low_stock', integration_ids: [] }).ok).toBe(false)
+  })
+
+  it('says what it does in the list', () => {
+    expect(describePreset('notify', { channel: 'slack', event: 'low_stock', url: URL_OK }).title).toBe('Notify Slack when a product runs low on stock')
+  })
+})
+
 describe('order totals in messages follow the currency', () => {
   it('uses the currency\'s own minor unit', () => {
     const total = (minor: number, currency: string) => (templateView({ order: { total_minor: minor, currency } }) as any).order.total
@@ -165,7 +202,7 @@ describe('automations limited to shops', () => {
   const trig = (event: string, extra: object = {}) => (buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event, ...extra }) as any).definition.trigger
 
   it('puts the chosen shops on every kind of trigger, and nothing when all shops', () => {
-    for (const [event, type] of [['created', 'order_created'], ['status_changed', 'order_status_changed'], ['customer_first_order', 'customer_first_order'], ['customer_signed_up', 'customer_signup']] as const) {
+    for (const [event, type] of [['created', 'order_created'], ['status_changed', 'order_status_changed'], ['customer_first_order', 'customer_first_order'], ['customer_signed_up', 'customer_signup'], ['low_stock', 'low_stock']] as const) {
       expect(trig(event, { integration_ids: [A, B] })).toMatchObject({ type, integration_ids: [A, B] })
       expect(trig(event)).not.toHaveProperty('integration_ids')
     }

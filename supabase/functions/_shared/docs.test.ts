@@ -5,10 +5,13 @@ import { z } from 'zod'
 import { customerWebhookSchema } from './customer-contract.ts'
 import { handleCustomerWebhook } from './customer-ingest.ts'
 import { handleOrderWebhook } from './ingest.ts'
+import { PULL_MAX_PRODUCTS, PUSH_MAX_PRODUCTS, inventoryEnvelope } from './inventory-contract.ts'
+import { handleInventoryWebhook } from './inventory-ingest.ts'
 import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
 import { mapFulfillmentStatus, mapOrderStatus, mapPaymentStatus } from './normalize.ts'
 import { orderWebhookSchema } from './order-contract.ts'
+import { pullDueProducts } from './product-pull.ts'
 
 const doc = readFileSync(new URL('../../../documentation/shop-webhook-integration.md', import.meta.url), 'utf8')
 const log: Logger = { info() {}, error() {} }
@@ -18,6 +21,7 @@ const KEY = `wr_live_${'c'.repeat(64)}`
 const jsonBlocks = [...doc.matchAll(/```json\n([\s\S]*?)```/g)].map((m) => JSON.parse(m[1]) as Record<string, any>)
 const events = jsonBlocks.filter((j) => String(j.event_type ?? '').startsWith('order.'))
 const customerEvents = jsonBlocks.filter((j) => String(j.event_type ?? '').startsWith('customer.'))
+const feeds = jsonBlocks.filter((j) => Array.isArray(j.products))
 
 describe('shop integration guide', () => {
   it('has the examples it promises', () => {
@@ -99,5 +103,73 @@ describe('shop integration guide', () => {
     const generated = { title: 'WorkRelay customer webhook event', ...z.toJSONSchema(customerWebhookSchema, { io: 'input', unrepresentable: 'any' }) }
     const committed = JSON.parse(readFileSync(new URL('../../../documentation/customer-webhook.schema.json', import.meta.url), 'utf8'))
     expect(committed).toEqual(generated)
+  })
+  describe('products and stock', () => {
+    const push = (store: MemoryStore, body: unknown, headers: Record<string, string> = {}) =>
+      handleInventoryWebhook(
+        new Request('https://x.test/inventory-webhook', { method: 'POST', headers: { authorization: `Bearer ${KEY}`, 'x-store-id': 's', ...headers }, body: JSON.stringify(body) }),
+        { store, log },
+      )
+
+    it('has the feed example it promises, and it validates against the real schema', () => {
+      expect(feeds).toHaveLength(1)
+      expect(feeds[0].products.map((p: { sku: string }) => p.sku)).toEqual(['BIKE-ROAD-700', 'NAIL-100'])
+      expect(inventoryEnvelope(PUSH_MAX_PRODUCTS).safeParse(feeds[0]).success).toBe(true)
+      expect(feeds[0].products[1]).toEqual({ sku: 'NAIL-100', stock: 4800, notify_on: 5000 }) // the "only what you know" example
+    })
+
+    it('the example is applied by a shop that switched pushing on, and ignored by one that did not', async () => {
+      const on = new MemoryStore()
+      const ref = await on.addIntegration(KEY, { status: 'connected', externalStoreId: 's' })
+      on.pushEnabled.add(ref.id)
+      const ok = await push(on, feeds[0])
+      expect(ok.status).toBe(200)
+      expect(await ok.json()).toEqual({ status: 'processed', applied: 2 })
+      const off = new MemoryStore()
+      await off.addIntegration(KEY, { status: 'connected', externalStoreId: 's' })
+      const res = await push(off, feeds[0])
+      expect(res.status).toBe(202)
+      expect(await res.json()).toEqual({ status: 'ignored', reason: 'inventory_push_disabled' })
+    })
+
+    it('the curl example in the guide is a valid push', async () => {
+      const curl = doc.match(/inventory-webhook" .*\n.*\n  -d '(\{.*\})'/)
+      expect(curl).not.toBeNull()
+      expect(inventoryEnvelope(PUSH_MAX_PRODUCTS).safeParse(JSON.parse(curl![1])).success).toBe(true)
+    })
+
+    it('a pull answer in either documented shape is accepted, and a wrong one is reported', async () => {
+      const run = async (body: string) => {
+        const records: (string | null)[] = []
+        let applied = 0
+        await pullDueProducts({
+          store: {
+            async claimDue() { return [{ integrationId: 'i', sourceUrl: 'https://shop.test/p', authHeader: null }] },
+            async apply(a) { applied += a.items.length; return a.items.length },
+            async record(_id, e) { records.push(e) },
+          },
+          http: { async get() { return { status: 200, body } } },
+          log,
+        })
+        return { applied, records }
+      }
+      expect(await run(JSON.stringify(feeds[0]))).toEqual({ applied: 2, records: [null] })
+      expect(await run(JSON.stringify(feeds[0].products))).toEqual({ applied: 2, records: [null] })
+      const bad = await run('{"items":[]}')
+      expect(bad.applied).toBe(0)
+      expect(bad.records[0]).toContain('Unexpected response')
+    })
+
+    it('the limits the guide states are the limits in the code', () => {
+      expect(doc).toContain(`up to ${PUSH_MAX_PRODUCTS} products`)
+      expect(doc).toContain(`up to **${PULL_MAX_PRODUCTS.toLocaleString('en-US')} products and 5 MB**`)
+      expect(inventoryEnvelope(PUSH_MAX_PRODUCTS).safeParse({ products: Array.from({ length: PUSH_MAX_PRODUCTS + 1 }, (_, i) => ({ sku: `S${i}` })) }).success).toBe(false)
+    })
+
+    it('the committed product JSON Schema matches the validator', () => {
+      const generated = { title: 'WorkRelay product feed (push body and pull answer)', ...z.toJSONSchema(inventoryEnvelope(PULL_MAX_PRODUCTS), { io: 'input', unrepresentable: 'any' }) }
+      const committed = JSON.parse(readFileSync(new URL('../../../documentation/product-feed.schema.json', import.meta.url), 'utf8'))
+      expect(committed).toEqual(generated)
+    })
   })
 })

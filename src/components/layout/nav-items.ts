@@ -26,10 +26,10 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, group: 'main' },
   { to: '/orders', label: 'Orders', icon: ShoppingCart, group: 'main' },
   { to: '/customers', label: 'Customers', icon: Users, group: 'main' },
+  { to: '/inventory', label: 'Inventory', icon: Boxes, group: 'main' },
   { to: '/automations', label: 'Automations', icon: Zap, group: 'main', adminOnly: true },
   { to: '/executions', label: 'Executions', icon: Play, group: 'main' },
   { to: '/approvals', label: 'Approvals', icon: CheckSquare, group: 'main' },
-  { to: '/inventory', label: 'Inventory', icon: Boxes, group: 'management', comingSoon: true },
   { to: '/settings', label: 'Settings', icon: Settings, group: 'management' },
   { to: '/integrations', label: 'Integrations', icon: Plug, group: 'shops' },
 ]

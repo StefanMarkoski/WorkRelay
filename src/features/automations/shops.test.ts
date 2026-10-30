@@ -11,6 +11,7 @@ describe('which shops an automation can use', () => {
   it('offers connected shops, and for signups only those that send them', () => {
     expect(eligibleShops([A, B, C], 'created').map((s) => s.id)).toEqual(['A', 'B'])
     expect(eligibleShops([A, B, C], 'customer_first_order').map((s) => s.id)).toEqual(['A', 'B'])
+    expect(eligibleShops([A, B, C], 'low_stock').map((s) => s.id)).toEqual(['A', 'B']) // stock needs no opt-in
     expect(eligibleShops([A, B, C, D], 'customer_signed_up').map((s) => s.id)).toEqual(['A', 'D'])
   })
 })

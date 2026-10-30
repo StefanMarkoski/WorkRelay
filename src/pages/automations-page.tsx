@@ -213,12 +213,20 @@ export function AutomationsPage() {
                       <option value="cancelled">an order is cancelled</option>
                       <option value="status_changed">an order changes status</option>
                       <option value="customer_first_order">a new customer places their first order</option>
+                      <option value="low_stock">a product runs low on stock</option>
                       <option value="customer_signed_up" disabled={signupShops.length === 0 && editing.config.event !== 'customer_signed_up'}>
                         a customer signs up{signupShops.length === 0 ? ' (needs customer signups switched on)' : ''}
                       </option>
                     </Select>
                   )}
                 </Field>
+                {editing.config.event === 'low_stock' && (
+                  <p className="-mt-2 text-xs text-muted-foreground">
+                    Covers every product. Each one alerts once when its stock reaches its own "Notify on" number (bikes at 5, nails at 5,000),
+                    set per product on <Link to="/inventory" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Inventory</Link> or sent by the shop.
+                    Products without a number never alert.
+                  </p>
+                )}
                 {editing.config.event === 'customer_signed_up' && signupShops.length === 0 && (
                   <p role="alert" className="-mt-2 text-xs text-destructive">
                     No shop sends signups yet, so this would never run. Switch customer signups on under <Link to="/integrations" className="underline">Integrations</Link>, then come back.

@@ -1,6 +1,5 @@
 import { Navigate, createHashRouter } from 'react-router-dom'
 import { AppShell } from '@/components/layout/app-shell'
-import { ModulePage } from '@/pages/module-placeholder'
 import { AutomationsPage } from '@/pages/automations-page'
 import { AdminTenantsPage } from '@/pages/admin-tenants-page'
 import { ApprovalsPage } from '@/pages/approvals-page'
@@ -8,10 +7,13 @@ import { CustomerDetailPage } from '@/pages/customer-detail-page'
 import { CustomersPage } from '@/pages/customers-page'
 import { ExecutionDetailPage } from '@/pages/execution-detail-page'
 import { ExecutionsPage } from '@/pages/executions-page'
+import { InventoryPage } from '@/pages/inventory-page'
 import { IntegrationsPage } from '@/pages/integrations-page'
+import { ProductDetailPage } from '@/pages/product-detail-page'
 import { OrderDetailPage } from '@/pages/order-detail-page'
 import { OrdersPage } from '@/pages/orders-page'
 import { OverviewPage } from '@/pages/overview-page'
+import { SettingsApiCallsPage } from '@/pages/settings-api-calls-page'
 import { SettingsPage } from '@/pages/settings-page'
 
 export const router = createHashRouter([
@@ -29,8 +31,10 @@ export const router = createHashRouter([
       { path: 'orders/:id', element: <OrderDetailPage /> },
       { path: 'customers', element: <CustomersPage /> },
       { path: 'customers/:id', element: <CustomerDetailPage /> },
-      { path: 'inventory', element: <ModulePage title="Inventory" description="Planned for a future phase. Nothing to configure yet." /> },
+      { path: 'inventory', element: <InventoryPage /> },
+      { path: 'inventory/:id', element: <ProductDetailPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'settings/api-calls', element: <SettingsApiCallsPage /> },
       { path: 'admin/tenants', element: <AdminTenantsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

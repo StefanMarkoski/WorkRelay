@@ -1,0 +1,195 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Plug } from 'lucide-react'
+import { useState, type FormEvent } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { Field, Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { PageHeader } from '@/components/common/page-header'
+import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
+import { useIntegrations } from '@/features/integrations/queries'
+import { SettingsTabs } from '@/features/settings/settings-tabs'
+import { useWorkspace } from '@/features/workspace/workspace-provider'
+import { formatDateTime, formatSyncPace, timeAgo } from '@/lib/format'
+import { errorMessage, supabase } from '@/lib/supabase'
+import type { Integration, IntegrationSync } from '@/types/db'
+
+const SYNC_COLUMNS = 'integration_id, source_url, has_auth_header, push_enabled, paused, calls, days, next_sync_at, last_sync_at, last_error'
+
+export function SettingsApiCallsPage() {
+  const { current } = useWorkspace()
+  const integrations = useIntegrations()
+  const syncs = useQuery({
+    queryKey: ['integration-sync', current.id],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('integration_sync').select(SYNC_COLUMNS).eq('organization_id', current.id)
+      if (error) throw error
+      return (data ?? []) as IntegrationSync[]
+    },
+  })
+  const shops = (integrations.data ?? []).filter((i) => i.status !== 'revoked')
+
+  return (
+    <>
+      <PageHeader title="Settings" description="Workspace details and who can access them." />
+      <SettingsTabs />
+      <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
+        WorkRelay can ask each shop for its products and stock on a schedule, so Inventory stays correct even when the shop does not push updates.
+        You say where to ask; how often is set by WorkRelay for your plan.
+      </p>
+      {integrations.isLoading || syncs.isLoading ? (
+        <TableSkeleton rows={3} />
+      ) : integrations.error || syncs.error ? (
+        <ErrorState onRetry={() => { void integrations.refetch(); void syncs.refetch() }} />
+      ) : shops.length === 0 ? (
+        <Card><EmptyState icon={Plug} title="No shops connected" description="Connect a shop under Integrations first, then set up its product feed here." /></Card>
+      ) : (
+        <div className="space-y-4">
+          {shops.map((shop) => (
+            <ShopCalls key={shop.id} shop={shop} sync={(syncs.data ?? []).find((s) => s.integration_id === shop.id) ?? null} />
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | null }) {
+  const { canManage } = useWorkspace()
+  const qc = useQueryClient()
+  const [url, setUrl] = useState(sync?.source_url ?? '')
+  const [header, setHeader] = useState('')
+  const [clearHeader, setClearHeader] = useState(false)
+  const [push, setPush] = useState(sync?.push_enabled ?? false)
+  const [paused, setPaused] = useState(sync?.paused ?? false)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+
+  const hasRate = sync?.calls != null && sync.days != null
+  const dirty =
+    url.trim() !== (sync?.source_url ?? '') || header !== '' || clearHeader || push !== (sync?.push_enabled ?? false) || paused !== (sync?.paused ?? false)
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setMessage(null)
+    const { error } = await supabase.rpc('set_sync_source', {
+      p_integration: shop.id,
+      p_url: url.trim(),
+      // null keeps the stored value (it can never be read back); an empty string removes it.
+      p_auth_header: clearHeader ? '' : header.trim() === '' ? null : header.trim(),
+      p_push: push,
+      p_paused: paused,
+    })
+    setBusy(false)
+    if (error) return setMessage({ tone: 'error', text: errorMessage(error) })
+    setHeader('')
+    setClearHeader(false)
+    setMessage({ tone: 'ok', text: 'Saved.' })
+    void qc.invalidateQueries({ queryKey: ['integration-sync'] })
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+        <CardTitle>{shop.name}</CardTitle>
+        {hasRate ? (
+          <Badge tone={paused ? 'neutral' : sync?.last_error ? 'danger' : 'success'}>
+            {paused ? 'Paused' : sync?.last_error ? 'Last check failed' : 'Scheduled'}
+          </Badge>
+        ) : (
+          <Badge>Not scheduled</Badge>
+        )}
+      </CardHeader>
+      <CardBody>
+        <dl className="mb-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <dt className="text-xs text-muted-foreground">Calls</dt>
+            <dd className="mt-0.5 font-medium">
+              {hasRate ? `${sync!.calls!.toLocaleString()} per ${sync!.days === 1 ? 'day' : `${sync!.days} days`}` : 'Not set'}
+            </dd>
+            <dd className="text-xs text-muted-foreground">{hasRate ? formatSyncPace(sync!.calls, sync!.days) : 'Set by WorkRelay'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Last successful check</dt>
+            <dd className="mt-0.5 font-medium" title={formatDateTime(sync?.last_sync_at)}>{sync?.last_sync_at ? timeAgo(sync.last_sync_at) : 'Never'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Next check</dt>
+            <dd className="mt-0.5 font-medium">{hasRate && !paused && sync?.source_url ? formatDateTime(sync?.next_sync_at) : '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Pushed updates</dt>
+            <dd className="mt-0.5 font-medium">{sync?.push_enabled ? 'Accepted' : 'Off'}</dd>
+          </div>
+        </dl>
+        {sync?.last_error && (
+          <p role="status" className="mb-4 rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">
+            The last check failed: {sync.last_error}
+          </p>
+        )}
+        {!hasRate && (
+          <p className="mb-4 text-sm text-muted-foreground">
+            No schedule is set for this shop, so WorkRelay will not call it. Ask WorkRelay to set how many calls per how many days this shop gets.
+            Pushed updates, if switched on below, work without a schedule.
+          </p>
+        )}
+
+        <form onSubmit={save} className="space-y-3 border-t pt-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label="Products URL" hint="An https address that answers with your products. See the integration guide for the format.">
+              {(id) => (
+                <Input id={id} type="url" inputMode="url" placeholder="https://yourshop.com/workrelay/products" maxLength={2000} disabled={!canManage || busy} value={url} onChange={(e) => setUrl(e.target.value)} />
+              )}
+            </Field>
+            <Field
+              label="Authorization (optional)"
+              hint={sync?.has_auth_header && !clearHeader ? 'One is saved and is never shown again. Type a new value to replace it.' : 'Sent as the Authorization header, for example "Bearer abc123".'}
+            >
+              {(id) => (
+                <div className="flex items-center gap-2">
+                  <Input
+                    id={id}
+                    type="password"
+                    autoComplete="off"
+                    maxLength={2000}
+                    disabled={!canManage || busy || clearHeader}
+                    placeholder={sync?.has_auth_header ? '••••••••' : ''}
+                    value={header}
+                    onChange={(e) => setHeader(e.target.value)}
+                  />
+                  {canManage && sync?.has_auth_header && (
+                    <button type="button" className="text-xs whitespace-nowrap text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={() => { setClearHeader(!clearHeader); setHeader('') }}>
+                      {clearHeader ? 'Keep it' : 'Remove'}
+                    </button>
+                  )}
+                </div>
+              )}
+            </Field>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+            <label className="flex items-center gap-2 text-sm">
+              <Switch label={`Accept pushed updates from ${shop.name}`} checked={push} onChange={setPush} disabled={!canManage || busy} />
+              Accept pushed updates
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch label={`Pause checks for ${shop.name}`} checked={paused} onChange={setPaused} disabled={!canManage || busy} />
+              Pause scheduled checks
+            </label>
+          </div>
+          {canManage ? (
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={busy || !dirty}>{busy ? 'Saving…' : 'Save'}</Button>
+              {message && <span role={message.tone === 'error' ? 'alert' : 'status'} className={`text-sm ${message.tone === 'error' ? 'text-destructive' : 'text-success'}`}>{message.text}</span>}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">Only owners and admins can change this.</p>
+          )}
+        </form>
+      </CardBody>
+    </Card>
+  )
+}
+

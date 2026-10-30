@@ -41,6 +41,13 @@ export interface IngestStore {
     externalId: string | null
     registeredAt: string | null
   }): Promise<'ok' | 'disabled'>
+  /** Apply a product/stock report. 'disabled' when a push arrives from a shop that has not switched pushing on. */
+  applyProducts(a: {
+    integrationId: string
+    items: Record<string, unknown>[]
+    source: 'push' | 'pull'
+    at: string
+  }): Promise<number | 'disabled'>
   applyPlan(a: {
     eventRowId: string
     organizationId: string

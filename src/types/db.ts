@@ -189,3 +189,78 @@ export interface Member {
   role: OrgRole
   created_at: string
 }
+
+/** A row of list_products. */
+export interface Product {
+  id: string
+  integration_id: string
+  integration_name: string
+  sku: string
+  name: string
+  /** Null: the shop never reported it. */
+  stock: number | null
+  /** The shop's own threshold. */
+  notify_on: number | null
+  /** Set by hand in the app; wins over the shop's value. */
+  notify_on_override: number | null
+  /** The override if set, else the shop's value; null means this product never alerts. */
+  effective_notify_on: number | null
+  price_minor: number | null
+  currency: string | null
+  price_source: 'api' | 'orders' | null
+  unit: string | null
+  category: string | null
+  barcode: string | null
+  reported_at: string | null
+  sold_30d: number
+  /** Stock is known, a threshold exists, and stock is at or below it. */
+  low: boolean
+  total_count: number
+}
+
+/** A row of product_orders. */
+export interface ProductOrder {
+  id: string
+  order_number: string | null
+  external_id: string
+  placed_at: string | null
+  status: string
+  quantity: number
+  unit_price_minor: number | null
+  currency: string | null
+  total_count: number
+}
+
+export interface StockEvent {
+  id: string
+  stock_before: number | null
+  stock_after: number
+  source: 'push' | 'pull'
+  occurred_at: string
+}
+
+/** How WorkRelay talks to a shop to read its products. The rate (calls per days) is set by a platform admin only. */
+export interface IntegrationSync {
+  integration_id: string
+  source_url: string | null
+  /** Whether an Authorization value is stored; the value itself can never be read back. */
+  has_auth_header: boolean
+  push_enabled: boolean
+  paused: boolean
+  calls: number | null
+  days: number | null
+  next_sync_at: string | null
+  last_sync_at: string | null
+  last_error: string | null
+}
+
+/** A row of admin_list_tenant_shops. */
+export interface TenantShop {
+  id: string
+  name: string
+  status: string
+  calls: number | null
+  days: number | null
+  last_sync_at: string | null
+  last_error: string | null
+}

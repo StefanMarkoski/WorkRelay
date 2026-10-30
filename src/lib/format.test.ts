@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney, formatSpent } from './format'
+import { formatMoney, formatSpent, formatSyncPace, maxSyncCalls } from './format'
 
 describe('formatMoney', () => {
   it('treats the minor unit as the currency defines it', () => {
@@ -24,5 +24,23 @@ describe('formatSpent', () => {
   it('shows a dash when there is nothing to add up', () => {
     expect(formatSpent({})).toBe('—')
     expect(formatSpent(null)).toBe('—')
+  })
+})
+
+describe('formatSyncPace', () => {
+  it('turns calls per days into a pace in words', () => {
+    expect(formatSyncPace(15, 1)).toBe('about every 1h 36m')
+    expect(formatSyncPace(200, 7)).toBe('about every 50m')
+    expect(formatSyncPace(24, 1)).toBe('about every 1h')
+    expect(formatSyncPace(1, 7)).toBe('about every 7d')
+    expect(formatSyncPace(2, 3)).toBe('about every 1d 12h')
+  })
+  it('says so when nothing is scheduled', () => {
+    expect(formatSyncPace(null, null)).toBe('Not scheduled')
+    expect(formatSyncPace(0, 1)).toBe('Not scheduled')
+  })
+  it('matches the fastest pace the database accepts (one call per 5 minutes)', () => {
+    expect(maxSyncCalls(1)).toBe(288)
+    expect(formatSyncPace(maxSyncCalls(1), 1)).toBe('about every 5m')
   })
 })

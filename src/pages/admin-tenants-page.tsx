@@ -8,6 +8,7 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { useIsPlatformAdmin, useTenants } from '@/features/admin/queries'
+import { ShopRates } from '@/features/admin/shop-rates'
 import { formatDate } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 
@@ -89,6 +90,8 @@ export function AdminTenantsPage() {
           </form>
         </CardBody>
       </Card>
+
+      {tenants.data && tenants.data.length > 0 && <ShopRates tenants={tenants.data} />}
 
       <Card>
         <CardHeader>

@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.customer-webhook]
 verify_jwt = false
 
+[functions.inventory-webhook]
+verify_jwt = false
+
 [functions.bind]
 verify_jwt = false
 

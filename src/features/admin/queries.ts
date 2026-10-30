@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/auth-provider'
 import { supabase } from '@/lib/supabase'
+import type { TenantShop } from '@/types/db'
 
 export interface Tenant {
   id: string
@@ -36,6 +37,19 @@ export function useTenants(enabled: boolean) {
       const { data, error } = await supabase.rpc('admin_list_tenants')
       if (error) throw error
       return data as Tenant[]
+    },
+  })
+}
+
+/** The shops of one tenant and their API-call rate (platform admins only; no order or customer data). */
+export function useTenantShops(orgId: string) {
+  return useQuery({
+    queryKey: ['admin-tenant-shops', orgId],
+    enabled: orgId !== '',
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_list_tenant_shops', { p_org: orgId })
+      if (error) throw error
+      return data as TenantShop[]
     },
   })
 }

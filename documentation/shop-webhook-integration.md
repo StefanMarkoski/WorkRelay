@@ -5,6 +5,7 @@ sends order events so that every order appears in the right WorkRelay workspace,
 
 - Machine-readable schema: [`order-webhook.schema.json`](./order-webhook.schema.json)
 - Optional customer signups: section 9, [`customer-webhook.schema.json`](./customer-webhook.schema.json)
+- Optional products and stock: section 10, [`product-feed.schema.json`](./product-feed.schema.json)
 - Base URL: `https://wayktzmupzrdcwosgnfg.supabase.co/functions/v1`
 
 ## 1. How the connection works
@@ -323,7 +324,125 @@ How WorkRelay treats these events:
 
 Machine-readable schema: [`customer-webhook.schema.json`](./customer-webhook.schema.json).
 
-## 10. Testing the connection
+## 10. Products and stock (optional)
+
+WorkRelay's **Inventory** page lists your products and how many pieces are left, and can alert the team when a product runs low.
+**The shop stays the source of truth**: WorkRelay shows the numbers you report and never changes them, and it does not subtract stock
+when orders arrive. Nothing here is required. Products also appear on their own once an order contains an item with a `sku`
+(with stock shown as "not reported" until the shop reports it).
+
+There are two ways to report products. They use **the same data** and can be combined:
+
+| | Who calls whom | Good for |
+|---|---|---|
+| **Push** | The shop sends `POST /inventory-webhook` when stock changes | Fast updates and fast low-stock alerts |
+| **Pull** | WorkRelay calls a URL **on the shop** on a schedule and reads the answer | Shops that cannot push, and as a safety net behind push |
+
+### The product feed
+
+```json
+{
+  "products": [
+    {
+      "sku": "BIKE-ROAD-700",
+      "name": "Road bike 700c",
+      "stock": 12,
+      "notify_on": 5,
+      "price_minor": 89900,
+      "currency": "EUR",
+      "unit": "pcs",
+      "category": "Bikes",
+      "barcode": "3850123456789",
+      "updated_at": "2026-10-30T09:15:00Z"
+    },
+    { "sku": "NAIL-100", "stock": 4800, "notify_on": 5000 }
+  ]
+}
+```
+
+Only **`sku` is required**. Everything else is optional, and an absent or `null` field **leaves the stored value unchanged**, so you can
+send just `sku` and `stock` for a quick update. Fields you do not know about are ignored, so extra fields never cause an error.
+
+| Field | Required | Notes |
+|---|---|---|
+| `sku` | **yes** | Up to 200. How a product is identified within a shop. Orders are matched to products by the same `sku` |
+| `name` | no | Up to 300. Shown on Inventory. If missing, the SKU is shown |
+| `stock` | no | Whole number of pieces on hand. `0` is a real value; leave it out (or `null`) if you do not know it |
+| `notify_on` | no | Whole number, 0 or more. Your own low-stock threshold, see below |
+| `price_minor` | no | Integer in the smallest currency unit, like orders. **Needs `currency`** |
+| `currency` | with `price_minor` | Three letters, e.g. `EUR` |
+| `unit` | no | Up to 50, e.g. `pcs`, `boxes` |
+| `category`, `barcode` | no | Up to 200 and 100 |
+| `updated_at` | no | ISO 8601 with `Z` or an offset: when this product last changed in the shop. Defaults to the moment WorkRelay received or requested the report. A time in the future is treated as now |
+
+How WorkRelay uses it:
+
+- **Newer wins, per product.** A report older than what WorkRelay already holds fills in anything missing but never overwrites, so a
+  late retry or a slow pull cannot undo a more recent push. Sending the same report twice changes nothing.
+- **Price.** If you report a price, that is the price shown ("from the shop"). If you do not, WorkRelay shows the unit price from the
+  product's most recent order line ("from orders"). If there is neither, no price is shown.
+- **Notify on.** A product is *low* when its stock is **at or below** its notify-on number. The number can come from the shop
+  (`notify_on`), or be typed in by hand on the Inventory page, and a hand-set number wins. A hand-set number is never changed by a
+  report; entering 0 there removes it so the shop's number applies again. Different products can have very different numbers
+  (bikes at 5, nails at 5,000). A product with no number never counts as low.
+- **Low-stock alerts.** If the workspace has the automation *a product runs low on stock*, it fires **once** when a product becomes low,
+  not on every report, and fires again only after the stock has gone back above the number. The **first** stock number ever reported for
+  a product never alerts (it only starts tracking), so connecting a shop whose products are already low does not send a burst.
+- **No deleting.** Products are never removed by a report. A product you stop sending simply keeps its last numbers.
+
+### Push: `POST /inventory-webhook`
+
+Same key and the same `X-Store-Id` as the order webhook (the key is already bound; there is no second bind). The body is the feed above:
+**up to 500 products and 1 MB per request.**
+
+**Switching it on:** in WorkRelay open **Settings → API Calls** and turn on *Accept pushed updates* for the shop. It is off by default
+and per shop; until then pushes are answered with `202` and not applied.
+
+```bash
+curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" \
+  -H "Content-Type: application/json" \
+  -d '{"products":[{"sku":"BIKE-ROAD-700","stock":11}]}'
+```
+
+| Status | Body | Meaning |
+|---|---|---|
+| 200 | `{"status":"processed","applied":2}` | Applied. `applied` is the number of products in the request |
+| 202 | `{"status":"ignored","reason":"inventory_push_disabled"}` | Pushing is off for this shop. Switch it on, then resend |
+| 400 | `{"error":"invalid_payload","detail":"products.0.stock: ..."}` | Fix the payload (the detail names the field, never the value). The whole request is rejected |
+| 401, 403, 405, 500 | as in section 7 | Same meaning and the same retry guidance |
+
+There is no `event_id`: reports are safe to repeat, so on a network error or 5xx simply send the same report again.
+
+### Pull: WorkRelay calls the shop
+
+Under **Settings → API Calls**, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
+value. WorkRelay then requests the URL on a schedule:
+
+```
+GET https://yourshop.com/workrelay/products
+Accept: application/json
+Authorization: Bearer abc123        (only if one was entered)
+```
+
+The shop answers `200` (any `2xx`) with the feed above, either `{"products":[...]}` or just the list `[...]`. The answer is the full
+catalogue, or at least every product whose stock should be kept current.
+
+- **How often is set by WorkRelay**, per shop, as *calls per number of days* (for example 15 calls per day is about one call every
+  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on Settings → API Calls. The fastest possible is one
+  call every 5 minutes. A call that fails still counts, and is not retried before the next scheduled time.
+- **Limits:** up to **5,000 products and 5 MB** per answer, **15 seconds** to respond. Larger catalogues are not supported yet.
+- **Safety rules:** the URL must be `https`, must resolve to a public address (no private networks or `localhost`), and **redirects are not
+  followed** (a 3xx counts as a failure; give the final URL). The Authorization value is stored privately, never shown again after saving, and
+  sent only to that URL.
+- **Timestamps:** each product is stamped with the moment WorkRelay *sent* the request unless it carries its own `updated_at`, so a push
+  that happened while the answer was on its way is not overwritten.
+- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on Settings → API Calls, and nothing from
+  that answer is applied.
+- A schedule can be paused per shop. If no schedule has been set for a shop, WorkRelay does not call it; ask WorkRelay to set one.
+
+Machine-readable schema: [`product-feed.schema.json`](./product-feed.schema.json) (the pull answer may hold up to 5,000 products, a push up to 500).
+
+## 11. Testing the connection
 
 ```bash
 BASE=https://wayktzmupzrdcwosgnfg.supabase.co/functions/v1
@@ -355,8 +474,9 @@ In WorkRelay, check **Integrations → Event history** (every delivery with stat
 - [ ] A persistent outbox retries on network errors and 5xx
 - [ ] 4xx responses are logged (the `detail` field says what to fix) and not retried unchanged
 - [ ] A test order shows up under Orders with the right totals, items and statuses
+- [ ] (Products, optional) a test product shows up under Inventory, and a second report with the same values changes nothing
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|

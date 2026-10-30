@@ -6,6 +6,7 @@ import { Field, Input, Select } from '@/components/ui/input'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { ErrorState, TableSkeleton } from '@/components/common/states'
+import { SettingsTabs } from '@/features/settings/settings-tabs'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, humanize } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
@@ -66,6 +67,7 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" description="Workspace details and who can access them." />
+      <SettingsTabs />
       <div className="space-y-4">
         <Card>
           <CardHeader><CardTitle>Workspace</CardTitle></CardHeader>

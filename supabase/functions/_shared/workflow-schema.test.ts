@@ -37,7 +37,7 @@ describe('validateDefinition', () => {
   it('accepts a list of shops on order and customer triggers, but never an empty or malformed one', () => {
     const A = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11'
     const ok = (trigger: unknown) => validateDefinition(def([rec('a')], trigger)).ok
-    for (const type of ['order_created', 'order_status_changed', 'customer_signup', 'customer_first_order']) {
+    for (const type of ['order_created', 'order_status_changed', 'customer_signup', 'customer_first_order', 'low_stock']) {
       expect(ok({ type, integration_ids: [A] }), type).toBe(true)
       expect(ok({ type }), type).toBe(true)
       expect(ok({ type, integration_ids: [] }), type).toBe(false)

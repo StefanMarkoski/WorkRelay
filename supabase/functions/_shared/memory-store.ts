@@ -97,6 +97,15 @@ export class MemoryStore implements IngestStore {
     return 'ok' as const
   }
 
+  /** Product reports as applied. pushEnabled is set per integration by tests (the real rule is in apply_product_sync). */
+  productReports: Parameters<IngestStore['applyProducts']>[0][] = []
+  pushEnabled = new Set<string>()
+  async applyProducts(a: Parameters<IngestStore['applyProducts']>[0]) {
+    if (a.source === 'push' && !this.pushEnabled.has(a.integrationId)) return 'disabled' as const
+    this.productReports.push(a)
+    return a.items.length
+  }
+
   async applyPlan(a: Parameters<IngestStore['applyPlan']>[0]) {
     if (this.forceConflicts > 0) {
       this.forceConflicts--

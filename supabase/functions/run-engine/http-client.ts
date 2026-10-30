@@ -4,6 +4,24 @@ import { checkOutboundUrl, isPrivateAddress } from '../_shared/ssrf.ts'
 const TIMEOUT_MS = 10_000
 const MAX_RESPONSE_BYTES = 10_000
 
+/** Static checks, then every address the name resolves to must be public. Throws HttpError otherwise. */
+export async function assertPublicDestination(url: string): Promise<void> {
+  const blocked = checkOutboundUrl(url)
+  if (blocked) throw new HttpError(`Destination blocked: ${blocked}`, false)
+
+  const host = new URL(url).hostname
+  const addresses: string[] = []
+  for (const type of ['A', 'AAAA'] as const) {
+    try {
+      addresses.push(...(await Deno.resolveDns(host, type)))
+    } catch {
+      // no records of this type
+    }
+  }
+  if (addresses.length === 0) throw new HttpError('Destination could not be resolved', true)
+  if (addresses.some(isPrivateAddress)) throw new HttpError('Destination blocked: resolves to a private address', false)
+}
+
 /**
  * Outbound HTTP for workflow actions.
  * - https only, static host checks, then every resolved address is checked.
@@ -15,20 +33,7 @@ const MAX_RESPONSE_BYTES = 10_000
 export function createHttpClient(): HttpClient {
   return {
     async request({ method, url, body }) {
-      const blocked = checkOutboundUrl(url)
-      if (blocked) throw new HttpError(`Destination blocked: ${blocked}`, false)
-
-      const host = new URL(url).hostname
-      const addresses: string[] = []
-      for (const type of ['A', 'AAAA'] as const) {
-        try {
-          addresses.push(...(await Deno.resolveDns(host, type)))
-        } catch {
-          // no records of this type
-        }
-      }
-      if (addresses.length === 0) throw new HttpError('Destination could not be resolved', true)
-      if (addresses.some(isPrivateAddress)) throw new HttpError('Destination blocked: resolves to a private address', false)
+      await assertPublicDestination(url)
 
       try {
         const res = await fetch(url, {

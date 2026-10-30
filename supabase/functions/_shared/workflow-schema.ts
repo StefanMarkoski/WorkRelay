@@ -3,7 +3,7 @@ import { checkOutboundUrl } from './ssrf.ts'
 
 /** UI-independent workflow representation. A visual canvas can later read and write the same shape. */
 
-export const TRIGGER_TYPES = ['webhook', 'order_created', 'order_status_changed', 'customer_signup', 'customer_first_order', 'manual'] as const
+export const TRIGGER_TYPES = ['webhook', 'order_created', 'order_status_changed', 'customer_signup', 'customer_first_order', 'low_stock', 'manual'] as const
 export const STEP_TYPES = ['condition', 'http_request', 'send_email', 'create_approval', 'record_result'] as const
 export type TriggerType = (typeof TRIGGER_TYPES)[number]
 export type StepType = (typeof STEP_TYPES)[number]
@@ -23,6 +23,8 @@ export const triggerSchema = z.discriminatedUnion('type', [
   // `integration_id` (one shop) is the older form and still works.
   z.object({ type: z.literal('customer_signup'), integration_id: z.uuid().optional(), integration_ids: shops }),
   z.object({ type: z.literal('customer_first_order'), integration_ids: shops }),
+  // Fires once each time a product reaches its "Notify on" number (see migration 0015).
+  z.object({ type: z.literal('low_stock'), integration_ids: shops }),
   z.object({ type: z.literal('manual') }),
 ])
 
