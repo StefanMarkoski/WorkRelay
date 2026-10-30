@@ -26,3 +26,22 @@ export function useIntegrations(opts: { poll?: boolean } = {}) {
 }
 
 export const functionsBaseUrl = () => `${import.meta.env.VITE_SUPABASE_URL ?? ''}/functions/v1`
+
+/**
+ * How many enabled "a customer signs up" automations cover this shop. Only owners and admins can read automations,
+ * so for everyone else this is simply 0 (the database decides, not this hint).
+ */
+export function useSignupAutomations(shopId: string | null) {
+  const { current, canManage } = useWorkspace()
+  return useQuery({
+    queryKey: ['signup-automations', current.id, shopId],
+    enabled: canManage && !!shopId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('workflows').select('id, preset_config').eq('organization_id', current.id).eq('enabled', true)
+      if (error) throw error
+      return ((data ?? []) as { id: string; preset_config: { event?: string; integration_id?: string } | null }[]).filter(
+        (w) => w.preset_config?.event === 'customer_signed_up' && (!w.preset_config.integration_id || w.preset_config.integration_id === shopId),
+      ).length
+    },
+  })
+}

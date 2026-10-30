@@ -8,7 +8,7 @@ import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration } from '@/types/db'
-import { functionsBaseUrl } from './queries'
+import { functionsBaseUrl, useSignupAutomations } from './queries'
 
 const SAMPLE = `{
   "event_id": "cust_77:created",
@@ -54,16 +54,7 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
   })
 
   // Automations that wait for signups: switching off pauses them, so say so before it happens.
-  const dependents = useQuery({
-    queryKey: ['signup-automations', current.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('workflows').select('id, enabled, preset_config').eq('organization_id', current.id).eq('enabled', true)
-      if (error) throw error
-      return ((data ?? []) as { id: string; preset_config: { event?: string; integration_id?: string } | null }[]).filter(
-        (w) => w.preset_config?.event === 'customer_signed_up' && (!w.preset_config.integration_id || w.preset_config.integration_id === shop.id),
-      ).length
-    },
-  })
+  const dependents = useSignupAutomations(shop.id)
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -82,6 +73,7 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
     setBusy(false)
     void qc.invalidateQueries({ queryKey: ['integrations', current.id] })
     void qc.invalidateQueries({ queryKey: ['automations'] })
+    void qc.invalidateQueries({ queryKey: ['signup-automations'] })
     onClose()
   }
 

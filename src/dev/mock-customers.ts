@@ -25,8 +25,8 @@ export function deriveCustomers(orders: Row[], signups: Row[] = []): Row[] {
   for (const g of signups) {
     const k = keyOf(g.email)
     const c = byKey.get(k)
-    if (c) Object.assign(c, { registered_at: g.registered_at, external_id: g.external_id ?? null })
-    else byKey.set(k, { id: `c-${k}`, organization_id: ORG, email_key: k, email: g.email, name: g.name ?? null, phone: null, external_id: g.external_id ?? null, registered_at: g.registered_at, profile_at: g.registered_at, first_seen_at: g.registered_at })
+    if (c) Object.assign(c, { registered_at: g.registered_at, external_id: g.external_id ?? null, signup_integrations: [...(c.signup_integrations ?? []), g.integration_id] })
+    else byKey.set(k, { id: `c-${k}`, organization_id: ORG, email_key: k, email: g.email, name: g.name ?? null, phone: null, external_id: g.external_id ?? null, registered_at: g.registered_at, signup_integrations: [g.integration_id], profile_at: g.registered_at, first_seen_at: g.registered_at })
   }
   return [...byKey.values()]
 }
@@ -34,14 +34,16 @@ export function deriveCustomers(orders: Row[], signups: Row[] = []): Row[] {
 const when = (o: Row) => o.placed_at ?? o.created_at
 
 export function listCustomers(db: Record<string, Row[]>, args: Record<string, any> = {}): Row[] {
-  const { p_search, p_limit = 25, p_offset = 0, p_id, p_scope = 'ordered' } = args
+  const { p_search, p_limit = 25, p_offset = 0, p_id, p_scope = 'ordered', p_integration } = args
   const term = String(p_search ?? '').toLowerCase()
-  const ordered = (c: Row) => (db.orders ?? []).some((o) => keyOf(o.customer_email) === c.email_key)
-  const inScope = (c: Row) => (p_id || p_scope === 'all' ? ordered(c) || !!c.registered_at : p_scope === 'registered' ? !ordered(c) && !!c.registered_at : ordered(c))
+  const ofShop = (o: Row) => !p_integration || o.integration_id === p_integration
+  const ordered = (c: Row) => (db.orders ?? []).some((o) => keyOf(o.customer_email) === c.email_key && ofShop(o))
+  const registered = (c: Row) => (p_integration ? !!c.signup_integrations?.includes(p_integration) : !!c.registered_at)
+  const inScope = (c: Row) => (p_id || p_scope === 'all' ? ordered(c) || registered(c) : p_scope === 'registered' ? !ordered(c) && registered(c) : ordered(c))
   const rows = (db.customers ?? [])
     .filter((c) => inScope(c) && (!p_id || c.id === p_id) && (!term || c.email.toLowerCase().includes(term) || (c.name ?? '').toLowerCase().includes(term)))
     .map((c) => {
-      const mine = (db.orders ?? []).filter((o) => keyOf(o.customer_email) === c.email_key)
+      const mine = (db.orders ?? []).filter((o) => keyOf(o.customer_email) === c.email_key && ofShop(o))
       const spent: Record<string, number> = {}
       for (const o of mine) if (o.currency && o.total_minor != null && o.status !== 'cancelled') spent[o.currency] = (spent[o.currency] ?? 0) + o.total_minor
       return { id: c.id, name: c.name, email: c.email, phone: c.phone, first_seen_at: c.first_seen_at, last_order_at: mine.map(when).sort().at(-1) ?? null, order_count: mine.length, spent, registered_at: c.registered_at ?? null, external_id: c.external_id ?? null }

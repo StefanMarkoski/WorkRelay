@@ -86,9 +86,9 @@ const { DB, RPC } = MODE === 'demo' ? { DB: DEMO_DB, RPC: DEMO_RPC } : buildData
 // Shops with signups switched on report some accounts; most of them have not ordered (yet).
 const SIGNUPS: Row[] = (DB.integrations ?? []).some((i) => i.track_signups)
   ? [
-      { email: 'new.visitor@example.com', name: 'Dimitar Stojanov', registered_at: ago(90), external_id: 'cust_2041' },
-      { email: 'lena@example.com', name: null, registered_at: ago(60 * 20) },
-      { email: 'buyer1@example.com', name: 'Operative', registered_at: ago(60 * 24 * 6), external_id: 'cust_17' },
+      { email: 'new.visitor@example.com', name: 'Dimitar Stojanov', registered_at: ago(90), external_id: 'cust_2041', integration_id: 'i2' },
+      { email: 'lena@example.com', name: null, registered_at: ago(60 * 20), integration_id: 'i2' },
+      { email: 'buyer1@example.com', name: 'Operative', registered_at: ago(60 * 24 * 6), external_id: 'cust_17', integration_id: 'i2' },
     ]
   : []
 DB.customers = deriveCustomers(DB.orders ?? [], MODE === 'empty' ? [] : SIGNUPS)

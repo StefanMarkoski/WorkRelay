@@ -3,13 +3,13 @@ import { Search, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { Input, Select } from '@/components/ui/input'
 import { Segmented } from '@/components/ui/segmented'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
-import { useIntegrations } from '@/features/integrations/queries'
+import { useIntegrations, useSignupAutomations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, formatSpent, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
@@ -27,6 +27,7 @@ const SCOPES: { id: Scope; label: string }[] = [
 export function CustomersPage() {
   const { current } = useWorkspace()
   const integrations = useIntegrations()
+  const [shopId, setShopId] = useState('') // '' = all shops together
   const [scope, setScope] = useState<Scope>('ordered')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -41,7 +42,7 @@ export function CustomersPage() {
   }, [searchInput])
 
   const query = useQuery({
-    queryKey: ['customers', current.id, search, scope, page],
+    queryKey: ['customers', current.id, search, scope, shopId, page],
     placeholderData: (prev) => prev,
     refetchInterval: 30_000, // safety net if live updates are unavailable
     queryFn: async () => {
@@ -51,6 +52,7 @@ export function CustomersPage() {
         p_limit: PAGE_SIZE,
         p_offset: page * PAGE_SIZE,
         p_scope: scope,
+        p_integration: shopId || null,
       })
       if (error) throw error
       const rows = (data ?? []) as Customer[]
@@ -58,13 +60,34 @@ export function CustomersPage() {
     },
   })
 
+  const shops = integrations.data ?? []
+  const shop = shops.find((i) => i.id === shopId) ?? null
+  const signupAutomations = useSignupAutomations(shop?.id ?? null).data ?? 0
   // The extra groups only exist for shops that send signups (or once did), so nobody else sees a filter that is always empty.
-  const showScope = scope !== 'ordered' || (integrations.data ?? []).some((i) => i.signups_enabled_at !== null)
+  const showScope = scope !== 'ordered' || (shop ? shop.signups_enabled_at !== null : shops.some((i) => i.signups_enabled_at !== null))
 
   return (
     <>
-      <PageHeader title="Customers" description="Everyone who has placed an order, matched by email address. Shops that send signups can also show people who registered but have not ordered." />
+      <PageHeader title="Customers" description="Everyone who has placed an order across your shops, matched by email address. Pick a shop to see only its customers." />
+      {shop?.track_signups && (
+        <p role="status" className="mb-4 rounded-lg border bg-card px-4 py-3 text-sm">
+          Customer signups are on for <span className="font-medium">{shop.name}</span>: every new account it creates is recorded here
+          {signupAutomations > 0 ? `, and your team is notified (${signupAutomations} automation${signupAutomations === 1 ? '' : 's'}).` : '.'}
+        </p>
+      )}
+      {shop && shop.signups_enabled_at === null && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">{shop.name}</span> does not send signups, so only people who ordered from it appear.{' '}
+          <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Integrations</Link>
+        </p>
+      )}
       <Card className="mb-6 flex flex-wrap items-center gap-3 p-4">
+        {shops.length > 1 && (
+          <Select aria-label="Shop" className="w-auto min-w-40" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
+            <option value="">All shops</option>
+            {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </Select>
+        )}
         {showScope && (
           <Segmented label="Which customers" value={scope} options={SCOPES} onChange={(next) => { setScope(next); setPage(0) }} />
         )}
