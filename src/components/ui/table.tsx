@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 
 export const Table = ({ className, ...p }: ComponentProps<'table'>) => (
-  <div className="overflow-x-auto">
+  <div className="relative overflow-x-auto">
     <table className={cn('w-full text-left text-[13px]', className)} {...p} />
   </div>
 )

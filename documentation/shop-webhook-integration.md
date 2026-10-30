@@ -4,6 +4,7 @@ This guide is for the developers of the shop (commerce app). It explains how the
 sends order events so that every order appears in the right WorkRelay workspace, and only there.
 
 - Machine-readable schema: [`order-webhook.schema.json`](./order-webhook.schema.json)
+- Optional customer signups: section 9, [`customer-webhook.schema.json`](./customer-webhook.schema.json)
 - Base URL: `https://wayktzmupzrdcwosgnfg.supabase.co/functions/v1`
 
 ## 1. How the connection works
@@ -200,6 +201,9 @@ The smallest valid event:
   outdated and does not overwrite it, and a newer one replaces it. These edits are **not sent back to the shop**. The shop's own text stays
   visible on the order ("Store status"), so a difference between the two is easy to spot. A manual status change can start automations
   that listen for status changes (it never starts "new order" or "webhook" automations).
+- **Customers**: WorkRelay's Customers page lists everyone who has placed an order. A customer is matched by the order's `customer.email`
+  (ignoring upper/lower case and surrounding spaces), within your workspace, so the same address across two of your shops is one customer.
+  Nothing extra needs to be sent. An order without an email still appears under Orders but does not create a customer.
 - **Unknown order**: any event for an unseen `external_id` creates the order, so a missed `order.created` self-heals.
 - **Automations**: `order.created` can trigger the tenant's new-order automations (for example a Discord notification), and a
   status change that was applied can trigger status automations. Replayed or duplicate events do not trigger one twice.
@@ -253,7 +257,73 @@ Delivery guidance for the shop:
   Turn such automations off first.
 - WorkRelay never writes back to the shop in this version, and it does not process payments, refunds or shipments.
 
-## 9. Testing the connection
+## 9. Customer signups (optional)
+
+Orders already create customers: WorkRelay's Customers page lists everyone who has placed an order. If the shop also wants to
+tell WorkRelay about **accounts that were created before the first order** (for example to send a welcome message), it can use a second,
+optional endpoint. Nothing here is required, and it does nothing until someone switches it on for the shop.
+
+**Switching it on:** in WorkRelay, open **Integrations**, press **Edit** on the shop and turn on *Receive customer signups*.
+It is off by default and per shop. While it is off, events sent to this endpoint are kept and shown as ignored in Event history.
+If you resend the same event after switching it on, it is processed.
+
+`POST /customer-webhook` with the **same key and the same `X-Store-Id`** as the order webhook (the key is already bound; there is no
+second bind). One event per request, 1 MB at most.
+
+```json
+{
+  "event_id": "cust_77:created",
+  "event_type": "customer.created",
+  "occurred_at": "2026-10-27T09:15:00Z",
+  "customer": {
+    "email": "ana@example.com",
+    "name": "Ana Petrova",
+    "phone": "+38970123456",
+    "external_id": "cust_77",
+    "registered_at": "2026-10-27T09:14:52Z"
+  }
+}
+```
+
+| Field | Required | Notes |
+|---|---|---|
+| `event_id` | **yes** | Unique per event; reuse it when retrying the same event. Same rules as orders |
+| `event_type` | **yes** | `customer.created` or `customer.updated`. Anything else is accepted but ignored (HTTP 202) |
+| `occurred_at` | **yes** | ISO 8601 with `Z` or an offset: when it happened in the shop |
+| `customer.email` | **yes** | A valid address, up to 320. **This is how customers are matched**, with upper/lower case and surrounding spaces ignored |
+| `customer.name` | no | Up to 200 |
+| `customer.phone` | no | Up to 64 |
+| `customer.external_id` | no | The shop's own id, up to 200. Stored and shown, **never used for matching** |
+| `customer.registered_at` | no | When the account was created. Defaults to `occurred_at` |
+
+Absent or `null` fields leave the stored value unchanged.
+
+How WorkRelay treats these events:
+
+- **One customer per email address**, across orders and signups and across all of the workspace's shops. A person who signs up and then
+  orders is one customer; so is someone who ordered as a guest and registers later.
+- **`customer.created`** records the signup, marks the person as registered, and can start a *customer signs up* automation
+  (once per customer and shop; repeats and retries never notify twice).
+- **`customer.updated`** only updates the profile (and marks the account as existing). It never starts a signup automation.
+- **Older data never overwrites newer data**, the same rule as orders: send `occurred_at` as the time of the change in the shop.
+- **Importing existing accounts**: signups that happened **before the feature was switched on** are saved but never notify anyone, so a
+  bulk import does not flood the team. Their `registered_at` should be the real signup date.
+- A **new customer's first order** is a separate automation (*a new customer places their first order*). It works from orders alone,
+  so it is available to every shop, with or without this endpoint.
+- People who signed up but have not ordered appear on the Customers page only when you choose *Registered only* or *All*.
+
+| Status | Body | Meaning |
+|---|---|---|
+| 200 | `{"status":"processed"}` | Applied |
+| 200 | `{"status":"duplicate"}` | Already processed. Treat as success |
+| 202 | `{"status":"ignored","reason":"signups_disabled"}` | Customer signups are switched off for this shop. Switch them on in WorkRelay, then resend |
+| 202 | `{"status":"ignored"}` | Unsupported `event_type`. Do not retry |
+| 400 | `{"error":"invalid_payload","detail":"customer.email: ..."}` | Fix the payload (the detail names the field, never the value) |
+| 401, 403, 405, 500 | as in section 7 | Same meaning and the same retry guidance |
+
+Machine-readable schema: [`customer-webhook.schema.json`](./customer-webhook.schema.json).
+
+## 10. Testing the connection
 
 ```bash
 BASE=https://wayktzmupzrdcwosgnfg.supabase.co/functions/v1
@@ -286,7 +356,7 @@ In WorkRelay, check **Integrations → Event history** (every delivery with stat
 - [ ] 4xx responses are logged (the `detail` field says what to fix) and not retried unchanged
 - [ ] A test order shows up under Orders with the right totals, items and statuses
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|

@@ -6,6 +6,7 @@ import {
   Plug,
   Settings,
   ShoppingCart,
+  Users,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
@@ -24,6 +25,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, group: 'main' },
   { to: '/orders', label: 'Orders', icon: ShoppingCart, group: 'main' },
+  { to: '/customers', label: 'Customers', icon: Users, group: 'main' },
   { to: '/automations', label: 'Automations', icon: Zap, group: 'main', adminOnly: true },
   { to: '/executions', label: 'Executions', icon: Play, group: 'main' },
   { to: '/approvals', label: 'Approvals', icon: CheckSquare, group: 'main' },

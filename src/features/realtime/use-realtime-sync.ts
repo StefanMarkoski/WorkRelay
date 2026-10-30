@@ -11,7 +11,7 @@ export type LiveStatus = 'connecting' | 'live' | 'offline'
  * client-readable are published (never webhook_events or integrations).
  */
 const TABLES: Record<string, QueryKey[]> = {
-  orders: [['orders'], ['order'], ['overview']],
+  orders: [['orders'], ['order'], ['overview'], ['customers'], ['customer']],
   order_events: [['order'], ['overview']],
   workflow_runs: [['runs'], ['run'], ['overview'], ['automations']],
   step_runs: [['run']],

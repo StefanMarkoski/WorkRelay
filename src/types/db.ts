@@ -13,6 +13,9 @@ export interface Integration {
   bound_at: string | null
   last_seen_at: string | null
   created_at: string
+  /** The shop opted in to the optional customer-signup webhook. */
+  track_signups: boolean
+  signups_enabled_at: string | null
 }
 
 export interface WebhookEvent {
@@ -123,6 +126,40 @@ export interface Order {
   created_at: string
   updated_at: string
   integrations?: { name: string } | null
+}
+
+/** A row of list_customers: who they are, plus counts computed from their orders. */
+export interface Customer {
+  id: string
+  name: string | null
+  email: string
+  phone: string | null
+  first_seen_at: string
+  /** Null for someone who signed up and has not ordered. */
+  last_order_at: string | null
+  order_count: number
+  /** Order value per currency in minor units, cancelled orders left out. */
+  spent: Record<string, number>
+  /** When the shop reported their signup; null if it never did. */
+  registered_at: string | null
+  /** The shop's own customer id, informational only. */
+  external_id: string | null
+  total_count: number
+}
+
+/** A row of customer_orders. */
+export interface CustomerOrder {
+  id: string
+  order_number: string | null
+  external_id: string
+  placed_at: string
+  status: string
+  payment_status: string
+  fulfillment_status: string
+  currency: string | null
+  total_minor: number | null
+  integration_name: string | null
+  total_count: number
 }
 
 export interface OrderItem {

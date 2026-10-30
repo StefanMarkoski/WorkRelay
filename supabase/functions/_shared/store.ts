@@ -5,6 +5,8 @@ export interface IntegrationRef {
   organizationId: string
   status: 'awaiting_bind' | 'connected' | 'revoked'
   externalStoreId: string | null
+  /** The shop opted in to the customer-signup webhook (off by default). */
+  trackSignups: boolean
 }
 
 export interface RecordedEvent {
@@ -27,6 +29,18 @@ export interface IngestStore {
   }): Promise<RecordedEvent>
   markEvent(id: string, status: 'processed' | 'ignored' | 'failed', error?: string): Promise<void>
   getOrder(integrationId: string, externalId: string): Promise<StoredOrder | null>
+  applySignup(a: {
+    eventRowId: string
+    organizationId: string
+    integrationId: string
+    eventType: 'customer.created' | 'customer.updated'
+    occurredAt: string
+    email: string
+    name: string | null
+    phone: string | null
+    externalId: string | null
+    registeredAt: string | null
+  }): Promise<'ok' | 'disabled'>
   applyPlan(a: {
     eventRowId: string
     organizationId: string

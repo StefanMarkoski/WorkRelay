@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Plug, Plus, RotateCw, Ban } from 'lucide-react'
+import { Ban, Pencil, Plug, Plus, RotateCw } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +10,7 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
+import { EditShop } from '@/features/integrations/edit-shop'
 import { EventHistory } from '@/features/integrations/event-history'
 import { KeyRevealModal } from '@/features/integrations/key-reveal'
 import { PayloadTester } from '@/features/integrations/payload-tester'
@@ -33,6 +34,7 @@ export function IntegrationsPage() {
   const [tab, setTab] = useState<Tab>('connections')
   const [creating, setCreating] = useState(false)
   const [secret, setSecret] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Integration | null>(null)
   const [confirm, setConfirm] = useState<{ kind: 'rotate' | 'revoke'; target: Integration } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -106,7 +108,10 @@ export function IntegrationsPage() {
               <tbody>
                 {integrations.data!.map((i) => (
                   <TR key={i.id}>
-                    <TD className="font-medium">{i.name}</TD>
+                    <TD className="font-medium">
+                      {i.name}
+                      {i.track_signups && <div className="mt-0.5 text-[11px] font-normal text-muted-foreground">Customer signups on</div>}
+                    </TD>
                     <TD><StatusBadge status={i.status} /></TD>
                     <TD className="font-mono text-xs">{i.key_prefix}…</TD>
                     <TD className="text-muted-foreground">
@@ -117,6 +122,9 @@ export function IntegrationsPage() {
                     <TD className="text-right">
                       {canManage && i.status !== 'revoked' && (
                         <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setEditing(i)}>
+                            <Pencil /> Edit
+                          </Button>
                           <Button variant="ghost" size="sm" onClick={() => { setError(null); setConfirm({ kind: 'rotate', target: i }) }}>
                             <RotateCw /> Rotate
                           </Button>
@@ -174,6 +182,7 @@ export function IntegrationsPage() {
         </div>
       </Modal>
 
+      <EditShop shop={editing} onClose={() => setEditing(null)} />
       <KeyRevealModal secret={secret} onClose={() => setSecret(null)} />
     </>
   )

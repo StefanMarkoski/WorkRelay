@@ -2,6 +2,8 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
+import { customerWebhookSchema } from './customer-contract.ts'
+import { handleCustomerWebhook } from './customer-ingest.ts'
 import { handleOrderWebhook } from './ingest.ts'
 import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
@@ -13,9 +15,9 @@ const log: Logger = { info() {}, error() {} }
 const KEY = `wr_live_${'c'.repeat(64)}`
 
 /** Every fenced json block in the guide that is an order event, in document order. */
-const events = [...doc.matchAll(/```json\n([\s\S]*?)```/g)]
-  .map((m) => JSON.parse(m[1]) as Record<string, any>)
-  .filter((j) => 'event_type' in j)
+const jsonBlocks = [...doc.matchAll(/```json\n([\s\S]*?)```/g)].map((m) => JSON.parse(m[1]) as Record<string, any>)
+const events = jsonBlocks.filter((j) => String(j.event_type ?? '').startsWith('order.'))
+const customerEvents = jsonBlocks.filter((j) => String(j.event_type ?? '').startsWith('customer.'))
 
 describe('shop integration guide', () => {
   it('has the examples it promises', () => {
@@ -75,6 +77,27 @@ describe('shop integration guide', () => {
   it('the committed JSON Schema matches the validator', () => {
     const generated = { title: 'WorkRelay order webhook event', ...z.toJSONSchema(orderWebhookSchema, { io: 'input', unrepresentable: 'any' }) }
     const committed = JSON.parse(readFileSync(new URL('../../../documentation/order-webhook.schema.json', import.meta.url), 'utf8'))
+    expect(committed).toEqual(generated)
+  })
+
+  it('the customer signup example validates, is accepted for a shop that switched signups on, and is ignored for one that did not', async () => {
+    expect(customerEvents.map((e) => e.event_id)).toEqual(['cust_77:created'])
+    expect(customerWebhookSchema.safeParse(customerEvents[0]).success).toBe(true)
+    const send = (store: MemoryStore) =>
+      handleCustomerWebhook(new Request('https://x.test/customer-webhook', { method: 'POST', headers: { authorization: `Bearer ${KEY}`, 'x-store-id': 's' }, body: JSON.stringify(customerEvents[0]) }), { store, log })
+    const on = new MemoryStore()
+    await on.addIntegration(KEY, { status: 'connected', externalStoreId: 's', trackSignups: true })
+    expect((await send(on)).status).toBe(200)
+    const off = new MemoryStore()
+    await off.addIntegration(KEY, { status: 'connected', externalStoreId: 's' })
+    const res = await send(off)
+    expect(res.status).toBe(202)
+    expect(await res.json()).toEqual({ status: 'ignored', reason: 'signups_disabled' })
+  })
+
+  it('the committed customer JSON Schema matches the validator', () => {
+    const generated = { title: 'WorkRelay customer webhook event', ...z.toJSONSchema(customerWebhookSchema, { io: 'input', unrepresentable: 'any' }) }
+    const committed = JSON.parse(readFileSync(new URL('../../../documentation/customer-webhook.schema.json', import.meta.url), 'utf8'))
     expect(committed).toEqual(generated)
   })
 })

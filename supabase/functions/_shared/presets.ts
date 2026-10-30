@@ -5,7 +5,7 @@ import type { WorkflowDefinition } from './workflow-schema.ts'
 /** Ready-made automations. Each preset is turned into a normal workflow definition, so the engine, retries,
  *  approvals and execution history work exactly the same as for any workflow. */
 
-export const NOTIFY_EVENTS = ['created', 'cancelled', 'status_changed'] as const
+export const NOTIFY_EVENTS = ['created', 'cancelled', 'status_changed', 'customer_signed_up', 'customer_first_order'] as const
 export const NOTIFY_CHANNELS = ['discord', 'slack', 'generic'] as const
 
 const safeUrl = z.string().trim().max(2000).superRefine((value, ctx) => {
@@ -17,6 +17,8 @@ export const notifyConfigSchema = z.object({
   event: z.enum(NOTIFY_EVENTS),
   channel: z.enum(NOTIFY_CHANNELS),
   url: safeUrl,
+  /** Only for 'customer_signed_up': limit it to one shop. Left out: any shop with signups switched on. */
+  integration_id: z.uuid().optional(),
 })
 
 export const reviewLargeConfigSchema = z.object({
@@ -32,6 +34,8 @@ export const EVENT_LABELS: Record<NotifyConfig['event'], string> = {
   created: 'a new order arrives',
   cancelled: 'an order is cancelled',
   status_changed: 'an order changes status',
+  customer_signed_up: 'a customer signs up',
+  customer_first_order: 'a new customer places their first order',
 }
 export const CHANNEL_LABELS: Record<NotifyConfig['channel'], string> = { discord: 'Discord', slack: 'Slack', generic: 'a webhook URL' }
 
@@ -39,6 +43,8 @@ const MESSAGES: Record<NotifyConfig['event'], string> = {
   created: 'New order {{order.display_number}} from {{order.customer}}: {{order.total}}',
   cancelled: 'Order {{order.display_number}} was cancelled ({{order.total}})',
   status_changed: 'Order {{order.display_number}} is now {{order.status}} ({{order.total}})',
+  customer_signed_up: 'New customer signed up: {{customer.display_name}} ({{customer.email}})',
+  customer_first_order: 'New customer {{customer.display_name}} ({{customer.email}}) placed their first order: {{order.display_number}}, {{order.total}}',
 }
 
 /** Placeholders sit inside JSON string literals; the engine escapes their values. */
@@ -46,12 +52,20 @@ export function notifyBody(config: NotifyConfig): string {
   const text = MESSAGES[config.event]
   if (config.channel === 'discord') return `{"content":"${text}"}`
   if (config.channel === 'slack') return `{"text":"${text}"}`
+  if (config.event === 'customer_signed_up') {
+    return `{"event":"customer.signed_up","customer":"{{customer.display_name}}","email":"{{customer.email}}","phone":"{{customer.phone}}","external_id":"{{customer.external_id}}","message":"${text}"}`
+  }
+  if (config.event === 'customer_first_order') {
+    return `{"event":"customer.first_order","customer":"{{customer.display_name}}","email":"{{customer.email}}","order_number":"{{order.display_number}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
+  }
   return `{"event":"order.${config.event}","order_number":"{{order.display_number}}","status":"{{order.status}}","payment_status":"{{order.payment_status}}","fulfillment_status":"{{order.fulfillment_status}}","customer":"{{order.customer}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
 }
 
 export function buildNotifyDefinition(config: NotifyConfig): WorkflowDefinition {
   const trigger: WorkflowDefinition['trigger'] =
-    config.event === 'created' ? { type: 'order_created' }
+    config.event === 'customer_signed_up' ? { type: 'customer_signup', ...(config.integration_id ? { integration_id: config.integration_id } : {}) }
+    : config.event === 'customer_first_order' ? { type: 'customer_first_order' }
+    : config.event === 'created' ? { type: 'order_created' }
     : config.event === 'cancelled' ? { type: 'order_status_changed', to_status: 'cancelled' }
     : { type: 'order_status_changed' }
   return {
@@ -93,7 +107,7 @@ export function describePreset(kind: PresetKind, config: Record<string, any>): {
     let host = 'the destination'
     try { host = new URL(String(config.url)).hostname } catch { /* keep default */ }
     return {
-      title: `Notify ${CHANNEL_LABELS[config.channel as NotifyConfig['channel']] ?? 'webhook'} when ${EVENT_LABELS[config.event as NotifyConfig['event']] ?? 'an order event happens'}`,
+      title: `Notify ${CHANNEL_LABELS[config.channel as NotifyConfig['channel']] ?? 'webhook'} when ${EVENT_LABELS[config.event as NotifyConfig['event']] ?? 'an event happens'}`,
       summary: `Posts a message to ${host}`,
     }
   }

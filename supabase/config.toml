@@ -9,6 +9,9 @@ project_id = "wayktzmupzrdcwosgnfg"
 [functions.order-webhook]
 verify_jwt = false
 
+[functions.customer-webhook]
+verify_jwt = false
+
 [functions.bind]
 verify_jwt = false
 

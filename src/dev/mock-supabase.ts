@@ -4,6 +4,7 @@
  * It is never part of the production build.
  */
 import { mountDataToggle } from './data-toggle'
+import { customerOrders, deriveCustomers, listCustomers } from './mock-customers'
 import { buildDataset, readMode } from './mock-datasets'
 
 type Row = Record<string, any>
@@ -39,12 +40,14 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'e2', order_id: 'o1', source: 'workrelay', type: 'note.added', occurred_at: ago(0.5), actor_user_id: 'u1', data: { note: 'Called the customer' } },
   ],
   integrations: [
-    { id: 'i2', organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'ignis-gaming-store', external_base_url: null, bound_at: ago(90), last_seen_at: ago(10), created_at: ago(120) },
-    { id: 'i1', organization_id: ORG, kind: 'commerce', name: 'Game Store', status: 'connected', key_prefix: 'wr_live_7b84', external_store_id: 'pazarmax', external_base_url: null, bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150) },
+    { id: 'i2', organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'ignis-gaming-store', external_base_url: null, bound_at: ago(90), last_seen_at: ago(10), created_at: ago(120), track_signups: true, signups_enabled_at: ago(60 * 24 * 5) },
+    { id: 'i1', organization_id: ORG, kind: 'commerce', name: 'Game Store', status: 'connected', key_prefix: 'wr_live_7b84', external_store_id: 'pazarmax', external_base_url: null, bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150), track_signups: false, signups_enabled_at: null },
   ],
   workflows: [
     { id: 'w1', organization_id: ORG, name: 'Notify Discord when a new order arrives', preset: 'notify', preset_config: { event: 'created', channel: 'discord', url: 'https://discord.com/api/webhooks/1/x' }, enabled: true, status: 'published', current_version_id: 'v1', updated_at: ago(27), created_at: ago(30) },
     { id: 'w2', organization_id: ORG, name: 'Review orders above 100', preset: 'review_large', preset_config: { threshold: 100, reviewer_role: 'admin' }, enabled: false, status: 'published', current_version_id: 'v2', updated_at: ago(500), created_at: ago(600) },
+    { id: 'w3', organization_id: ORG, name: 'Notify Discord when a customer signs up', preset: 'notify', preset_config: { event: 'customer_signed_up', channel: 'discord', url: 'https://discord.com/api/webhooks/3/x', integration_id: 'i2' }, enabled: true, status: 'published', current_version_id: 'v3', updated_at: ago(300), created_at: ago(310) },
+    { id: 'w4', organization_id: ORG, name: 'Notify Slack when a customer signs up', preset: 'notify', preset_config: { event: 'customer_signed_up', channel: 'slack', url: 'https://hooks.slack.com/services/x', integration_id: 'i1' }, enabled: true, status: 'published', current_version_id: 'v4', updated_at: ago(200), created_at: ago(210) },
   ],
   workflow_runs: [
     ['r1', 'succeeded', 1, 0.6], ['r2', 'succeeded', 10, 0.5], ['r3', 'succeeded', 11, 1.6], ['r4', 'failed', 60, 0.8], ['r5', 'waiting_approval', 5, null],
@@ -59,7 +62,9 @@ const DEMO_DB: Record<string, Row[]> = {
   webhook_events: [
     ['order.created', 'evt_ORD-99685_1', 'processed', null, 1], ['order.created', 'evt_OMNI_391705_created', 'processed', null, 10],
     ['order.status_changed', 'evt_OMNI_855383_status', 'processed', null, 11], ['order.created', 'bad-1', 'failed', 'order.totals.total_minor: expected int', 90], ['order.deleted', 'ign-1', 'ignored', 'unsupported event_type', 120],
-  ].map(([t, id, status, error, min]) => ({ id: id, integration_id: 'i1', event_id: id, event_type: t, status, error, attempt_count: 0, received_at: ago(min as number), processed_at: ago(min as number), organization_id: ORG })),
+  ].map(([t, id, status, error, min]) => ({ id: id, integration_id: 'i1', event_id: id, event_type: t, status, error, attempt_count: 0, received_at: ago(min as number), processed_at: ago(min as number), organization_id: ORG })).concat([
+    { id: 'cust_2041_created', integration_id: 'i2', event_id: 'cust_2041:created', event_type: 'customer.created', status: 'processed', error: null, attempt_count: 0, received_at: ago(90), processed_at: ago(90), organization_id: ORG },
+  ] as any),
   approvals: [
     { id: 'a1', run_id: 'r5', step_key: 'review', title: 'Review large order #ORD-99685 (149230.00 MKD)', context: { order: { external_id: '99685' } }, reviewer_user_id: null, reviewer_role: 'admin', status: 'pending', decided_by: null, decided_at: null, comment: null, created_at: ago(5), organization_id: ORG },
     { id: 'a2', run_id: 'r1', step_key: 'review', title: 'Review large order #OMNI-391705', context: {}, reviewer_user_id: null, reviewer_role: 'admin', status: 'approved', decided_by: 'u1', decided_at: ago(30), comment: 'Looks fine', created_at: ago(40), organization_id: ORG },
@@ -78,6 +83,15 @@ const DEMO_RPC: Record<string, unknown> = {
 // ?data=worst|empty|one|many swaps the whole dataset at this boundary; the components never know.
 const MODE = readMode()
 const { DB, RPC } = MODE === 'demo' ? { DB: DEMO_DB, RPC: DEMO_RPC } : buildDataset(MODE, DEMO_DB, DEMO_RPC)
+// Shops with signups switched on report some accounts; most of them have not ordered (yet).
+const SIGNUPS: Row[] = (DB.integrations ?? []).some((i) => i.track_signups)
+  ? [
+      { email: 'new.visitor@example.com', name: 'Dimitar Stojanov', registered_at: ago(90), external_id: 'cust_2041' },
+      { email: 'lena@example.com', name: null, registered_at: ago(60 * 20) },
+      { email: 'buyer1@example.com', name: 'Operative', registered_at: ago(60 * 24 * 6), external_id: 'cust_17' },
+    ]
+  : []
+DB.customers = deriveCustomers(DB.orders ?? [], MODE === 'empty' ? [] : SIGNUPS)
 mountDataToggle(MODE)
 
 class Query {
@@ -92,6 +106,7 @@ class Query {
   eq(col: string, val: unknown) { this.filters.push((r) => !(col in r) || r[col] === val); return this }
   neq(col: string, val: unknown) { this.filters.push((r) => !(col in r) || r[col] !== val); return this }
   or() { return this }
+  like(col: string, pattern: string) { const prefix = pattern.replace(/%$/, ''); this.filters.push((r) => String(r[col] ?? '').startsWith(prefix)); return this }
   gte() { return this }
   lt() { return this }
   order() { return this }
@@ -118,7 +133,11 @@ export const isSupabaseConfigured = true
 export const errorMessage = (e: unknown) => (e as { message?: string } | null)?.message ?? 'Something went wrong.'
 export const supabase: any = {
   from: (table: string) => new Query(table),
-  rpc: (name: string) => Promise.resolve({ data: RPC[name] ?? null, error: null }),
+  rpc: (name: string, args?: Record<string, any>) => {
+    if (name === 'list_customers') return Promise.resolve({ data: listCustomers(DB, args), error: null })
+    if (name === 'customer_orders') return Promise.resolve({ data: customerOrders(DB, args), error: null })
+    return Promise.resolve({ data: RPC[name] ?? null, error: null })
+  },
   functions: { invoke: () => Promise.resolve({ data: {}, error: null }) },
   channel: () => channel,
   removeChannel: () => Promise.resolve('ok'),

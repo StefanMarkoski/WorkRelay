@@ -18,6 +18,14 @@ export function formatMoney(minor: number | null | undefined, currency: string |
   }
 }
 
+/** Order value per currency, e.g. "€10.00 · ¥5,000". Currencies are never added together. */
+export function formatSpent(spent: Record<string, number> | null | undefined): string {
+  const parts = Object.entries(spent ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, minor]) => formatMoney(minor, currency))
+  return parts.length ? parts.join(' · ') : '—'
+}
+
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))

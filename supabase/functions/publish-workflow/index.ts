@@ -42,6 +42,20 @@ Deno.serve(async (req) => {
   const result = validateDefinition(wf.draft_definition)
   if (!result.ok) return reply(422, { error: 'invalid_definition', issues: result.issues })
 
+  // "Customer signed up" only makes sense when a shop actually sends signups. Refuse it here, not just in the form.
+  const trigger = result.value.trigger
+  if (trigger.type === 'customer_signup') {
+    let q = admin.from('integrations').select('id').eq('organization_id', wf.organization_id).eq('status', 'connected').eq('track_signups', true).limit(1)
+    if (trigger.integration_id) q = q.eq('id', trigger.integration_id)
+    const { data: shops } = await q
+    if (!shops || shops.length === 0) {
+      return reply(422, {
+        error: 'invalid_definition',
+        issues: [{ path: 'trigger', message: 'Turn on customer signups for a shop first (Integrations, then Edit on the shop).' }],
+      })
+    }
+  }
+
   const { data, error } = await admin.rpc('publish_workflow', {
     p_workflow: wf.id,
     p_definition: result.value,

@@ -10,7 +10,7 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
     async findIntegrationByKeyHash(hashHex) {
       const { data, error } = await db
         .from('integrations')
-        .select('id, organization_id, status, external_store_id')
+        .select('id, organization_id, status, external_store_id, track_signups')
         .eq('key_hash', `\\x${hashHex}`)
         .maybeSingle()
       if (error) throw new Error(error.message)
@@ -20,6 +20,7 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
         organizationId: data.organization_id,
         status: data.status,
         externalStoreId: data.external_store_id,
+        trackSignups: data.track_signups === true,
       }
     },
 
@@ -58,18 +59,21 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
 
       const { data, error } = await db
         .from('webhook_events')
-        .select('id, status, attempt_count')
+        .select('id, status, attempt_count, error')
         .eq('integration_id', e.integrationId)
         .eq('event_id', e.eventId)
         .single()
       if (error) throw new Error(error.message)
-      if (data.status === 'failed' || data.status === 'received') {
+      // Failed and half-finished events are retried. So is a signup that was ignored only because tracking was off:
+      // once the shop switches it on, resending the same event works.
+      const retry = data.status === 'failed' || data.status === 'received' || (data.status === 'ignored' && String(data.error ?? '').startsWith('signups_off'))
+      if (retry) {
         await db
           .from('webhook_events')
-          .update({ attempt_count: data.attempt_count + 1, raw_payload: e.rawPayload, status: 'received' })
+          .update({ attempt_count: data.attempt_count + 1, raw_payload: e.rawPayload, status: 'received', error: null })
           .eq('id', data.id)
       }
-      return { id: data.id, status: data.status, isNew: false }
+      return { id: data.id, status: retry ? 'received' : data.status, isNew: false }
     },
 
     async markEvent(id, status, error) {
@@ -88,6 +92,23 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
         .maybeSingle()
       if (error) throw new Error(error.message)
       return (data as StoredOrder | null) ?? null
+    },
+
+    async applySignup(a) {
+      const { data, error } = await db.rpc('apply_customer_signup', {
+        p_event_row: a.eventRowId,
+        p_org: a.organizationId,
+        p_integration: a.integrationId,
+        p_event_type: a.eventType,
+        p_occurred_at: a.occurredAt,
+        p_email: a.email,
+        p_name: a.name,
+        p_phone: a.phone,
+        p_external_id: a.externalId,
+        p_registered_at: a.registeredAt,
+      })
+      if (error) throw new Error(error.message)
+      return data === 'ok' ? 'ok' : 'disabled'
     },
 
     async applyPlan({ eventRowId, organizationId, integrationId, externalId, plan }: {

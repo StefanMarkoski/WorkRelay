@@ -112,3 +112,50 @@ describe('presets running on the engine', () => {
     expect(small.approvals).toHaveLength(0)
   })
 })
+
+describe('customer notifications', () => {
+  const customer = { id: 'c1', name: 'Ana "The Boss" Petrova', email: 'ana@example.com', phone: null, external_id: null }
+  const SHOP = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11'
+
+  it.each((['discord', 'slack', 'generic'] as const).flatMap((c) => (['customer_signed_up', 'customer_first_order'] as const).map((e) => [c, e] as const)))(
+    '%s / %s builds a valid definition and valid JSON, even with hostile text',
+    (channel, event) => {
+      const r = buildPresetDefinition('notify', { channel, event, url: URL_OK })
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(validateDefinition(r.definition).ok).toBe(true)
+      const rendered = renderTemplate((r.definition.steps[0] as any).body, templateView({ customer, order }), { json: true })
+      expect(JSON.parse(rendered)).toBeTruthy()
+      expect(rendered).toContain('ana@example.com')
+    },
+  )
+
+  it('maps the events to the customer triggers, with an optional shop for signups', () => {
+    const t = (config: object) => (buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, ...config }) as any).definition.trigger
+    expect(t({ event: 'customer_signed_up' })).toEqual({ type: 'customer_signup' })
+    expect(t({ event: 'customer_signed_up', integration_id: SHOP })).toEqual({ type: 'customer_signup', integration_id: SHOP })
+    expect(t({ event: 'customer_first_order' })).toEqual({ type: 'customer_first_order' })
+    expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'customer_signed_up', integration_id: 'not-a-uuid' }).ok).toBe(false)
+  })
+
+  it('shows a name when there is one, the email when there is not, and never an empty message', () => {
+    expect((templateView({ customer }) as any).customer.display_name).toBe('Ana "The Boss" Petrova')
+    expect((templateView({ customer: { email: 'x@y.co' } }) as any).customer.display_name).toBe('x@y.co')
+    expect((templateView({ customer: {} }) as any).customer.display_name).toBe('a customer')
+  })
+
+  it('says what the preset does in the list', () => {
+    expect(describePreset('notify', { channel: 'discord', event: 'customer_signed_up', url: URL_OK }).title).toBe('Notify Discord when a customer signs up')
+    expect(describePreset('notify', { channel: 'discord', event: 'customer_first_order', url: URL_OK }).title).toContain('first order')
+  })
+})
+
+describe('order totals in messages follow the currency', () => {
+  it('uses the currency\'s own minor unit', () => {
+    const total = (minor: number, currency: string) => (templateView({ order: { total_minor: minor, currency } }) as any).order.total
+    expect(total(4999, 'EUR')).toBe('49.99 EUR')
+    expect(total(5000, 'JPY')).toBe('5000 JPY')
+    expect(total(12500, 'KWD')).toBe('12.500 KWD')
+  })
+})
+

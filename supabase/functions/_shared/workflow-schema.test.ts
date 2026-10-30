@@ -25,6 +25,15 @@ describe('validateDefinition', () => {
     expect(validateDefinition(def([rec('a')], { type: 'webhook' })).ok).toBe(false)
   })
 
+  it('accepts the customer triggers, with an optional shop for signups, and rejects a malformed shop', () => {
+    const ok = (trigger: unknown) => validateDefinition(def([rec('a')], trigger)).ok
+    expect(ok({ type: 'customer_signup' })).toBe(true)
+    expect(ok({ type: 'customer_signup', integration_id: '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11' })).toBe(true)
+    expect(ok({ type: 'customer_first_order' })).toBe(true)
+    expect(ok({ type: 'customer_signup', integration_id: 'shop-1' })).toBe(false)
+    expect(ok({ type: 'customer_signed_up' })).toBe(false)
+  })
+
   it('rejects unknown references, duplicates, loops and unreachable steps', () => {
     const msg = (steps: unknown[]) => {
       const r = validateDefinition(def(steps))

@@ -16,6 +16,8 @@ export class MemoryStore implements IngestStore {
   events: EventRow[] = []
   orders = new Map<string, StoredOrder & { id: string }>()
   items = new Map<string, unknown[]>()
+  /** What applySignup was asked to apply (the real logic is the apply_customer_signup SQL function). */
+  signups: Parameters<IngestStore['applySignup']>[0][] = []
   timeline: { orderId: string; type: string; data: Record<string, unknown> }[] = []
   /** Test hook: force the next N applyPlan calls to report a version conflict. */
   forceConflicts = 0
@@ -27,6 +29,7 @@ export class MemoryStore implements IngestStore {
       organizationId: `org_${this.nextId++}`,
       status: 'awaiting_bind' as const,
       externalStoreId: null,
+      trackSignups: false,
       keyHash: await sha256Hex(key),
       ...init,
     }
@@ -52,10 +55,11 @@ export class MemoryStore implements IngestStore {
   async recordEvent(e: { integrationId: string; eventId: string; rawPayload: unknown }) {
     const existing = this.events.find((x) => x.integrationId === e.integrationId && x.eventId === e.eventId)
     if (existing) {
-      if (existing.status === 'failed' || existing.status === 'received') {
+      if (existing.status === 'failed' || existing.status === 'received' || (existing.status === 'ignored' && String(existing.error ?? '').startsWith('signups_off'))) {
         existing.attempts++
         existing.rawPayload = e.rawPayload
         existing.status = 'received'
+        existing.error = undefined
       }
       return { id: existing.id, status: existing.status, isNew: false }
     }
@@ -81,6 +85,16 @@ export class MemoryStore implements IngestStore {
   async getOrder(integrationId: string, externalId: string) {
     const o = this.orders.get(`${integrationId}:${externalId}`)
     return o ? structuredClone(o) : null
+  }
+
+  async applySignup(a: Parameters<IngestStore['applySignup']>[0]) {
+    if (!this.integrations.get(a.integrationId)?.trackSignups) {
+      await this.markEvent(a.eventRowId, 'ignored', 'signups_off: signup tracking is off for this shop')
+      return 'disabled' as const
+    }
+    this.signups.push(a)
+    await this.markEvent(a.eventRowId, 'processed')
+    return 'ok' as const
   }
 
   async applyPlan(a: Parameters<IngestStore['applyPlan']>[0]) {

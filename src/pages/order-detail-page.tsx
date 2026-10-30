@@ -68,6 +68,17 @@ export function OrderDetailPage() {
       return data as Member[]
     },
   })
+  // The customer record for this order's email, if there is one (an order without an email has none).
+  const emailKey = query.data?.order?.customer_email?.trim().toLowerCase()
+  const customer = useQuery({
+    queryKey: ['customer', 'by-email', current.id, emailKey],
+    enabled: !!emailKey,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('customers').select('id').eq('organization_id', current.id).eq('email_key', emailKey!).maybeSingle()
+      if (error) throw error
+      return data as { id: string } | null
+    },
+  })
   const people = Object.fromEntries((members.data ?? []).map((m) => [m.user_id, m.email]))
 
   async function addNote(e: FormEvent) {
@@ -155,6 +166,11 @@ export function OrderDetailPage() {
                 <p className="text-sm">{o.customer_name ?? 'Name not provided'}</p>
                 <p className="text-sm text-muted-foreground">{o.customer_email ?? 'No email'}</p>
                 {o.customer_phone && <p className="text-sm text-muted-foreground">{o.customer_phone}</p>}
+                {customer.data && (
+                  <Link to={`/customers/${customer.data.id}`} className="mt-1 inline-block text-sm text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">
+                    View customer
+                  </Link>
+                )}
               </div>
               <AddressBlock title="Billing" a={o.billing_address} />
               <AddressBlock title="Shipping" a={o.shipping_address} />

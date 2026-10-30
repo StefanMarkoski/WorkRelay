@@ -15,7 +15,7 @@ const MAX_BODY_BYTES = 1_000_000
 const MAX_APPLY_ATTEMPTS = 4
 
 /** Resolve the integration from the bearer key. Org and store come from the key, never the payload. */
-async function authenticate(req: Request, deps: HandlerDeps): Promise<IntegrationRef | Response> {
+export async function authenticate(req: Request, deps: HandlerDeps): Promise<IntegrationRef | Response> {
   const key = parseBearer(req)
   if (!key) return json(401, { error: 'invalid_key' })
   const integration = await deps.store.findIntegrationByKeyHash(await sha256Hex(key))
@@ -33,7 +33,7 @@ export async function readJsonBody(req: Request): Promise<{ ok: true; value: unk
   }
 }
 
-function describeIssues(error: z.ZodError): string {
+export function describeIssues(error: z.ZodError): string {
   // Paths and messages only: never echo submitted values (may contain PII).
   return error.issues
     .slice(0, 10)
