@@ -10,6 +10,8 @@ const TONE: Record<string, BadgeTone> = {
   running: 'info', processing: 'info', draft: 'neutral', ignored: 'neutral', skipped: 'neutral', unknown: 'neutral',
 }
 
+export const statusTone = (status: string): BadgeTone => TONE[status] ?? 'neutral'
+
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
-  return <Badge tone={TONE[status] ?? 'neutral'}>{label ?? humanize(status)}</Badge>
+  return <Badge tone={statusTone(status)}>{label ?? humanize(status)}</Badge>
 }

@@ -195,6 +195,11 @@ The smallest valid event:
 - **Order of arrival does not matter.** Each field is only overwritten by an event with a newer `occurred_at` than the
   one that last set it. A late, older event is recorded on the order's timeline as outdated and does not overwrite newer data.
   Make sure `occurred_at` reflects when the change happened in the shop.
+- **Edits made in WorkRelay**: any member of the workspace can change an order's status, payment status and fulfillment status by hand. The edit is
+  recorded on the order with the member who made it and is treated like an event that happened at that moment: a shop event with an older `occurred_at` is recorded as
+  outdated and does not overwrite it, and a newer one replaces it. These edits are **not sent back to the shop**. The shop's own text stays
+  visible on the order ("Store status"), so a difference between the two is easy to spot. A manual status change can start automations
+  that listen for status changes (it never starts "new order" or "webhook" automations).
 - **Unknown order**: any event for an unseen `external_id` creates the order, so a missed `order.created` self-heals.
 - **Automations**: `order.created` can trigger the tenant's new-order automations (for example a Discord notification), and a
   status change that was applied can trigger status automations. Replayed or duplicate events do not trigger one twice.

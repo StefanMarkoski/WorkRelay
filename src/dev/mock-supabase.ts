@@ -34,6 +34,8 @@ const DEMO_DB: Record<string, Row[]> = {
   order_items: [{ id: 'it1', order_id: 'o1', position: 0, sku: 'GC-50', name: 'Gift card 50', quantity: 2, unit_price_minor: 7000000 }],
   order_events: [
     { id: 'e1', order_id: 'o1', source: 'external', type: 'order.created', occurred_at: ago(1), actor_user_id: null, data: { applied: ['status', 'totals'], status_to: 'pending' } },
+    { id: 'e4', order_id: 'o1', source: 'workrelay', type: 'order.status_changed', occurred_at: ago(0.3), actor_user_id: 'u1', data: { applied: ['status', 'fulfillment_status'], status_from: 'processing', status_to: 'completed', fulfillment_from: 'unfulfilled', fulfillment_to: 'fulfilled', note: 'Handed to the courier, tracking sent to the customer.', by: 'dashboard' } },
+    { id: 'e3', order_id: 'o1', source: 'workrelay', type: 'order.status_changed', occurred_at: ago(0.4), actor_user_id: 'u2', data: { applied: ['status'], status_from: 'pending', status_to: 'processing', by: 'dashboard' } },
     { id: 'e2', order_id: 'o1', source: 'workrelay', type: 'note.added', occurred_at: ago(0.5), actor_user_id: 'u1', data: { note: 'Called the customer' } },
   ],
   integrations: [

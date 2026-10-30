@@ -9,10 +9,13 @@ import { Textarea } from '@/components/ui/input'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
+import { EditStatus } from '@/features/orders/edit-status'
 import { OrderTimeline } from '@/features/orders/order-timeline'
+import { StatusHistory } from '@/features/orders/status-history'
+import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatMoney, humanize } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
-import type { Order, OrderEvent, OrderItem } from '@/types/db'
+import type { Member, Order, OrderEvent, OrderItem } from '@/types/db'
 
 function AddressBlock({ title, a }: { title: string; a: Order['billing_address'] }) {
   const lines = a ? [a.name, a.line1, a.line2, [a.postal_code, a.city].filter(Boolean).join(' '), a.region, a.country, a.phone].filter(Boolean) : []
@@ -33,6 +36,7 @@ const Row = ({ label, value }: { label: string; value: string }) => (
 export function OrderDetailPage() {
   const { id } = useParams()
   const qc = useQueryClient()
+  const { current } = useWorkspace()
   const [note, setNote] = useState('')
   const [showAllItems, setShowAllItems] = useState(false)
   const [noteError, setNoteError] = useState<string | null>(null)
@@ -54,6 +58,17 @@ export function OrderDetailPage() {
       }
     },
   })
+
+  // Who is behind each action: the workspace's members, by user id. Someone removed since then shows as a former member.
+  const members = useQuery({
+    queryKey: ['members', current.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_members', { org: current.id })
+      if (error) throw error
+      return data as Member[]
+    },
+  })
+  const people = Object.fromEntries((members.data ?? []).map((m) => [m.user_id, m.email]))
 
   async function addNote(e: FormEvent) {
     e.preventDefault()
@@ -83,10 +98,13 @@ export function OrderDetailPage() {
         <StatusBadge status={o.payment_status} label={`Payment: ${humanize(o.payment_status)}`} />
         <StatusBadge status={o.fulfillment_status} label={`Fulfillment: ${humanize(o.fulfillment_status)}`} />
         {o.data_quality.length > 0 && <Badge tone="warning" title={o.data_quality.join(', ')}>Incomplete data</Badge>}
+        <EditStatus key={o.updated_at} order={o} onSaved={() => void qc.invalidateQueries({ queryKey: ['order', id] })} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 [&>div]:min-w-0">
         <div className="space-y-4 lg:col-span-2">
+          <StatusHistory events={events} people={people} />
+
           <Card>
             <CardHeader><CardTitle>Items</CardTitle></CardHeader>
             {items.length === 0 ? (
@@ -125,7 +143,7 @@ export function OrderDetailPage() {
 
           <Card>
             <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
-            <OrderTimeline events={events} />
+            <OrderTimeline events={events} people={people} />
           </Card>
         </div>
 
@@ -166,8 +184,8 @@ export function OrderDetailPage() {
                 <Button type="submit" size="sm" disabled={saving || !note.trim()}>Add note</Button>
               </form>
               <p className="border-t pt-3 text-xs text-muted-foreground">
-                Changing the order status in the store is not available yet: the connected integration does not expose write
-                access. WorkRelay does not process payments, refunds or shipments.
+                Status edits are made with Edit status at the top of the page, and stay in WorkRelay: the store is not told.
+                WorkRelay does not process payments, refunds or shipments.
               </p>
             </CardBody>
           </Card>

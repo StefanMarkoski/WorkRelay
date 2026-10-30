@@ -86,6 +86,25 @@ describe('ingestion', () => {
     expect(only()).toMatchObject({ customer_name: 'Ana B', customer_email: 'ana@example.com', notes: null, currency: 'EUR' })
   })
 
+  it('treats a manual edit in WorkRelay like any other newer write: older shop events are outdated, newer ones win', async () => {
+    await handleOrderWebhook(post(ev({ event_id: 'c', occurred_at: '2026-10-27T10:00:00Z' }, { status: 'pending' })), deps())
+    // what set_order_statuses stores: the new value, stamped with the time of the edit
+    Object.assign(only(), { status: 'cancelled', applied_at: { ...only().applied_at, status: '2026-10-27T11:00:00Z' } })
+
+    await handleOrderWebhook(
+      post(ev({ event_id: 'older', event_type: 'order.status_changed', occurred_at: '2026-10-27T10:30:00Z' }, { status: 'processing' })),
+      deps(),
+    )
+    expect(only().status).toBe('cancelled')
+    expect(store.timeline.at(-1)!.data.stale).toEqual(['status'])
+
+    await handleOrderWebhook(
+      post(ev({ event_id: 'newer', event_type: 'order.status_changed', occurred_at: '2026-10-27T12:00:00Z' }, { status: 'completed' })),
+      deps(),
+    )
+    expect(only().status).toBe('completed')
+  })
+
   it('does not let an older out-of-order event overwrite newer state, but records it', async () => {
     await handleOrderWebhook(post(ev({ event_id: 'new', occurred_at: '2026-10-27T12:00:00Z' }, { status: 'completed' })), deps())
     await handleOrderWebhook(
