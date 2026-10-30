@@ -37,16 +37,24 @@ export interface PullDeps {
 
 export async function pullDueProducts(deps: PullDeps, limit = 3): Promise<{ pulled: number; failed: number }> {
   const due = await deps.store.claimDue(limit)
-  const results = await Promise.all(due.map((shop) => pullOne(shop, deps)))
-  return { pulled: results.filter(Boolean).length, failed: results.filter((ok) => !ok).length }
+  const results = await Promise.all(due.map((shop) => pullShop(shop, deps)))
+  return { pulled: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length }
 }
 
-async function pullOne(shop: DueSync, deps: PullDeps): Promise<boolean> {
+export type PullOutcome = { ok: true; products: number } | { ok: false; error: string }
+
+/**
+ * One pull from one shop: ask its URL, check the answer, apply it, and record the outcome (it shows in Event history).
+ * Used by the scheduler and by "Sync now", so a manual sync is exactly the same operation as a scheduled one.
+ */
+export async function pullShop(shop: DueSync, deps: PullDeps): Promise<PullOutcome> {
   const sentAt = (deps.now ?? (() => new Date()))().toISOString()
-  const fail = async (message: string) => {
+  const fail = async (raw: string): Promise<PullOutcome> => {
+    // Whatever went wrong, the shop's saved Authorization value must never end up in a message that is stored or shown.
+    const message = shop.authHeader && shop.authHeader.length >= 4 ? raw.split(shop.authHeader).join('[hidden]') : raw
     deps.log.info('product pull failed', { integration_id: shop.integrationId, reason: message })
     await deps.store.record(shop.integrationId, message).catch(() => undefined)
-    return false
+    return { ok: false, error: message }
   }
   try {
     const headers: Record<string, string> = { accept: 'application/json' }
@@ -66,7 +74,7 @@ async function pullOne(shop: DueSync, deps: PullDeps): Promise<boolean> {
 
     const applied = await deps.store.apply({ integrationId: shop.integrationId, items: toDatabaseItems(parsed.data.products), at: sentAt })
     await deps.store.record(shop.integrationId, null, applied)
-    return true
+    return { ok: true, products: applied }
   } catch (err) {
     return await fail(err instanceof Error ? err.message : 'The request failed')
   }

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PullStore } from '../_shared/product-pull.ts'
+import type { PullStore } from './product-pull.ts'
 
 /** Service-role implementation of the scheduled pull's persistence. */
 export function createPullStore(db: SupabaseClient): PullStore {

@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { Plug } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,8 @@ import { Switch } from '@/components/ui/switch'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { useIntegrations } from '@/features/integrations/queries'
+import { useIntegrationSyncs } from '@/features/integrations/sync'
+import { SyncNowControl } from '@/features/integrations/sync-now-button'
 import { shopLabel } from '@/features/integrations/shop-label'
 import { SettingsTabs } from '@/features/settings/settings-tabs'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
@@ -16,20 +18,9 @@ import { formatDateTime, formatSyncPace, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration, IntegrationSync } from '@/types/db'
 
-const SYNC_COLUMNS = 'integration_id, source_url, has_auth_header, push_enabled, paused, calls, days, next_sync_at, last_sync_at, last_error'
-
 export function SettingsApiCallsPage() {
-  const { current } = useWorkspace()
   const integrations = useIntegrations()
-  const syncs = useQuery({
-    queryKey: ['integration-sync', current.id],
-    refetchInterval: 30_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('integration_sync').select(SYNC_COLUMNS).eq('organization_id', current.id)
-      if (error) throw error
-      return (data ?? []) as IntegrationSync[]
-    },
-  })
+  const syncs = useIntegrationSyncs()
   const shops = (integrations.data ?? []).filter((i) => i.status !== 'revoked')
 
   return (
@@ -130,6 +121,7 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
             The last check failed: {sync.last_error}
           </p>
         )}
+        <SyncNowControl shopId={shop.id} className="mb-4" />
         {!hasRate && (
           <p className="mb-4 text-sm text-muted-foreground">
             No schedule is set for this shop, so WorkRelay will not call it. Ask WorkRelay to set how many calls per how many days this shop gets.

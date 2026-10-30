@@ -57,8 +57,8 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'se3', product_id: 'pr1', stock_before: null, stock_after: 12, source: 'pull', occurred_at: ago(60 * 24 * 3) },
   ],
   integration_sync: [
-    { integration_id: SHOP_1, organization_id: ORG, source_url: 'https://pazarmax.example/workrelay/products', has_auth_header: true, push_enabled: true, paused: false, calls: 15, days: 1, next_sync_at: ago(-50), last_sync_at: ago(46), last_error: null },
-    { integration_id: SHOP_2, organization_id: ORG, source_url: 'https://ignis.example/feed', has_auth_header: false, push_enabled: false, paused: false, calls: 4, days: 7, next_sync_at: ago(-60 * 20), last_sync_at: null, last_error: 'The shop answered with HTTP 503' },
+    { integration_id: SHOP_1, organization_id: ORG, source_url: 'https://pazarmax.example/workrelay/products', has_auth_header: true, push_enabled: true, paused: false, calls: 15, days: 1, next_sync_at: ago(-50), last_sync_at: ago(46), last_error: null, window_start: ago(60 * 5), window_used: 4 },
+    { integration_id: SHOP_2, organization_id: ORG, source_url: 'https://ignis.example/feed', has_auth_header: false, push_enabled: false, paused: false, calls: 4, days: 7, next_sync_at: ago(-60 * 20), last_sync_at: null, last_error: 'The shop answered with HTTP 503', window_start: ago(60 * 24), window_used: 4 },
   ],
   order_events: [
     { id: 'e1', order_id: 'o1', source: 'external', type: 'order.created', occurred_at: ago(1), actor_user_id: null, data: { applied: ['status', 'totals'], status_to: 'pending' } },
@@ -213,7 +213,17 @@ export const supabase: any = {
     if (name === 'customer_orders') return Promise.resolve({ data: customerOrders(DB, args), error: null })
     return Promise.resolve({ data: RPC[name] ?? null, error: null })
   },
-  functions: { invoke: () => Promise.resolve({ data: {}, error: null }) },
+  functions: {
+    invoke: (name: string, opts?: { body?: { integration_id?: string } }) => {
+      if (name !== 'sync-now') return Promise.resolve({ data: {}, error: null })
+      // Dev stand-in for the sync-now function: spends a call from the shop's window and stamps the check.
+      const row = (DB.integration_sync ?? []).find((r) => r.integration_id === opts?.body?.integration_id)
+      if (!row || row.calls == null) return Promise.resolve({ data: null, error: { context: new Response(JSON.stringify({ error: 'not_scheduled', detail: 'WorkRelay has not set up scheduled checks for this shop yet.' }), { status: 409 }) } })
+      row.window_used += 1
+      row.last_sync_at = new Date().toISOString()
+      return Promise.resolve({ data: { status: 'ok', products: 6, calls_left: row.calls - row.window_used }, error: null })
+    },
+  },
   channel: () => channel,
   removeChannel: () => Promise.resolve('ok'),
   auth: {

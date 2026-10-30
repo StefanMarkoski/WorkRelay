@@ -29,3 +29,8 @@ verify_jwt = false
 # Validates the caller's JWT and platform-admin status itself, so it can return structured errors with CORS headers.
 [functions.admin-create-tenant]
 verify_jwt = false
+
+# Validates the caller's JWT itself (owner or admin of the shop's workspace, checked in the database) so it can answer with
+# CORS headers and readable refusals. It runs the same pull as the scheduler, on the same call budget.
+[functions.sync-now]
+verify_jwt = false

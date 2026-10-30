@@ -1,5 +1,5 @@
-import type { PullHttp } from '../_shared/product-pull.ts'
-import { assertPublicDestination } from './http-client.ts'
+import { assertPublicDestination } from './public-destination.ts'
+import type { PullHttp } from './product-pull.ts'
 
 const TIMEOUT_MS = 15_000
 const MAX_RESPONSE_BYTES = 5_000_000

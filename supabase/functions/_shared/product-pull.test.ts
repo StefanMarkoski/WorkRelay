@@ -86,6 +86,19 @@ describe('failures are recorded for the tenant and never applied', () => {
   })
 })
 
+describe('the shop\'s saved Authorization value', () => {
+  it('is scrubbed from any error before it is stored or shown', async () => {
+    const t = setup([shop({ authHeader: 'Bearer s3cret-token' })], async () => { throw new Error('upstream said: bad credential Bearer s3cret-token') })
+    await t.run()
+    expect(t.records[0][1]).toBe('upstream said: bad credential [hidden]')
+  })
+  it('leaves messages alone when there is nothing to hide', async () => {
+    const t = setup([shop()], async () => { throw new Error('The request timed out') })
+    await t.run()
+    expect(t.records[0][1]).toBe('The request timed out')
+  })
+})
+
 describe('nothing due', () => {
   it('does nothing', async () => {
     const t = setup([], ok({}))

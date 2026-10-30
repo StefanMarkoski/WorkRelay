@@ -5,8 +5,8 @@ import { consoleLogger } from '../_shared/log.ts'
 import { pullDueProducts } from '../_shared/product-pull.ts'
 import { createEngineStore } from './engine-store.ts'
 import { createHttpClient } from './http-client.ts'
-import { createPullClient } from './pull-client.ts'
-import { createPullStore } from './pull-store.ts'
+import { createPullClient } from '../_shared/pull-client.ts'
+import { createPullStore } from '../_shared/pull-store.ts'
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },

@@ -254,6 +254,9 @@ export interface IntegrationSync {
   next_sync_at: string | null
   last_sync_at: string | null
   last_error: string | null
+  /** The shop's current call window: started at its first call, renewed after `days`. */
+  window_start: string | null
+  window_used: number
 }
 
 /** A row of admin_list_tenant_shops. */
