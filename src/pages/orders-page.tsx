@@ -11,6 +11,7 @@ import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
 import { useIntegrations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
@@ -50,7 +51,7 @@ export function OrdersPage() {
     queryFn: async () => {
       let q = supabase
         .from('orders')
-        .select('*, integrations(name)', { count: 'exact' })
+        .select('*, integrations(name, currency)', { count: 'exact' })
         .eq('organization_id', current.id)
         .order('placed_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
@@ -100,7 +101,7 @@ export function OrdersPage() {
           </Select>
           <Select aria-label="Source integration" value={filters.integration} onChange={set('integration')}>
             <option value="">Any source</option>
-            {integrations.data?.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {integrations.data?.map((i) => <option key={i.id} value={i.id}>{shopLabel(i)}</option>)}
           </Select>
         </div>
         <div className="flex flex-col gap-3 border-t pt-3 text-xs sm:flex-row sm:items-center sm:justify-between">
@@ -154,7 +155,7 @@ export function OrdersPage() {
                     <TD className="text-right font-medium tabular-nums">{formatMoney(o.total_minor, o.currency)}</TD>
                     <TD><StatusBadge status={o.payment_status} /></TD>
                     <TD className="hidden lg:table-cell"><StatusBadge status={o.fulfillment_status} /></TD>
-                    <TD className="hidden lg:table-cell">{o.integrations?.name ? <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-0.5 text-xs whitespace-nowrap"><Store className="size-3 text-muted-foreground" />{o.integrations.name}</span> : '—'}</TD>
+                    <TD className="hidden lg:table-cell">{o.integrations?.name ? <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-0.5 text-xs whitespace-nowrap"><Store className="size-3 text-muted-foreground" />{shopLabel(o.integrations)}</span> : '—'}</TD>
                     <TD className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">{timeAgo(o.updated_at)}</TD>
                   </TR>
                 ))}

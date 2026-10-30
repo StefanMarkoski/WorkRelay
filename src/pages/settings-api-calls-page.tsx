@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { useIntegrations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { SettingsTabs } from '@/features/settings/settings-tabs'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatSyncPace, timeAgo } from '@/lib/format'
@@ -62,14 +63,13 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
   const [url, setUrl] = useState(sync?.source_url ?? '')
   const [header, setHeader] = useState('')
   const [clearHeader, setClearHeader] = useState(false)
-  const [push, setPush] = useState(sync?.push_enabled ?? false)
   const [paused, setPaused] = useState(sync?.paused ?? false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
 
   const hasRate = sync?.calls != null && sync.days != null
   const dirty =
-    url.trim() !== (sync?.source_url ?? '') || header !== '' || clearHeader || push !== (sync?.push_enabled ?? false) || paused !== (sync?.paused ?? false)
+    url.trim() !== (sync?.source_url ?? '') || header !== '' || clearHeader || paused !== (sync?.paused ?? false)
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -80,7 +80,6 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
       p_url: url.trim(),
       // null keeps the stored value (it can never be read back); an empty string removes it.
       p_auth_header: clearHeader ? '' : header.trim() === '' ? null : header.trim(),
-      p_push: push,
       p_paused: paused,
     })
     setBusy(false)
@@ -94,7 +93,7 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
   return (
     <Card>
       <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-        <CardTitle>{shop.name}</CardTitle>
+        <CardTitle>{shopLabel(shop)}</CardTitle>
         {hasRate ? (
           <Badge tone={paused ? 'neutral' : sync?.last_error ? 'danger' : 'success'}>
             {paused ? 'Paused' : sync?.last_error ? 'Last check failed' : 'Scheduled'}
@@ -121,8 +120,9 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
             <dd className="mt-0.5 font-medium">{hasRate && !paused && sync?.source_url ? formatDateTime(sync?.next_sync_at) : '—'}</dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Pushed updates</dt>
-            <dd className="mt-0.5 font-medium">{sync?.push_enabled ? 'Accepted' : 'Off'}</dd>
+            <dt className="text-xs text-muted-foreground">Quick sync from your shop</dt>
+            <dd className="mt-0.5 font-medium">{sync?.push_enabled ? 'Allowed' : 'Not allowed'}</dd>
+            <dd className="text-xs text-muted-foreground">{sync?.push_enabled ? 'Your shop can send stock to WorkRelay at any time' : 'Set by WorkRelay'}</dd>
           </div>
         </dl>
         {sync?.last_error && (
@@ -133,7 +133,7 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
         {!hasRate && (
           <p className="mb-4 text-sm text-muted-foreground">
             No schedule is set for this shop, so WorkRelay will not call it. Ask WorkRelay to set how many calls per how many days this shop gets.
-            Pushed updates, if switched on below, work without a schedule.
+            Quick sync from your shop, once WorkRelay allows it, works without a schedule.
           </p>
         )}
 
@@ -170,10 +170,6 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
             </Field>
           </div>
           <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
-            <label className="flex items-center gap-2 text-sm">
-              <Switch label={`Accept pushed updates from ${shop.name}`} checked={push} onChange={setPush} disabled={!canManage || busy} />
-              Accept pushed updates
-            </label>
             <label className="flex items-center gap-2 text-sm">
               <Switch label={`Pause checks for ${shop.name}`} checked={paused} onChange={setPaused} disabled={!canManage || busy} />
               Pause scheduled checks

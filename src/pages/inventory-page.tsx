@@ -15,6 +15,7 @@ import { useInventoryHealth } from '@/features/insights/queries'
 import { NotifyEdit } from '@/features/inventory/notify-edit'
 import { PRICE_SOURCE_LABEL } from '@/features/inventory/price-source'
 import { useIntegrations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
@@ -84,7 +85,7 @@ export function InventoryPage() {
         {shops.length > 1 && (
           <Select aria-label="Shop" className="w-auto min-w-40" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
             <option value="">All shops</option>
-            {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {shops.map((i) => <option key={i.id} value={i.id}>{shopLabel(i)}</option>)}
           </Select>
         )}
         <Segmented label="Which products" value={scope} options={SCOPES} onChange={(next) => { setScope(next); setPage(0) }} />
@@ -129,7 +130,7 @@ export function InventoryPage() {
                         {p.name}
                       </Link>
                       <div className="mt-0.5 max-w-72 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">
-                        {p.sku}{shops.length > 1 && <span className="font-sans"> · {p.integration_name}</span>}
+                        {p.sku}{shops.length > 1 && <span className="font-sans"> · {shopLabel(shops.find((s) => s.id === p.integration_id) ?? { name: p.integration_name })}</span>}
                       </div>
                     </TD>
                     <TD className="text-right">

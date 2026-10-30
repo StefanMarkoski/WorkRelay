@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { ErrorState } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
 import { useIntegrations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useLiveStatus } from '@/features/realtime/live-status'
 import { useLiveItems, type LiveItem } from './live-data'
 import { timeAgo } from '@/lib/format'
@@ -76,7 +77,7 @@ export function LiveFeed({ shopId, className }: { shopId: string; className?: st
                   <span className="line-clamp-2 text-[13px] font-medium [overflow-wrap:anywhere]">{i.title}</span>
                   <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
                     {i.status && <StatusBadge status={i.status} />}
-                    <span>{timeAgo(i.at)}{showShop && i.shopId ? ` · ${shops.find((s) => s.id === i.shopId)?.name ?? ''}` : ''}</span>
+                    <span>{timeAgo(i.at)}{showShop && i.shopId ? ` · ${((s) => (s ? shopLabel(s) : ''))(shops.find((x) => x.id === i.shopId))}` : ''}</span>
                   </span>
                 </span>
               </Link>

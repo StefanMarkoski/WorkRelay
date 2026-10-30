@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { useIntegrations, useSignupAutomations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, formatSpent, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
@@ -85,7 +86,7 @@ export function CustomersPage() {
         {shops.length > 1 && (
           <Select aria-label="Shop" className="w-auto min-w-40" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
             <option value="">All shops</option>
-            {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {shops.map((i) => <option key={i.id} value={i.id}>{shopLabel(i)}</option>)}
           </Select>
         )}
         {showScope && (

@@ -4,6 +4,7 @@ import { CurrencySelect } from '@/components/common/currency-select'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { ErrorState, TableSkeleton } from '@/components/common/states'
 import { formatSyncPace, maxSyncCalls, timeAgo } from '@/lib/format'
@@ -24,7 +25,7 @@ export function ShopRates({ tenants }: { tenants: Tenant[] }) {
       <CardHeader><CardTitle>Shops: currency and API calls</CardTitle></CardHeader>
       <CardBody className="space-y-4">
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Each shop sells in exactly one currency, which owners can also change in the shop's details. Changing it never converts an amount: it gives
+          Quick sync decides whether a shop may push stock to WorkRelay (for example from a sync button in its own admin); scheduled calls from WorkRelay work either way. Each shop sells in exactly one currency, which owners can also change in the shop's details. Changing it never converts an amount: it gives
           orders that had no currency the new one, and marks orders that say a different one.
         </p>
         <p className="max-w-3xl text-sm text-muted-foreground">
@@ -47,7 +48,7 @@ export function ShopRates({ tenants }: { tenants: Tenant[] }) {
           <p className="border-t p-4 text-sm text-muted-foreground">This tenant has no shops yet.</p>
         ) : (
           <Table>
-            <THead><tr><TH>Shop</TH><TH>Currency</TH><TH colSpan={3}>Calls per days</TH><TH className="hidden md:table-cell">Last check</TH><TH><span className="sr-only">Save</span></TH></tr></THead>
+            <THead><tr><TH>Shop</TH><TH>Currency</TH><TH>Quick sync</TH><TH colSpan={3}>Calls per days</TH><TH className="hidden md:table-cell">Last check</TH><TH><span className="sr-only">Save</span></TH></tr></THead>
             <tbody>
               {shops.data!.map((s) => <RateRow key={`${s.id}:${s.calls}:${s.days}`} shop={s} orgId={orgId} />)}
             </tbody>
@@ -92,6 +93,7 @@ function RateRow({ shop, orgId }: { shop: TenantShop; orgId: string }) {
     <TR>
       <TD className="min-w-32 font-medium [overflow-wrap:anywhere]">{shop.name}</TD>
       <TD className="min-w-52"><CurrencyCell shop={shop} orgId={orgId} /></TD>
+      <TD className="min-w-28"><PushCell shop={shop} orgId={orgId} /></TD>
       <TD colSpan={3} className="p-0">
         <form id={`rate-${shop.id}`} onSubmit={save} className="flex flex-wrap items-center gap-3 px-4 py-2">
           <Input aria-label={`Calls for ${shop.name}`} inputMode="numeric" className="h-8 w-20 tabular-nums" value={calls} onChange={(e) => setCalls(e.target.value)} placeholder="—" />
@@ -137,6 +139,36 @@ function CurrencyCell({ shop, orgId }: { shop: TenantShop; orgId: string }) {
       <div className="flex items-center gap-2">
         <CurrencySelect aria-label={`Currency for ${shop.name}`} className="h-8 w-40 text-xs" value={value} onChange={setValue} placeholder={shop.currency ? undefined : 'Not set'} disabled={busy} />
         {changed && <Button type="button" size="sm" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button>}
+      </div>
+      {error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+/**
+ * Whether this shop may push stock to WorkRelay (its "Sync to WorkRelay" button, or any job on its side). Only a platform
+ * admin can change it; the workspace sees it read-only. Scheduled pulls do not depend on it.
+ */
+function PushCell({ shop, orgId }: { shop: TenantShop; orgId: string }) {
+  const qc = useQueryClient()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function set(next: boolean) {
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_set_push_enabled', { p_integration: shop.id, p_enabled: next })
+    setBusy(false)
+    if (rpcError) return setError(errorMessage(rpcError))
+    void qc.invalidateQueries({ queryKey: ['admin-tenant-shops', orgId] })
+    void qc.invalidateQueries({ queryKey: ['integration-sync'] })
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <Switch label={`Allow quick sync from ${shop.name}`} checked={shop.push_enabled} onChange={set} disabled={busy} />
+        <span className="text-xs text-muted-foreground">{shop.push_enabled ? 'Allowed' : 'Off'}</span>
       </div>
       {error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}
     </div>

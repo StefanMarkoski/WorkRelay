@@ -1,3 +1,5 @@
+import { shopLabel } from '@/features/integrations/shop-label'
+import { useIntegrations } from '@/features/integrations/queries'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
@@ -31,6 +33,7 @@ const Fact = ({ label, children }: { label: string; children: React.ReactNode })
 export function ProductDetailPage() {
   const { id } = useParams()
   const { current, canManage } = useWorkspace()
+  const shops = useIntegrations().data ?? []
   const [page, setPage] = useState(0)
   const [now] = useState(() => Date.now()) // the right edge of the stock chart
 
@@ -90,7 +93,7 @@ export function ProductDetailPage() {
       <Link to="/inventory" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="size-4" /> Inventory
       </Link>
-      <PageHeader title={p.name} description={`SKU ${p.sku} · ${p.integration_name}`} actions={p.low ? <Badge tone="warning">Low stock</Badge> : undefined} />
+      <PageHeader title={p.name} description={`SKU ${p.sku} · ${shopLabel(shops.find((s) => s.id === p.integration_id) ?? { name: p.integration_name })}`} actions={p.low ? <Badge tone="warning">Low stock</Badge> : undefined} />
 
       <Card className="mb-4">
         <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">

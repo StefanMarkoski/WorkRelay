@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
+import { shopLabel } from '@/features/integrations/shop-label'
 import type { Integration } from '@/types/db'
 import { eligibleShops, toggleShop, type ShopSelection } from './shops'
 
-type Shop = Pick<Integration, 'id' | 'name' | 'status' | 'track_signups'>
+type Shop = Pick<Integration, 'id' | 'name' | 'status' | 'track_signups'> & { currency?: string | null }
 
 const box = 'size-4 shrink-0 rounded border-input accent-[var(--primary)] disabled:opacity-50'
 
@@ -30,7 +31,7 @@ export function ShopPicker({ shops, event, value, onChange }: { shops: Shop[]; e
         {eligible.map((s) => (
           <label key={s.id} className="flex items-center gap-2 text-sm">
             <input type="checkbox" className={box} checked={value === null || value.includes(s.id)} onChange={() => onChange(toggleShop(value, s.id, eligible))} />
-            <span className="[overflow-wrap:anywhere]">{s.name}</span>
+            <span className="[overflow-wrap:anywhere]">{shopLabel(s)}</span>
           </label>
         ))}
         {stale.map((id) => (
@@ -43,7 +44,7 @@ export function ShopPicker({ shops, event, value, onChange }: { shops: Shop[]; e
           <label key={s.id} className="flex items-start gap-2 text-sm text-muted-foreground">
             <input type="checkbox" className={`${box} mt-0.5`} disabled checked={false} readOnly />
             <span>
-              <span className="[overflow-wrap:anywhere]">{s.name}</span>
+              <span className="[overflow-wrap:anywhere]">{shopLabel(s)}</span>
               <span className="block text-xs">
                 Signups are off for this shop.{' '}
                 <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Switch them on</Link>

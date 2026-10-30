@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
 import { useIntegrations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, humanize } from '@/lib/format'
 import { contextShopFilter, shopIdOfContext } from '@/lib/shop-scope'
@@ -35,7 +36,7 @@ export function ApprovalsPage() {
   const connected = shops.filter((i) => i.status === 'connected')
   const showShop = connected.length > 1 // the shop only matters once there is more than one to tell apart
   const [shopId, setShopId] = useState('') // '' = all shops
-  const shopOf = (a: Approval) => shops.find((i) => i.id === shopIdOfContext(a.context))?.name ?? null
+  const shopOf = (a: Approval) => ((s) => (s ? shopLabel(s) : null))(shops.find((i) => i.id === shopIdOfContext(a.context)))
   const [target, setTarget] = useState<Approval | null>(null)
   const [comment, setComment] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -79,7 +80,7 @@ export function ApprovalsPage() {
         {showShop && (
           <Select aria-label="Filter by shop" className="w-44" value={shopId} onChange={(e) => setShopId(e.target.value)}>
             <option value="">All shops</option>
-            {connected.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {connected.map((i) => <option key={i.id} value={i.id}>{shopLabel(i)}</option>)}
           </Select>
         )}
       </div>

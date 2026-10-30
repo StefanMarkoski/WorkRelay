@@ -109,8 +109,8 @@ const DEMO_RPC: Record<string, unknown> = {
   ],
   admin_list_tenants: [{ id: ORG, name: 'Game Shop', created_at: ago(9000), owner_emails: ['owner@example.com'], members: 2, integrations: 2, workflows: 6, orders: 7, currencies: ['MKD', 'USD'], shops_without_currency: 0 }],
   admin_list_tenant_shops: [
-    { id: SHOP_1, name: 'Game Store', status: 'connected', currency: 'MKD', calls: 15, days: 1, last_sync_at: ago(46), last_error: null },
-    { id: SHOP_2, name: 'Game Store 2', status: 'connected', currency: 'USD', calls: null, days: null, last_sync_at: null, last_error: null },
+    { id: SHOP_1, name: 'Game Store', status: 'connected', currency: 'MKD', push_enabled: true, calls: 15, days: 1, last_sync_at: ago(46), last_error: null },
+    { id: SHOP_2, name: 'Game Store 2', status: 'connected', currency: 'USD', push_enabled: false, calls: null, days: null, last_sync_at: null, last_error: null },
   ],
 }
 
@@ -192,6 +192,11 @@ export const supabase: any = {
       return Promise.resolve({ data: rows, error: null })
     }
     if (name === 'product_orders') return Promise.resolve({ data: productOrders(DB, args), error: null })
+    if (name === 'admin_set_push_enabled') {
+      for (const s of (RPC.admin_list_tenant_shops as Row[]) ?? []) if (s.id === args?.p_integration) s.push_enabled = !!args?.p_enabled
+      for (const r of DB.integration_sync ?? []) if (r.integration_id === args?.p_integration) r.push_enabled = !!args?.p_enabled
+      return Promise.resolve({ data: null, error: null })
+    }
     if (name === 'set_integration_currency' || name === 'admin_set_shop_currency') {
       const id = args?.p_id ?? args?.p_integration
       const code = String(args?.p_currency ?? '').trim().toUpperCase()

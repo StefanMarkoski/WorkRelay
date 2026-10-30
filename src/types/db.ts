@@ -262,6 +262,8 @@ export interface TenantShop {
   name: string
   status: string
   currency: string | null
+  /** Whether the shop may push stock to WorkRelay. Set by a platform admin only. */
+  push_enabled: boolean
   calls: number | null
   days: number | null
   last_sync_at: string | null

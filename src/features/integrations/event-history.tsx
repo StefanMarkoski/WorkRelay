@@ -7,6 +7,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/state
 import { Pagination } from '@/components/common/pagination'
 import { StatusBadge } from '@/components/common/status-badge'
 import { useIntegrations } from './queries'
+import { shopLabel } from './shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
@@ -62,7 +63,7 @@ export function EventHistory() {
         {showShop && (
           <Select aria-label="Filter by shop" className="w-44" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
             <option value="">All shops</option>
-            {shops.filter((i) => i.status !== 'revoked').map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {shops.filter((i) => i.status !== 'revoked').map((i) => <option key={i.id} value={i.id}>{shopLabel(i)}</option>)}
           </Select>
         )}
       </div>
@@ -91,7 +92,7 @@ export function EventHistory() {
                 <TR key={e.id}>
                   <TD className="max-w-48 truncate font-mono text-xs" title={e.event_id}>{e.event_id}</TD>
                   <TD>{e.event_type ?? '—'}</TD>
-                  {showShop && <TD className="text-muted-foreground [overflow-wrap:anywhere]">{shops.find((i) => i.id === e.integration_id)?.name ?? '—'}</TD>}
+                  {showShop && <TD className="text-muted-foreground [overflow-wrap:anywhere]">{((s) => (s ? shopLabel(s) : '—'))(shops.find((i) => i.id === e.integration_id))}</TD>}
                   <TD><StatusBadge status={e.status} /></TD>
                   <TD className="whitespace-nowrap">{formatDateTime(e.received_at)}</TD>
                   <TD>{e.attempt_count + 1}</TD>

@@ -1,3 +1,4 @@
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
@@ -185,7 +186,7 @@ export function OrderDetailPage() {
           <Card>
             <CardHeader><CardTitle>Source</CardTitle></CardHeader>
             <CardBody className="space-y-1 text-sm">
-              <Row label="Integration" value={o.integrations?.name ?? '—'} />
+              <Row label="Integration" value={o.integrations ? shopLabel(o.integrations) : '—'} />
               <Row label="External ID" value={o.external_id} />
               <Row label="Placed" value={formatDateTime(o.placed_at)} />
               <Row label="Last event" value={formatDateTime(o.last_event_at)} />

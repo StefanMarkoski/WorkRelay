@@ -76,12 +76,36 @@ select inv_test.check('saving with no header value keeps the stored header', (se
 select inv_test.as_user('00000000-0000-0000-0000-0000000000f1');
 select inv_test.fails('the sync url must be https',
   $$select set_sync_source('a1000000-0000-0000-0000-0000000000f1', 'http://shop.example/x', null, true, false)$$);
-select inv_test.check('the owner sees the url but not the auth header',
-  (select source_url = 'https://shop.example/api/stock' and push_enabled from integration_sync));
+select inv_test.check('the owner sees the url, and passing "push on" changes nothing: the switch is the platform admin''s',
+  (select source_url = 'https://shop.example/api/stock' and not push_enabled from integration_sync));
+select inv_test.fails('a tenant owner cannot switch pushing on',
+  $$select admin_set_push_enabled('a1000000-0000-0000-0000-0000000000f1', true)$$, '42501');
 select inv_test.fails('the auth header cannot be selected by a tenant',
   $$select auth_header from integration_sync$$, '42501');
 select inv_test.fails('an owner of another workspace cannot set the source',
   $$select set_sync_source('a1000000-0000-0000-0000-0000000000f2', 'https://x.example', null, false, false)$$, '42501');
+reset role;
+
+select inv_test.check('with the switch still off, a push is ignored even though the owner asked for it',
+  apply_product_sync('a1000000-0000-0000-0000-0000000000f1', '[{"sku":"BIKE-1","stock":9}]', 'push') = -1);
+
+-- the platform admin switches pushing on
+select inv_test.as_user('00000000-0000-0000-0000-0000000000f3');
+select inv_test.fails('an unknown shop is refused', $$select admin_set_push_enabled(gen_random_uuid(), true)$$);
+select admin_set_push_enabled('a1000000-0000-0000-0000-0000000000f1', true);
+reset role;
+select inv_test.check('the platform admin can switch it on', (select push_enabled from integration_sync));
+select inv_test.as_user('00000000-0000-0000-0000-0000000000f1');
+select set_sync_source('a1000000-0000-0000-0000-0000000000f1', 'https://shop.example/api/stock', null, false, true);
+reset role;
+select inv_test.check('the owner saving the source (even with push false) does not switch it off, and the pause still saves',
+  (select push_enabled and paused from integration_sync));
+select inv_test.as_user('00000000-0000-0000-0000-0000000000f1');
+select set_sync_source('a1000000-0000-0000-0000-0000000000f1', 'https://shop.example/api/stock', null, true, false);
+reset role;
+select inv_test.as_user('00000000-0000-0000-0000-0000000000f3');
+select inv_test.check('the platform admin sees the switch in the tenant''s shop list',
+  (select count(*) = 1 and bool_and(push_enabled) from admin_list_tenant_shops('a0000000-0000-0000-0000-0000000000f1')));
 reset role;
 
 -- ------------------------------------------------------------------------------------------------ partial + out-of-order

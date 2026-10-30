@@ -10,6 +10,7 @@ import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
 import { useIntegrations } from '@/features/integrations/queries'
+import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatDuration, humanize } from '@/lib/format'
 import { contextShopFilter, shopIdOfContext } from '@/lib/shop-scope'
@@ -23,7 +24,7 @@ export function ExecutionsPage() {
   const shops = useIntegrations().data ?? []
   // The shop column only matters once there is more than one shop to tell apart.
   const showShop = shops.filter((i) => i.status === 'connected').length > 1
-  const shopOf = (r: WorkflowRun) => shops.find((i) => i.id === shopIdOfContext(r.context))?.name ?? '—'
+  const shopOf = (r: WorkflowRun) => ((s) => (s ? shopLabel(s) : '—'))(shops.find((i) => i.id === shopIdOfContext(r.context)))
   const [status, setStatus] = useState('')
   const [shopId, setShopId] = useState('') // '' = all shops
   const [page, setPage] = useState(0)
@@ -58,7 +59,7 @@ export function ExecutionsPage() {
           {showShop && (
             <Select aria-label="Filter by shop" className="w-44" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
               <option value="">All shops</option>
-              {shops.filter((i) => i.status === 'connected').map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              {shops.filter((i) => i.status === 'connected').map((i) => <option key={i.id} value={i.id}>{shopLabel(i)}</option>)}
             </Select>
           )}
         </div>
