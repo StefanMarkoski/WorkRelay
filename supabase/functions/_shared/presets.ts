@@ -5,7 +5,7 @@ import type { WorkflowDefinition } from './workflow-schema.ts'
 /** Ready-made automations. Each preset is turned into a normal workflow definition, so the engine, retries,
  *  approvals and execution history work exactly the same as for any workflow. */
 
-export const NOTIFY_EVENTS = ['created', 'cancelled', 'status_changed', 'customer_signed_up', 'customer_first_order', 'low_stock'] as const
+export const NOTIFY_EVENTS = ['created', 'cancelled', 'status_changed', 'customer_signed_up', 'customer_first_order', 'low_stock', 'products_synced'] as const
 export const NOTIFY_CHANNELS = ['discord', 'slack', 'generic'] as const
 
 const safeUrl = z.string().trim().max(2000).superRefine((value, ctx) => {
@@ -40,6 +40,7 @@ export const EVENT_LABELS: Record<NotifyConfig['event'], string> = {
   customer_signed_up: 'a customer signs up',
   customer_first_order: 'a new customer places their first order',
   low_stock: 'a product runs low on stock',
+  products_synced: 'a shop syncs its products',
 }
 export const CHANNEL_LABELS: Record<NotifyConfig['channel'], string> = { discord: 'Discord', slack: 'Slack', generic: 'a webhook URL' }
 
@@ -49,6 +50,7 @@ const MESSAGES: Record<NotifyConfig['event'], string> = {
   status_changed: 'Order {{order.display_number}} is now {{order.status}} ({{order.total}})',
   customer_signed_up: 'New customer signed up: {{customer.display_name}} ({{customer.email}})',
   customer_first_order: 'New customer {{customer.display_name}} ({{customer.email}}) placed their first order: {{order.display_number}}, {{order.total}}',
+  products_synced: '{{sync.by}} has synced their products{{sync.where}}',
   low_stock: 'Low stock: {{product.name}} (SKU {{product.sku}}) has {{product.stock}} left, at or below its alert level of {{product.threshold}}. Shop: {{product.shop}}',
 }
 
@@ -59,6 +61,9 @@ export function notifyBody(config: NotifyConfig): string {
   if (config.channel === 'slack') return `{"text":"${text}"}`
   if (config.event === 'customer_signed_up') {
     return `{"event":"customer.signed_up","customer":"{{customer.display_name}}","email":"{{customer.email}}","phone":"{{customer.phone}}","external_id":"{{customer.external_id}}","message":"${text}"}`
+  }
+  if (config.event === 'products_synced') {
+    return `{"event":"products.synced","by":"{{sync.by}}","user":"{{sync.name}}","role":"{{sync.role}}","shop":"{{sync.shop}}","message":"${text}"}`
   }
   if (config.event === 'low_stock') {
     return `{"event":"product.low_stock","product":"{{product.name}}","sku":"{{product.sku}}","stock":"{{product.stock}}","notify_on":"{{product.threshold}}","unit":"{{product.unit}}","shop":"{{product.shop}}","message":"${text}"}`
@@ -82,6 +87,7 @@ export function buildNotifyDefinition(config: NotifyConfig): WorkflowDefinition 
     config.event === 'customer_signed_up' ? { type: 'customer_signup', ...limit }
     : config.event === 'customer_first_order' ? { type: 'customer_first_order', ...limit }
     : config.event === 'low_stock' ? { type: 'low_stock', ...limit }
+    : config.event === 'products_synced' ? { type: 'products_synced', ...limit }
     : config.event === 'created' ? { type: 'order_created', ...limit }
     : config.event === 'cancelled' ? { type: 'order_status_changed', to_status: 'cancelled', ...limit }
     : { type: 'order_status_changed', ...limit }

@@ -48,6 +48,8 @@ export interface IngestStore {
     source: 'push' | 'pull'
     at: string
   }): Promise<number | 'disabled'>
+  /** A push was applied: tell the automations who synced (merged with the other chunks of the same sync). Best effort. */
+  announceProductSync(a: { integrationId: string; byName: string | null; byRole: string | null; products: number }): Promise<void>
   applyPlan(a: {
     eventRowId: string
     organizationId: string

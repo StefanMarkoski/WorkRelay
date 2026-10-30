@@ -59,6 +59,20 @@ export async function handleInventoryWebhook(req: Request, deps: HandlerDeps): P
     }
     await deps.store.touchIntegration(integration.id).catch(() => undefined) // last-seen is best effort
     await note('processed', summary)
+    // Tell the team's automations (once per sync: the database merges the chunks of one button press). An automatic background
+    // push says `quiet`, an empty one has nothing to announce, and a failure here must never fail a push that was applied.
+    if (!parsed.data.quiet && result > 0) {
+      try {
+        await deps.store.announceProductSync({
+          integrationId: integration.id,
+          byName: parsed.data.synced_by?.name || null,
+          byRole: parsed.data.synced_by?.role || null,
+          products: result,
+        })
+      } catch (err) {
+        deps.log.error('product sync announcement failed', { integration_id: integration.id, message: err instanceof Error ? err.message : 'unknown' })
+      }
+    }
     return json(200, { status: 'processed', applied: result })
   } catch (err) {
     await note('failed', summary, 'internal error')

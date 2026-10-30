@@ -89,6 +89,65 @@ describe('Event history', () => {
   })
 })
 
+describe('telling the team a shop synced', () => {
+  it('announces a push, naming who pressed the button, with how many products were applied', async () => {
+    await send({ products: [{ sku: 'A', stock: 1 }, { sku: 'B', stock: 2 }], synced_by: { name: ' Marko ', role: 'Admin' } })
+    expect(store.announcements).toEqual([{ integrationId: shop.id, byName: 'Marko', byRole: 'Admin', products: 2 }])
+  })
+
+  it('still announces when the shop does not say who (the team is then told the shop did it)', async () => {
+    await send({ products: [{ sku: 'A', stock: 1 }] })
+    expect(store.announcements).toEqual([{ integrationId: shop.id, byName: null, byRole: null, products: 1 }])
+  })
+
+  it('treats a blank name or role as not given, and accepts just one of them', async () => {
+    await send({ products: [{ sku: 'A' }], synced_by: { name: '   ', role: 'Manager' } })
+    await send({ products: [{ sku: 'A' }], synced_by: { name: 'Ana', role: null } })
+    expect(store.announcements.map((a) => [a.byName, a.byRole])).toEqual([[null, 'Manager'], ['Ana', null]])
+  })
+
+  it('stays silent for a push marked quiet (an automatic background job)', async () => {
+    expect((await send({ products: [{ sku: 'A', stock: 1 }], quiet: true })).status).toBe(200)
+    expect(store.productReports).toHaveLength(1) // the stock was still applied
+    expect(store.announcements).toHaveLength(0)
+    await send({ products: [{ sku: 'A', stock: 1 }], quiet: false })
+    expect(store.announcements).toHaveLength(1)
+  })
+
+  it('announces nothing when quick sync is not allowed, when the push is rejected, or when there was nothing in it', async () => {
+    store.pushEnabled.clear()
+    await send({ products: [{ sku: 'A', stock: 1 }], synced_by: { name: 'Marko' } })
+    store.pushEnabled.add(shop.id)
+    await send({ products: [{ sku: 'A', stock: 'many' }], synced_by: { name: 'Marko' } })
+    await send({ products: [], synced_by: { name: 'Marko' } })
+    expect(store.announcements).toHaveLength(0)
+  })
+
+  it('never fails a push that was applied because the announcement could not be made', async () => {
+    store.failAnnouncements = true
+    const res = await send({ products: [{ sku: 'A', stock: 1 }], synced_by: { name: 'Marko' } })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ status: 'processed', applied: 1 })
+    expect(store.productReports).toHaveLength(1)
+  })
+
+  it('rejects a malformed synced_by or quiet, naming the field and never the value', async () => {
+    for (const body of [
+      { products: [], synced_by: 'Marko' },
+      { products: [], synced_by: { name: 5 } },
+      { products: [], synced_by: { name: 'x'.repeat(121) } },
+      { products: [], synced_by: { role: 'x'.repeat(61) } },
+      { products: [], quiet: 'yes' },
+    ]) {
+      const res = await send(body)
+      expect(res.status, JSON.stringify(body).slice(0, 60)).toBe(400)
+    }
+    const detail = (await (await send({ products: [], synced_by: { name: 5 } })).json()).detail as string
+    expect(detail).toContain('synced_by.name')
+    expect(store.announcements).toHaveLength(0)
+  })
+})
+
 describe('the payload', () => {
   it('needs only a sku; everything else is optional and nulls mean "unchanged"', async () => {
     const res = await send({ products: [{ sku: ' BIKE-1 ' }, { sku: 'NAIL-1', name: null, stock: null, notify_on: null, price_minor: null }] })

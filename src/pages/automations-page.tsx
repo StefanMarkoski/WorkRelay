@@ -214,12 +214,20 @@ export function AutomationsPage() {
                       <option value="status_changed">an order changes status</option>
                       <option value="customer_first_order">a new customer places their first order</option>
                       <option value="low_stock">a product runs low on stock</option>
+                      <option value="products_synced">a shop syncs its products</option>
                       <option value="customer_signed_up" disabled={signupShops.length === 0 && editing.config.event !== 'customer_signed_up'}>
                         a customer signs up{signupShops.length === 0 ? ' (needs customer signups switched on)' : ''}
                       </option>
                     </Select>
                   )}
                 </Field>
+                {editing.config.event === 'products_synced' && (
+                  <p className="-mt-2 text-xs text-muted-foreground">
+                    Fires when a shop sends its products to WorkRelay, for example when someone presses the sync button in the shop's own admin.
+                    The message says who did it, when the shop tells us, and a sync sent in several parts is announced once.
+                    Scheduled checks and <span className="font-medium text-foreground">Sync now</span> from WorkRelay do not count. The shop needs quick sync switched on by WorkRelay.
+                  </p>
+                )}
                 {editing.config.event === 'low_stock' && (
                   <p className="-mt-2 text-xs text-muted-foreground">
                     Covers every product. Each one alerts once when its stock reaches its own "Notify on" number (bikes at 5, nails at 5,000),

@@ -54,6 +54,11 @@ export function ShopPicker({ shops, event, value, onChange }: { shops: Shop[]; e
         ))}
       </div>
       {value !== null && value.length === 0 && <p role="alert" className="text-xs text-destructive">Pick at least one shop.</p>}
+      {event === 'products_synced' && (
+        <p className="text-xs text-muted-foreground">
+          {value === null ? 'Announces a sync from any shop, including ones connected later.' : 'Announces a sync only from the ticked shops.'}
+        </p>
+      )}
       {event === 'low_stock' && (
         <p className="text-xs text-muted-foreground">
           {value === null ? 'Alerts for products of every shop, including ones connected later.' : 'Alerts only for products that belong to the ticked shops.'}

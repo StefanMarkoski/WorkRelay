@@ -30,7 +30,19 @@ export type ProductItem = z.infer<typeof productSchema>
 export const PUSH_MAX_PRODUCTS = 500
 export const PULL_MAX_PRODUCTS = 5000
 
-export const inventoryEnvelope = (max: number) => z.object({ products: z.array(productSchema).max(max) })
+/** Who pressed the sync button in the shop's admin, so the team's notification can say so. Both parts are optional. */
+export const syncedBySchema = z.object({
+  name: optional(z.string().trim().max(120)),
+  role: optional(z.string().trim().max(60)),
+})
+
+/**
+ * The feed. `synced_by` and `quiet` only mean something on a push: `synced_by` names the person who pressed the shop's sync
+ * button, and `quiet: true` marks an automatic background push that should not notify anyone. A pull answer may carry them
+ * and they are ignored.
+ */
+export const inventoryEnvelope = (max: number) =>
+  z.object({ products: z.array(productSchema).max(max), synced_by: optional(syncedBySchema), quiet: optional(z.boolean()) })
 
 /** The shape handed to the database: nulls dropped, times normalised, so "absent" is the only way to say "unchanged". */
 export function toDatabaseItems(items: ProductItem[]): Record<string, unknown>[] {

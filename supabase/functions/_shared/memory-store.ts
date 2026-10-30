@@ -106,6 +106,14 @@ export class MemoryStore implements IngestStore {
     return a.items.length
   }
 
+  /** What the push handler announced (the real merging is the announce_products_synced SQL function). */
+  announcements: Parameters<IngestStore['announceProductSync']>[0][] = []
+  failAnnouncements = false
+  async announceProductSync(a: Parameters<IngestStore['announceProductSync']>[0]) {
+    if (this.failAnnouncements) throw new Error('db down')
+    this.announcements.push(a)
+  }
+
   async applyPlan(a: Parameters<IngestStore['applyPlan']>[0]) {
     if (this.forceConflicts > 0) {
       this.forceConflicts--

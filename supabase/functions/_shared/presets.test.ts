@@ -187,6 +187,49 @@ describe('low-stock notifications', () => {
   })
 })
 
+describe('product sync notifications', () => {
+  const sync = { by: 'Marko "The Admin" (Admin)', name: 'Marko "The Admin"', role: 'Admin', shop: 'Game Store', where: ' (Game Store)' }
+
+  it.each((['discord', 'slack', 'generic'] as const).map((c) => [c] as const))(
+    '%s builds a valid definition and valid JSON, even with hostile text in the name',
+    (channel) => {
+      const r = buildPresetDefinition('notify', { channel, event: 'products_synced', url: URL_OK })
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(validateDefinition(r.definition).ok).toBe(true)
+      const rendered = renderTemplate((r.definition.steps[0] as any).body, templateView({ sync }), { json: true })
+      expect(JSON.parse(rendered)).toBeTruthy()
+      expect(rendered).toContain('has synced their products')
+      expect(rendered).toContain('Game Store')
+    },
+  )
+
+  it('says "<who> has synced their products (<shop>)", and gives a generic webhook the parts separately', () => {
+    const r = buildPresetDefinition('notify', { channel: 'generic', event: 'products_synced', url: URL_OK }) as any
+    const body = JSON.parse(renderTemplate(r.definition.steps[0].body, templateView({ sync }), { json: true }))
+    expect(body).toMatchObject({ event: 'products.synced', by: 'Marko "The Admin" (Admin)', user: 'Marko "The Admin"', role: 'Admin', shop: 'Game Store' })
+    expect(body.message).toBe('Marko "The Admin" (Admin) has synced their products (Game Store)')
+  })
+
+  it('does not say the shop twice when the shop itself is the subject (nobody was named)', () => {
+    const r = buildPresetDefinition('notify', { channel: 'slack', event: 'products_synced', url: URL_OK }) as any
+    const alone = { by: 'Game Store', name: null, role: null, shop: 'Game Store', where: '' }
+    expect(JSON.parse(renderTemplate(r.definition.steps[0].body, templateView({ sync: alone }), { json: true })).text).toBe('Game Store has synced their products')
+  })
+
+  it('maps to the products_synced trigger, for all shops or the chosen ones', () => {
+    const t = (config: object) => (buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'products_synced', ...config }) as any).definition.trigger
+    expect(t({})).toEqual({ type: 'products_synced' })
+    const A = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11'
+    expect(t({ integration_ids: [A] })).toEqual({ type: 'products_synced', integration_ids: [A] })
+    expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'products_synced', integration_ids: [] }).ok).toBe(false)
+  })
+
+  it('says what it does in the list', () => {
+    expect(describePreset('notify', { channel: 'discord', event: 'products_synced', url: URL_OK }).title).toBe('Notify Discord when a shop syncs its products')
+  })
+})
+
 describe('order totals in messages follow the currency', () => {
   it('uses the currency\'s own minor unit', () => {
     const total = (minor: number, currency: string) => (templateView({ order: { total_minor: minor, currency } }) as any).order.total

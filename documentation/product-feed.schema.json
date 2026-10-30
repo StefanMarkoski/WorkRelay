@@ -122,6 +122,46 @@
           "sku"
         ]
       }
+    },
+    "synced_by": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "role": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 60
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "quiet": {
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   },
   "required": [
