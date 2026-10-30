@@ -116,8 +116,9 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
 
         {!signups && shop.track_signups && (dependents.data ?? 0) > 0 && (
           <p role="status" className="mt-3 border-t pt-3 text-xs">
-            {dependents.data} automation{dependents.data === 1 ? '' : 's'} wait{dependents.data === 1 ? 's' : ''} for signups from this shop. They stay saved
-            and show as waiting until you switch this back on. Signups sent while it is off are not replayed.
+            {dependents.data} automation{dependents.data === 1 ? '' : 's'} cover{dependents.data === 1 ? 's' : ''} signups from this shop. After you
+            save, {dependents.data === 1 ? 'it stops' : 'they stop'} receiving from this shop. {dependents.data === 1 ? 'It keeps' : 'They keep'} running
+            for any other shop that sends signups, and wait if none does. Signups sent while this is off are not replayed.
           </p>
         )}
       </div>

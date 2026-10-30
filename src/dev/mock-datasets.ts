@@ -21,6 +21,8 @@ export function readMode(): DataMode {
 }
 
 const ORG = 'org1'
+const SHOP_1 = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a01'
+const SHOP_2 = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a02'
 const ago = (min: number) => new Date(Date.now() - min * 60_000).toISOString()
 const ahead = (min: number) => new Date(Date.now() + min * 60_000).toISOString()
 
@@ -51,7 +53,7 @@ function order(a: OrderArgs, integName: string): Row {
       ? { name: a.name, line1: 'Apartment 14B, Building C, Block 7, Residential Complex "Zeleni Dvorovi", Boulevard Partizanski Odredi 112-116', line2: 'Entrance 2, intercom code 4471', city: 'Skopje', region: 'Skopje Statistical Region', postal_code: '1000', country: 'North Macedonia' }
       : null,
     notes: a.notes ?? null, data_quality: a.quality ?? [], last_event_at: at, created_at: at, updated_at: at,
-    organization_id: ORG, integration_id: a.integ ?? 'i1', integrations: { name: integName },
+    organization_id: ORG, integration_id: a.integ ?? SHOP_1, integrations: { name: integName },
   }
 }
 
@@ -98,8 +100,8 @@ function worstEvents(): Row[] {
 }
 
 const worstIntegrations = (): Row[] => [
-  { id: 'i1', organization_id: ORG, kind: 'commerce', name: LONG_STORE, status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'pazarmax-production-eu-west-1-store-0042', external_base_url: 'https://www.pazarmax-official-online-storefront.example.com/api/v2/webhooks/workrelay', bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150) },
-  { id: 'i2', organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'awaiting_bind', key_prefix: 'wr_live_9a10', external_store_id: null, external_base_url: null, bound_at: null, last_seen_at: null, created_at: ago(20) },
+  { id: SHOP_1, organization_id: ORG, kind: 'commerce', name: LONG_STORE, status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'pazarmax-production-eu-west-1-store-0042', external_base_url: 'https://www.pazarmax-official-online-storefront.example.com/api/v2/webhooks/workrelay', bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150) },
+  { id: SHOP_2, organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'awaiting_bind', key_prefix: 'wr_live_9a10', external_store_id: null, external_base_url: null, bound_at: null, last_seen_at: null, created_at: ago(20) },
   { id: 'i3', organization_id: ORG, kind: 'commerce', name: 'Pop-up store (revoked)', status: 'revoked', key_prefix: 'wr_live_41ff', external_store_id: 'popup-skopje', external_base_url: null, bound_at: ago(9000), last_seen_at: ago(60 * 24 * 40), created_at: ago(9500) },
   { id: 'i4', organization_id: ORG, kind: 'commerce', name: 'J', status: 'connected', key_prefix: 'wr_live_0001', external_store_id: 'j', external_base_url: null, bound_at: ago(90), last_seen_at: ago(60 * 24 * 3), created_at: ago(120) },
 ]
@@ -137,7 +139,7 @@ const worstEventsLog = (): Row[] =>
     ['order.created', 'bad-1', 'failed', 'order.items[17].unit_price_minor: Invalid input: expected number, received string; order.customer.email: Invalid email address; order.totals.total_minor: expected int, received float', 90],
     ['order.created', 'ign-1', 'ignored', 'unsupported event_type', 120],
     ['order.status_changed', 'evt_OMNI_855383_status', 'processed', null, 11],
-  ].map(([t, id, status, error, min], i) => ({ id: `we-${i}`, integration_id: 'i1', event_id: id, event_type: t, status, error, attempt_count: 0, received_at: ago(min as number), processed_at: ago(min as number), organization_id: ORG }))
+  ].map(([t, id, status, error, min], i) => ({ id: `we-${i}`, integration_id: SHOP_1, event_id: id, event_type: t, status, error, attempt_count: 0, received_at: ago(min as number), processed_at: ago(min as number), organization_id: ORG }))
 
 const LONG_COMMENT = 'Approved after speaking with the customer by phone. They confirmed the delivery address and the replacement reason. ' + 'Please make sure the courier is told to call ahead, because the building has no doorbell. '.repeat(20)
 

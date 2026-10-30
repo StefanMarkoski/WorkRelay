@@ -92,6 +92,7 @@ export function AutomationsPage() {
       refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the automation.')
+      refresh() // whatever the failure, the list must show what is actually stored
     } finally {
       setBusy(false)
     }
@@ -167,7 +168,7 @@ export function AutomationsPage() {
                         <p className="mt-1 text-xs text-muted-foreground">Not receiving from: {status.notes.join(', ')}.</p>
                       )}
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {d.summary}{a.preset && connectedShops.length > 1 ? ` · ${shopLabel(selection, allShops)}` : ''} · updated {timeAgo(a.updated_at)}
+                        {d.summary}{a.preset && connectedShops.length > 1 ? ` · ${shopLabel(selection, allShops, event)}` : ''} · updated {timeAgo(a.updated_at)}
                       </p>
                     </div>
                     {a.preset && a.preset_config && (

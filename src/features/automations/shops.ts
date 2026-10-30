@@ -31,11 +31,22 @@ export function reconcileSelection(selection: ShopSelection, eligible: Shop[]): 
   return normalizeSelection(selection.filter((id) => ids.has(id)), eligible)
 }
 
-/** "All shops", or the chosen names ("Alpha, Beta" / "Alpha, Beta +2"). */
-export function shopLabel(selection: ShopSelection, shops: Shop[]): string {
-  if (selection === null) return 'All shops'
-  const names = selection.map((id) => shops.find((s) => s.id === id)?.name ?? 'a removed shop')
-  return names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ')
+/** Up to two names, then "+N". */
+const names = (list: string[]) => (list.length > 2 ? `${list.slice(0, 2).join(', ')} +${list.length - 2}` : list.join(', '))
+
+/**
+ * "All shops", or the chosen names ("Alpha, Beta" / "Alpha, Beta +2"). For "a customer signs up" on all shops it says
+ * which shops are sending signups right now, because a shop with signups off silently drops out of "all".
+ */
+export function shopLabel(selection: ShopSelection, shops: Shop[], event?: string): string {
+  if (selection === null) {
+    if (event !== 'customer_signed_up') return 'All shops'
+    const connected = shops.filter((s) => s.status === 'connected')
+    const sending = connected.filter((s) => s.track_signups)
+    if (sending.length === connected.length) return 'All shops'
+    return sending.length === 0 ? 'All shops, none sending signups' : `Shops sending signups: ${names(sending.map((s) => s.name))}`
+  }
+  return names(selection.map((id) => shops.find((s) => s.id === id)?.name ?? 'a removed shop'))
 }
 
 /**
@@ -48,7 +59,10 @@ export function shopStatus(event: string, selection: ShopSelection, shops: Shop[
   const problem = (s: Shop | null): string | null =>
     !s ? 'a removed shop' : s.status !== 'connected' ? `${s.name} is disconnected` : signup && !s.track_signups ? `${s.name} has signups off` : null
   const working = named.filter((s) => s && problem(s) === null)
-  // "All shops" never lists shops one by one: it is waiting only when no shop can trigger it, and only signups can be in that state.
-  if (selection === null) return { waiting: signup && working.length === 0, notes: [] }
+  // "All shops" is waiting only when no shop can trigger it, and only signups can be in that state. For signups it also
+  // names the shops that are left out right now, since "all" quietly shrinks to the shops that send them.
+  if (selection === null) {
+    return { waiting: signup && working.length === 0, notes: signup ? named.map(problem).filter((p): p is string => p !== null) : [] }
+  }
   return { waiting: working.length === 0, notes: working.length === named.length ? [] : named.map(problem).filter((p): p is string => p !== null) }
 }

@@ -36,6 +36,14 @@ describe('the selection', () => {
     expect(reconcileSelection(null, eligibleShops([A, B], 'customer_signed_up'))).toBeNull()
   })
 
+  it('for signups on all shops, says which shops are sending right now', () => {
+    expect(shopLabel(null, [A, D], 'customer_signed_up')).toBe('All shops') // everyone sends
+    expect(shopLabel(null, [A, B], 'customer_signed_up')).toBe('Shops sending signups: Shop A') // B has signups off
+    expect(shopLabel(null, [B, C], 'customer_signed_up')).toBe('All shops, none sending signups')
+    expect(shopLabel(null, [A, B], 'created')).toBe('All shops') // other automations are not limited by the signup switch
+    expect(shopLabel(null, [A, B])).toBe('All shops')
+  })
+
   it('labels it for a card', () => {
     expect(shopLabel(null, [A, B])).toBe('All shops')
     expect(shopLabel(['A'], [A, B])).toBe('Shop A')
@@ -46,9 +54,10 @@ describe('the selection', () => {
 })
 
 describe('whether a saved automation can run', () => {
-  it('signups for all shops wait only when no shop sends them', () => {
-    expect(shopStatus('customer_signed_up', null, [B, C])).toEqual({ waiting: true, notes: [] })
-    expect(shopStatus('customer_signed_up', null, [A, B])).toEqual({ waiting: false, notes: [] })
+  it('signups for all shops wait only when no shop sends them, and name the shops left out', () => {
+    expect(shopStatus('customer_signed_up', null, [B, C])).toEqual({ waiting: true, notes: ['Shop B has signups off'] })
+    expect(shopStatus('customer_signed_up', null, [A, B])).toEqual({ waiting: false, notes: ['Shop B has signups off'] })
+    expect(shopStatus('customer_signed_up', null, [A, D])).toEqual({ waiting: false, notes: [] })
   })
 
   it('signups for chosen shops name the ones that are not sending, and wait only if none are', () => {
