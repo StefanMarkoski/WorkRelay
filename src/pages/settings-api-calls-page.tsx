@@ -140,30 +140,41 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
                 <Input id={id} type="url" inputMode="url" placeholder="https://yourshop.com/workrelay/products" maxLength={2000} disabled={!canManage || busy} value={url} onChange={(e) => setUrl(e.target.value)} />
               )}
             </Field>
-            <Field
-              label="Authorization (optional)"
-              hint={sync?.has_auth_header && !clearHeader ? 'One is saved and is never shown again. Type a new value to replace it.' : 'Sent as the Authorization header, for example "Bearer abc123".'}
-            >
-              {(id) => (
-                <div className="flex items-center gap-2">
-                  <Input
-                    id={id}
-                    type="password"
-                    autoComplete="off"
-                    maxLength={2000}
-                    disabled={!canManage || busy || clearHeader}
-                    placeholder={sync?.has_auth_header ? '••••••••' : ''}
-                    value={header}
-                    onChange={(e) => setHeader(e.target.value)}
-                  />
-                  {canManage && sync?.has_auth_header && (
-                    <button type="button" className="text-xs whitespace-nowrap text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={() => { setClearHeader(!clearHeader); setHeader('') }}>
-                      {clearHeader ? 'Keep it' : 'Remove'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </Field>
+            <div>
+              <Field
+                label="Authorization (optional)"
+                hint={sync?.has_auth_header && !clearHeader ? 'One is saved and is never shown again. Type a new value to replace it.' : 'Leave empty if your products endpoint needs no token.'}
+              >
+                {(id) => (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id={id}
+                      type="password"
+                      autoComplete="off"
+                      maxLength={2000}
+                      disabled={!canManage || busy || clearHeader}
+                      placeholder={sync?.has_auth_header ? '••••••••' : 'e.g. Bearer 9f3a7c1d2b8e'}
+                      value={header}
+                      onChange={(e) => setHeader(e.target.value)}
+                    />
+                    {canManage && sync?.has_auth_header && (
+                      <button type="button" className="text-xs whitespace-nowrap text-muted-foreground underline underline-offset-4 hover:text-foreground" onClick={() => { setClearHeader(!clearHeader); setHeader('') }}>
+                        {clearHeader ? 'Keep it' : 'Remove'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </Field>
+              <div className="mt-2 space-y-1 rounded-md border bg-card p-2.5 text-[11px] text-muted-foreground">
+                <p>
+                  Example, type only the value:{' '}
+                  <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-foreground">Bearer 9f3a7c1d2b8e</code>
+                </p>
+                <p>WorkRelay sends it to your products URL as this header:</p>
+                <code className="block rounded bg-secondary px-2 py-1 font-mono text-foreground [overflow-wrap:anywhere]">Authorization: Bearer 9f3a7c1d2b8e</code>
+                <p>Use the whole value your endpoint expects, including the word Bearer if it needs one.</p>
+              </div>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
             <label className="flex items-center gap-2 text-sm">
