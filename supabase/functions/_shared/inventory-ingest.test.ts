@@ -47,6 +47,48 @@ describe('the opt-in', () => {
   })
 })
 
+describe('Event history', () => {
+  it('records an applied push as a short summary, never the whole feed', async () => {
+    const products = Array.from({ length: 30 }, (_, i) => ({ sku: `S${i}`, stock: i }))
+    await send({ products })
+    expect(store.events).toHaveLength(1)
+    expect(store.events[0]).toMatchObject({ status: 'processed', integrationId: shop.id })
+    expect(store.events[0].rawPayload).toEqual({ products: 30, skus: products.slice(0, 10).map((p) => p.sku) })
+  })
+
+  it('records a push that was ignored because pushing is off, with the reason', async () => {
+    store.pushEnabled.clear()
+    await send({ products: [{ sku: 'A', stock: 1 }] })
+    expect(store.events[0]).toMatchObject({ status: 'ignored', error: expect.stringContaining('inventory_push_disabled') })
+  })
+
+  it('records a rejected push as failed, with the field but not the value, and keeps the body out', async () => {
+    await send({ products: [{ sku: 'secret@x.com', stock: 'many' }] })
+    expect(store.events[0]).toMatchObject({ status: 'failed', rawPayload: { rejected: true } })
+    expect(store.events[0].error).toContain('products.0.stock')
+    expect(JSON.stringify(store.events[0])).not.toContain('secret@x.com')
+    await send('not json{')
+    expect(store.events[1]).toMatchObject({ status: 'failed', error: 'malformed_json' })
+  })
+
+  it('gives every push its own event, so a repeated report is never blocked as a duplicate', async () => {
+    await send({ products: [{ sku: 'A', stock: 1 }] })
+    await send({ products: [{ sku: 'A', stock: 1 }] })
+    expect(new Set(store.events.map((e) => e.eventId)).size).toBe(2)
+    expect(store.productReports).toHaveLength(2)
+  })
+
+  it('never fails a push because the history could not be written', async () => {
+    store.recordEvent = async () => { throw new Error('db down') }
+    expect((await send({ products: [{ sku: 'A', stock: 1 }] })).status).toBe(200)
+  })
+
+  it('records nothing for a bad key', async () => {
+    await send({ products: [{ sku: 'A' }] }, { authorization: `Bearer ${OTHER_KEY}` })
+    expect(store.events).toHaveLength(0)
+  })
+})
+
 describe('the payload', () => {
   it('needs only a sku; everything else is optional and nulls mean "unchanged"', async () => {
     const res = await send({ products: [{ sku: ' BIKE-1 ' }, { sku: 'NAIL-1', name: null, stock: null, notify_on: null, price_minor: null }] })

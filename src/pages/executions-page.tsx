@@ -12,6 +12,7 @@ import { StatusBadge } from '@/components/common/status-badge'
 import { useIntegrations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatDuration, humanize } from '@/lib/format'
+import { contextShopFilter, shopIdOfContext } from '@/lib/shop-scope'
 import { supabase } from '@/lib/supabase'
 import type { WorkflowRun } from '@/types/db'
 
@@ -22,15 +23,13 @@ export function ExecutionsPage() {
   const shops = useIntegrations().data ?? []
   // The shop column only matters once there is more than one shop to tell apart.
   const showShop = shops.filter((i) => i.status === 'connected').length > 1
-  const shopOf = (r: WorkflowRun) => {
-    const id = r.context?.order?.integration_id ?? r.context?.event?.integration_id
-    return shops.find((i) => i.id === id)?.name ?? '—'
-  }
+  const shopOf = (r: WorkflowRun) => shops.find((i) => i.id === shopIdOfContext(r.context))?.name ?? '—'
   const [status, setStatus] = useState('')
+  const [shopId, setShopId] = useState('') // '' = all shops
   const [page, setPage] = useState(0)
 
   const query = useQuery({
-    queryKey: ['runs', current.id, status, page],
+    queryKey: ['runs', current.id, status, shopId, page],
     refetchInterval: 10_000,
     queryFn: async () => {
       let q = supabase
@@ -40,6 +39,7 @@ export function ExecutionsPage() {
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
       if (status) q = q.eq('status', status)
+      if (shopId) q = q.or(contextShopFilter(shopId))
       const { data, error, count } = await q
       if (error) throw error
       return { rows: data as unknown as WorkflowRun[], total: count ?? 0 }
@@ -50,15 +50,21 @@ export function ExecutionsPage() {
     <>
       <PageHeader title="Executions" description="Every automation run, with the version that started it." />
       <Card>
-        <div className="border-b p-3">
+        <div className="flex flex-wrap items-center gap-3 border-b p-3">
           <Select aria-label="Filter by status" className="w-44" value={status} onChange={(e) => { setStatus(e.target.value); setPage(0) }}>
             <option value="">All statuses</option>
             {['pending', 'running', 'waiting_approval', 'succeeded', 'failed', 'skipped'].map((s) => <option key={s} value={s}>{humanize(s)}</option>)}
           </Select>
+          {showShop && (
+            <Select aria-label="Filter by shop" className="w-44" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>
+              <option value="">All shops</option>
+              {shops.filter((i) => i.status === 'connected').map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </Select>
+          )}
         </div>
         {query.isLoading ? <TableSkeleton /> : query.error ? <ErrorState onRetry={() => query.refetch()} /> :
           query.data!.rows.length === 0 ? (
-            <EmptyState icon={Play} title={status ? 'No executions with this status' : 'No executions yet'}
+            <EmptyState icon={Play} title={status || shopId ? 'No executions match these filters' : 'No executions yet'}
               description="Runs appear here when an enabled automation is triggered." />
           ) : (
             <>

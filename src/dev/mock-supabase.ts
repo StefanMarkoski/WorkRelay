@@ -47,6 +47,7 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'pr2', integration_id: SHOP_2, sku: 'KEY-STEAM-10', name: 'Steam key 10', stock: 250, notify_on: null, notify_on_override: 50, price_minor: null, currency: null, reported_at: ago(12) },
     { id: 'pr3', integration_id: SHOP_1, sku: 'PAD-XL', name: 'Mouse pad XL', stock: null, notify_on: null, notify_on_override: null, price_minor: null, currency: null, reported_at: null },
     { id: 'pr4', integration_id: SHOP_1, sku: 'NAIL-100', name: 'Steel nails (box of 100)', stock: 4800, notify_on: 5000, notify_on_override: null, price_minor: 350, currency: 'EUR', unit: 'boxes', category: 'Hardware', reported_at: ago(300) },
+    { id: 'pr6', integration_id: SHOP_2, sku: 'BIKE-ROAD-700', name: 'Road bike 700c', stock: 3, notify_on: 5, notify_on_override: null, price_minor: 89900, currency: 'EUR', unit: 'pcs', category: 'Bikes', reported_at: ago(30) },
     { id: 'pr5', integration_id: SHOP_1, sku: 'BIKE-ROAD-700', name: 'Road bike 700c', stock: 12, notify_on: 5, notify_on_override: null, price_minor: 89900, currency: 'EUR', unit: 'pcs', category: 'Bikes', reported_at: ago(60) },
   ],
   stock_events: [
@@ -94,7 +95,7 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'cust_2041_created', integration_id: SHOP_2, event_id: 'cust_2041:created', event_type: 'customer.created', status: 'processed', error: null, attempt_count: 0, received_at: ago(90), processed_at: ago(90), organization_id: ORG },
   ] as any),
   approvals: [
-    { id: 'a1', run_id: 'r5', step_key: 'review', title: 'Review large order #ORD-99685 (149230.00 MKD)', context: { order: { external_id: '99685' } }, reviewer_user_id: null, reviewer_role: 'admin', status: 'pending', decided_by: null, decided_at: null, comment: null, created_at: ago(5), organization_id: ORG },
+    { id: 'a1', run_id: 'r5', step_key: 'review', title: 'Review large order #ORD-99685 (149230.00 MKD)', context: { order: { external_id: '99685', integration_id: SHOP_1 } }, reviewer_user_id: null, reviewer_role: 'admin', status: 'pending', decided_by: null, decided_at: null, comment: null, created_at: ago(5), organization_id: ORG },
     { id: 'a2', run_id: 'r1', step_key: 'review', title: 'Review large order #OMNI-391705', context: {}, reviewer_user_id: null, reviewer_role: 'admin', status: 'approved', decided_by: 'u1', decided_at: ago(30), comment: 'Looks fine', created_at: ago(40), organization_id: ORG },
   ],
 }
@@ -137,7 +138,12 @@ class Query {
   select() { return this }
   eq(col: string, val: unknown) { this.filters.push((r) => !(col in r) || r[col] === val); return this }
   neq(col: string, val: unknown) { this.filters.push((r) => !(col in r) || r[col] !== val); return this }
-  or() { return this }
+  // Only the shop filter used by Overview, Executions and Approvals is understood (context->order->>integration_id.eq.X,...); others are ignored.
+  or(filter?: string) {
+    const m = /^context->order->>integration_id\.eq\.([^,]+),/.exec(filter ?? '')
+    if (m) this.filters.push((r) => r.context?.order?.integration_id === m[1] || r.context?.event?.integration_id === m[1])
+    return this
+  }
   like(col: string, pattern: string) { const prefix = pattern.replace(/%$/, ''); this.filters.push((r) => String(r[col] ?? '').startsWith(prefix)); return this }
   gte() { return this }
   lt() { return this }
@@ -174,6 +180,15 @@ export const supabase: any = {
   rpc: (name: string, args?: Record<string, any>) => {
     if (name === 'list_customers') return Promise.resolve({ data: listCustomers(DB, args), error: null })
     if (name === 'list_products') return Promise.resolve({ data: listProducts(DB, args), error: null })
+    if (name === 'product_siblings') {
+      const me = (DB.products ?? []).find((x) => x.id === args?.p_product)
+      const shop = (id: string) => (DB.integrations ?? []).find((i) => i.id === id)?.name ?? 'Shop'
+      const rows = (DB.products ?? []).filter((x) => me && x.sku === me.sku && x.id !== me.id).map((x) => {
+        const eff = x.notify_on_override ?? x.notify_on ?? null
+        return { id: x.id, integration_id: x.integration_id, integration_name: shop(x.integration_id), stock: x.stock ?? null, unit: x.unit ?? null, reported_at: x.reported_at ?? null, low: x.stock != null && eff != null && x.stock <= eff }
+      })
+      return Promise.resolve({ data: rows, error: null })
+    }
     if (name === 'product_orders') return Promise.resolve({ data: productOrders(DB, args), error: null })
     if (name === 'set_notify_override') {
       const p = (DB.products ?? []).find((x) => x.id === args?.p_product)

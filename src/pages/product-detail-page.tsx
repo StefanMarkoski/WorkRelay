@@ -14,7 +14,7 @@ import { PRICE_SOURCE_LABEL } from '@/features/inventory/price-source'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, formatDateTime, formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
-import type { Product, ProductOrder, StockEvent } from '@/types/db'
+import type { Product, ProductOrder, ProductSibling, StockEvent } from '@/types/db'
 
 const PAGE_SIZE = 25
 
@@ -51,6 +51,17 @@ export function ProductDetailPage() {
         .limit(20)
       if (error) throw error
       return (data ?? []) as StockEvent[]
+    },
+  })
+
+  // The same SKU in the workspace's other shops (empty for a single-shop workspace or a SKU only one shop has).
+  const siblings = useQuery({
+    queryKey: ['product', id, 'siblings'],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('product_siblings', { p_product: id })
+      if (error) throw error
+      return (data ?? []) as ProductSibling[]
     },
   })
 
@@ -102,6 +113,46 @@ export function ProductDetailPage() {
           </p>
         </CardBody>
       </Card>
+
+      {(siblings.data?.length ?? 0) > 0 && (() => {
+        const rows = [{ id: p.id, integration_name: p.integration_name, stock: p.stock, unit: p.unit, low: p.low, here: true }, ...siblings.data!.map((x) => ({ ...x, here: false }))]
+        const known = rows.filter((r) => r.stock !== null)
+        const total = known.reduce((n, r) => n + (r.stock ?? 0), 0)
+        return (
+          <Card className="mb-4">
+            <CardHeader><CardTitle>Same SKU in your shops</CardTitle></CardHeader>
+            <Table>
+              <THead><tr><TH>Shop</TH><TH className="text-right">In stock</TH></tr></THead>
+              <tbody>
+                {rows.map((r) => (
+                  <TR key={r.id}>
+                    <TD className="[overflow-wrap:anywhere]">
+                      {r.here ? <span className="font-medium">{r.integration_name}</span> : <Link to={`/inventory/${r.id}`} className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">{r.integration_name}</Link>}
+                      {r.here && <span className="ml-2 text-xs text-muted-foreground">this product</span>}
+                    </TD>
+                    <TD className="text-right">
+                      {r.stock === null ? <span className="text-xs text-muted-foreground">Not reported</span> : (
+                        <span className="inline-flex items-center justify-end gap-2">
+                          {r.low && <Badge tone="warning">Low</Badge>}
+                          <span className="font-medium tabular-nums">{r.stock.toLocaleString()}{r.unit ? ` ${r.unit}` : ''}</span>
+                        </span>
+                      )}
+                    </TD>
+                  </TR>
+                ))}
+                <TR>
+                  <TD className="font-medium">Total</TD>
+                  <TD className="text-right font-medium tabular-nums">{known.length > 0 ? total.toLocaleString() : '—'}</TD>
+                </TR>
+              </tbody>
+            </Table>
+            <p className="border-t px-4 py-3 text-xs text-muted-foreground">
+              Shops are matched by SKU, so check it means the same product in each.
+              {known.length < rows.length ? ' The total leaves out shops that have not reported stock.' : ''} Each shop keeps its own alert level.
+            </p>
+          </Card>
+        )
+      })()}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

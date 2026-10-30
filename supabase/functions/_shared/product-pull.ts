@@ -19,7 +19,8 @@ export interface DueSync {
 export interface PullStore {
   claimDue(limit: number): Promise<DueSync[]>
   apply(a: { integrationId: string; items: Record<string, unknown>[]; at: string }): Promise<number>
-  record(integrationId: string, error: string | null): Promise<void>
+  /** Saves the outcome and shows it in Event history. `count` is how many products the answer held. */
+  record(integrationId: string, error: string | null, count?: number): Promise<void>
 }
 
 export interface PullHttp {
@@ -63,8 +64,8 @@ async function pullOne(shop: DueSync, deps: PullDeps): Promise<boolean> {
     const parsed = inventoryEnvelope(PULL_MAX_PRODUCTS).safeParse(Array.isArray(value) ? { products: value } : value)
     if (!parsed.success) return await fail(`Unexpected response: ${describeIssues(parsed.error)}`.slice(0, 500))
 
-    await deps.store.apply({ integrationId: shop.integrationId, items: toDatabaseItems(parsed.data.products), at: sentAt })
-    await deps.store.record(shop.integrationId, null)
+    const applied = await deps.store.apply({ integrationId: shop.integrationId, items: toDatabaseItems(parsed.data.products), at: sentAt })
+    await deps.store.record(shop.integrationId, null, applied)
     return true
   } catch (err) {
     return await fail(err instanceof Error ? err.message : 'The request failed')

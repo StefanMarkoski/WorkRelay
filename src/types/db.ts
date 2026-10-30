@@ -264,3 +264,14 @@ export interface TenantShop {
   last_sync_at: string | null
   last_error: string | null
 }
+
+/** A row of product_siblings: the same SKU in another shop of the workspace. */
+export interface ProductSibling {
+  id: string
+  integration_id: string
+  integration_name: string
+  stock: number | null
+  unit: string | null
+  reported_at: string | null
+  low: boolean
+}

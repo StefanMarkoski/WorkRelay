@@ -146,7 +146,7 @@ describe('shop integration guide', () => {
           store: {
             async claimDue() { return [{ integrationId: 'i', sourceUrl: 'https://shop.test/p', authHeader: null }] },
             async apply(a) { applied += a.items.length; return a.items.length },
-            async record(_id, e) { records.push(e) },
+            async record(_id, e, _count) { records.push(e) },
           },
           http: { async get() { return { status: 200, body } } },
           log,

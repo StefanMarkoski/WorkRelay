@@ -1,5 +1,6 @@
 import { AlertTriangle, Inbox, Play, Plug, ShoppingCart, Zap } from 'lucide-react'
 import type { CSSProperties } from "react"
+import { useState } from 'react'
 import { Link } from "react-router-dom"
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +10,8 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
+import { Select } from '@/components/ui/input'
+import { useIntegrations } from '@/features/integrations/queries'
 import { useOverview } from '@/features/overview/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDuration, formatMoney, humanize, timeAgo } from '@/lib/format'
@@ -56,7 +59,10 @@ const STATUS_BAR: Record<string, string> = {
 
 export function OverviewPage() {
   const { current } = useWorkspace()
-  const q = useOverview()
+  const [shopId, setShopId] = useState('') // '' = the whole workspace
+  const shops = (useIntegrations().data ?? []).filter((i) => i.status !== 'revoked')
+  const q = useOverview(shopId)
+  const shop = shops.find((i) => i.id === shopId) ?? null
 
   if (q.isLoading) {
     return (
@@ -69,11 +75,20 @@ export function OverviewPage() {
   if (q.error) return <ErrorState onRetry={() => q.refetch()} />
   const d = q.data!
   const totalOrders = d.orderStatuses.reduce((n, s) => n + s.count, 0)
-  const brandNew = d.workflows === 0 && d.integrationCount === 0 && totalOrders === 0
+  const brandNew = !shopId && d.workflows === 0 && d.integrationCount === 0 && totalOrders === 0
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Overview" description={`Workspace health, orders, and automations for ${current.name}.`} />
+      <PageHeader
+        title="Overview"
+        description={shop ? `Orders, automations and activity for ${shop.name} only.` : `Workspace health, orders, and automations for ${current.name}.`}
+        actions={shops.length > 1 ? (
+          <Select aria-label="Shop" className="w-48" value={shopId} onChange={(e) => setShopId(e.target.value)}>
+            <option value="">All shops</option>
+            {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </Select>
+        ) : undefined}
+      />
 
       {brandNew && (
         <Card>

@@ -7,7 +7,7 @@ const SENT_AT = new Date('2026-10-30T12:00:00Z')
 
 function setup(due: DueSync[], reply: (url: string, headers: Record<string, string>) => Promise<{ status: number; body: string }>) {
   const applied: { integrationId: string; items: Record<string, unknown>[]; at: string }[] = []
-  const records: [string, string | null][] = []
+  const records: [string, string | null, number | undefined][] = []
   const store: PullStore = {
     async claimDue() {
       return due
@@ -16,8 +16,8 @@ function setup(due: DueSync[], reply: (url: string, headers: Record<string, stri
       applied.push(a)
       return a.items.length
     },
-    async record(id, error) {
-      records.push([id, error])
+    async record(id, error, count) {
+      records.push([id, error, count])
     },
   }
   const http: PullHttp = { get: reply }
@@ -32,7 +32,7 @@ describe('a successful pull', () => {
     const t = setup([shop()], ok({ products: [{ sku: 'BIKE-1', stock: 4, notify_on: 5 }] }))
     expect(await t.run()).toEqual({ pulled: 1, failed: 0 })
     expect(t.applied).toEqual([{ integrationId: 'i1', items: [{ sku: 'BIKE-1', stock: 4, notify_on: 5 }], at: SENT_AT.toISOString() }])
-    expect(t.records).toEqual([['i1', null]])
+    expect(t.records).toEqual([['i1', null, 1]]) // the count of products applied is recorded for Event history
   })
 
   it('accepts a bare list as well as { products }', async () => {

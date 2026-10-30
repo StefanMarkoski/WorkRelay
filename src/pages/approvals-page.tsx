@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Field, Textarea } from '@/components/ui/input'
+import { Field, Select, Textarea } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { Segmented } from '@/components/ui/segmented'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
@@ -12,8 +12,10 @@ import { JsonView } from '@/components/common/json-view'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
+import { useIntegrations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, humanize } from '@/lib/format'
+import { contextShopFilter, shopIdOfContext } from '@/lib/shop-scope'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Approval, OrgRole } from '@/types/db'
 
@@ -29,15 +31,21 @@ export function ApprovalsPage() {
   const { current, userId } = useWorkspace()
   const qc = useQueryClient()
   const [tab, setTab] = useState<'pending' | 'history'>('pending')
+  const shops = useIntegrations().data ?? []
+  const connected = shops.filter((i) => i.status === 'connected')
+  const showShop = connected.length > 1 // the shop only matters once there is more than one to tell apart
+  const [shopId, setShopId] = useState('') // '' = all shops
+  const shopOf = (a: Approval) => shops.find((i) => i.id === shopIdOfContext(a.context))?.name ?? null
   const [target, setTarget] = useState<Approval | null>(null)
   const [comment, setComment] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const query = useQuery({
-    queryKey: ['approvals', current.id, tab],
+    queryKey: ['approvals', current.id, tab, shopId],
     queryFn: async () => {
       let q = supabase.from('approvals').select('*').eq('organization_id', current.id).limit(100)
+      if (shopId) q = q.or(contextShopFilter(shopId))
       q = tab === 'pending' ? q.eq('status', 'pending').order('created_at', { ascending: true }) : q.neq('status', 'pending').order('decided_at', { ascending: false })
       const { data, error: e } = await q
       if (e) throw e
@@ -61,17 +69,24 @@ export function ApprovalsPage() {
   return (
     <>
       <PageHeader title="Approvals" description="Human decisions requested by automations. A paused run resumes after a valid decision." />
-      <Segmented
-        className="mb-4"
-        label="Approval views"
-        value={tab}
-        onChange={setTab}
-        options={[{ id: 'pending', label: 'Pending' }, { id: 'history', label: 'History' }]}
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Segmented
+          label="Approval views"
+          value={tab}
+          onChange={setTab}
+          options={[{ id: 'pending', label: 'Pending' }, { id: 'history', label: 'History' }]}
+        />
+        {showShop && (
+          <Select aria-label="Filter by shop" className="w-44" value={shopId} onChange={(e) => setShopId(e.target.value)}>
+            <option value="">All shops</option>
+            {connected.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </Select>
+        )}
+      </div>
       <Card>
         {query.isLoading ? <TableSkeleton rows={4} /> : query.error ? <ErrorState onRetry={() => query.refetch()} /> :
           query.data!.length === 0 ? (
-            <EmptyState icon={CheckSquare} title={tab === 'pending' ? 'Nothing waiting for you' : 'No decisions yet'}
+            <EmptyState icon={CheckSquare} title={shopId ? 'No requests for this shop' : tab === 'pending' ? 'Nothing waiting for you' : 'No decisions yet'}
               description={tab === 'pending' ? 'Approval requests created by automations will show up here.' : 'Approved and rejected requests are kept here.'} />
           ) : (
             <Table>
@@ -81,6 +96,7 @@ export function ApprovalsPage() {
                   <TR key={a.id}>
                     <TD className="font-medium">
                       {a.title}
+                      {showShop && shopOf(a) && <span className="mt-0.5 block text-xs font-normal text-muted-foreground [overflow-wrap:anywhere]">{shopOf(a)}</span>}
                       {a.run_id && <Link to={`/executions/${a.run_id}`} className="ml-2 text-xs font-normal text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View run</Link>}
                     </TD>
                     <TD><StatusBadge status={a.status} /></TD>

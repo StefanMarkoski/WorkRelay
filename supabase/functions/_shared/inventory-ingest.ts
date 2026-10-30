@@ -16,12 +16,36 @@ export async function handleInventoryWebhook(req: Request, deps: HandlerDeps): P
   if (integration.status !== 'connected' || !integration.externalStoreId) return json(403, { error: 'integration_not_bound' })
   if (req.headers.get('x-store-id') !== integration.externalStoreId) return json(403, { error: 'store_mismatch' })
 
+  // Every push is shown in Event history, as a short summary (never the whole feed). Best effort: it must not fail a push.
+  const note = async (status: 'processed' | 'ignored' | 'failed', payload: Record<string, unknown>, error?: string) => {
+    try {
+      const recorded = await deps.store.recordEvent({
+        organizationId: integration.organizationId,
+        integrationId: integration.id,
+        eventId: `inventory:push:${crypto.randomUUID()}`,
+        eventType: 'inventory.push',
+        rawPayload: payload,
+      })
+      await deps.store.markEvent(recorded.id, status, error)
+    } catch {
+      // history is a convenience
+    }
+  }
+
   const body = await readJsonBody(req)
-  if (!body.ok) return json(400, { error: 'invalid_payload', detail: body.error })
+  if (!body.ok) {
+    await note('failed', { rejected: true }, body.error)
+    return json(400, { error: 'invalid_payload', detail: body.error })
+  }
 
   const parsed = inventoryEnvelope(PUSH_MAX_PRODUCTS).safeParse(body.value)
-  if (!parsed.success) return json(400, { error: 'invalid_payload', detail: describeIssues(parsed.error) })
+  if (!parsed.success) {
+    const detail = describeIssues(parsed.error)
+    await note('failed', { rejected: true }, detail)
+    return json(400, { error: 'invalid_payload', detail })
+  }
 
+  const summary = { products: parsed.data.products.length, skus: parsed.data.products.slice(0, 10).map((p) => p.sku) }
   try {
     const result = await deps.store.applyProducts({
       integrationId: integration.id,
@@ -29,10 +53,15 @@ export async function handleInventoryWebhook(req: Request, deps: HandlerDeps): P
       source: 'push',
       at: new Date().toISOString(),
     })
-    if (result === 'disabled') return json(202, { status: 'ignored', reason: 'inventory_push_disabled' })
+    if (result === 'disabled') {
+      await note('ignored', summary, 'inventory_push_disabled: pushing is switched off for this shop (Settings, API Calls)')
+      return json(202, { status: 'ignored', reason: 'inventory_push_disabled' })
+    }
     await deps.store.touchIntegration(integration.id).catch(() => undefined) // last-seen is best effort
+    await note('processed', summary)
     return json(200, { status: 'processed', applied: result })
   } catch (err) {
+    await note('failed', summary, 'internal error')
     deps.log.error('inventory webhook processing failed', {
       integration_id: integration.id,
       message: err instanceof Error ? err.message : 'unknown',

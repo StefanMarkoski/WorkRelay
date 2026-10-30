@@ -388,6 +388,9 @@ How WorkRelay uses it:
 - **Low-stock alerts.** If the workspace has the automation *a product runs low on stock*, it fires **once** when a product becomes low,
   not on every report, and fires again only after the stock has gone back above the number. The **first** stock number ever reported for
   a product never alerts (it only starts tracking), so connecting a shop whose products are already low does not send a burst.
+- **Event history.** Every push and every scheduled pull appears under **Integrations → Event history** as `inventory.push` or
+  `inventory.pull`, with a short summary (how many products, never the products themselves), so you can see that a feed arrived, was
+  ignored because pushing is off, or failed and why. These entries are kept for 30 days.
 - **No deleting.** Products are never removed by a report. A product you stop sending simply keeps its last numbers.
 
 ### Push: `POST /inventory-webhook`
