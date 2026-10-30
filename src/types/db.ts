@@ -16,6 +16,8 @@ export interface Integration {
   /** The shop opted in to the optional customer-signup webhook. */
   track_signups: boolean
   signups_enabled_at: string | null
+  /** The one currency this shop sells in. Null only for a shop with no orders yet that nobody has set. */
+  currency: string | null
 }
 
 export interface WebhookEvent {
@@ -127,7 +129,7 @@ export interface Order {
   last_event_at: string
   created_at: string
   updated_at: string
-  integrations?: { name: string } | null
+  integrations?: { name: string; currency?: string | null } | null
 }
 
 /** A row of list_customers: who they are, plus counts computed from their orders. */
@@ -259,6 +261,7 @@ export interface TenantShop {
   id: string
   name: string
   status: string
+  currency: string | null
   calls: number | null
   days: number | null
   last_sync_at: string | null

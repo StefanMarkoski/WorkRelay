@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { CurrencySelect } from '@/components/common/currency-select'
 import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -33,6 +34,7 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
   const qc = useQueryClient()
   const [name, setName] = useState(shop.name)
   const [signups, setSignups] = useState(shop.track_signups)
+  const [currency, setCurrency] = useState(shop.currency ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -66,6 +68,10 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
       const { error: nameError } = await supabase.from('integrations').update({ name: trimmed }).eq('id', shop.id)
       if (nameError) { setBusy(false); return setError(errorMessage(nameError)) }
     }
+    if (currency && currency !== shop.currency) {
+      const { error: rpcError } = await supabase.rpc('set_integration_currency', { p_id: shop.id, p_currency: currency })
+      if (rpcError) { setBusy(false); return setError(errorMessage(rpcError)) }
+    }
     if (signups !== shop.track_signups) {
       const { error: rpcError } = await supabase.rpc('set_integration_signups', { p_id: shop.id, p_enabled: signups })
       if (rpcError) { setBusy(false); return setError(errorMessage(rpcError)) }
@@ -73,6 +79,8 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
     setBusy(false)
     void qc.invalidateQueries({ queryKey: ['integrations', current.id] })
     void qc.invalidateQueries({ queryKey: ['automations'] })
+    void qc.invalidateQueries({ queryKey: ['insights'] })
+    void qc.invalidateQueries({ queryKey: ['orders'] })
     void qc.invalidateQueries({ queryKey: ['signup-automations'] })
     onClose()
   }
@@ -84,6 +92,17 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
     <form onSubmit={save} className="space-y-4">
       <Field label="Connection name" error={error}>
         {(id) => <Input id={id} value={name} maxLength={120} required autoFocus onChange={(e) => setName(e.target.value)} />}
+      </Field>
+
+      <Field
+        label="Currency"
+        hint={
+          shop.currency && currency !== shop.currency
+            ? `Orders from ${shop.name} stay exactly as they are, and no amount is converted. Orders that already say a different currency are marked, and orders with none take ${currency || 'the new one'}.`
+            : 'The one currency this shop sells in. Orders that arrive without a currency are given it, and amounts are never converted.'
+        }
+      >
+        {(id) => <CurrencySelect id={id} value={currency} onChange={setCurrency} placeholder={shop.currency ? undefined : 'Choose a currency…'} />}
       </Field>
 
       <div className="rounded-lg border p-3">

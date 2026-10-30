@@ -106,7 +106,7 @@ Only `external_id` is required. **Everything else is optional**: send what you h
 | `external_id` | string, 1 to 200 | **Required.** The shop's order id |
 | `order_number` | string, up to 100 | Human-facing number, e.g. `#1001` |
 | `placed_at` | ISO 8601 date-time | When the customer placed the order |
-| `currency` | 3-letter code | e.g. `EUR`. Needed to display any amount |
+| `currency` | 3-letter code | e.g. `EUR`. Optional: if you leave it out, the order takes the currency the shop is set to in WorkRelay (see below) |
 | `customer` | object | `name` (up to 200), `email` (valid email), `phone` (up to 64) |
 | `totals` | object | `subtotal_minor`, `discount_minor`, `shipping_minor`, `tax_minor`, `total_minor`: **integers in minor units** |
 | `status` | string, 1 to 64 | Order status, see section 6 |
@@ -115,6 +115,14 @@ Only `external_id` is required. **Everything else is optional**: send what you h
 | `billing_address`, `shipping_address` | object | `name`, `line1`, `line2`, `city`, `region`, `postal_code`, `country`, `phone` (all optional strings) |
 | `items` | array, up to 1000 | Each: `external_id`, `sku`, `name`, `quantity` (integer 0 to 1,000,000), `unit_price_minor` (integer) |
 | `notes` | string, up to 5000 | Notes from the shop |
+
+**Each shop has one currency.** The workspace sets it in WorkRelay when connecting the store (and can change it in the shop's details). It decides how
+WorkRelay counts and reports that shop's money, and WorkRelay **never converts** between currencies.
+
+- An order sent **without** a `currency` takes the shop's currency.
+- An order sent **with the shop's currency** is used as it is.
+- An order sent with a **different** currency is kept exactly as sent (nothing is relabelled, converted or dropped) and is marked on the order
+  as a currency mismatch, so a misconfigured shop is easy to spot. Fix the shop or the payload and resend; the order is then clean.
 
 **Money is always an integer in minor units**: `49.99 EUR` is `4999`. The minor unit follows the currency: `5000 JPY` is ¥5,000 (yen have no decimals) and `12500 KWD` is 12.500 KWD (three decimals). Decimal strings or floats are rejected.
 Unknown extra fields are ignored (the original payload is kept for diagnostics).
@@ -208,7 +216,7 @@ The smallest valid event:
 - **Unknown order**: any event for an unseen `external_id` creates the order, so a missed `order.created` self-heals.
 - **Automations**: `order.created` can trigger the tenant's new-order automations (for example a Discord notification), and a
   status change that was applied can trigger status automations. Replayed or duplicate events do not trigger one twice.
-- **Data quality flags** shown on the order: `missing_currency` (amounts without a currency), `missing_total`,
+- **Data quality flags** shown on the order: `missing_currency` (amounts without a currency, and the shop has none set either), `currency_mismatch` (the order's currency differs from its shop's), `missing_total`,
   `no_items`, `no_customer_contact`. They never block ingestion.
 
 ## 6. Statuses
@@ -472,7 +480,7 @@ In WorkRelay, check **Integrations → Event history** (every delivery with stat
 - [ ] Key stored server-side only; not in logs, URLs, browser code or the repository
 - [ ] Bind succeeded (`bound` or `already_bound`); `X-Store-Id` identical on every request
 - [ ] `occurred_at` is the time of the change in the shop, in ISO 8601 with `Z` or an offset
-- [ ] Money sent as integer minor units with a `currency`
+- [ ] Money sent as integer minor units, in the shop's currency (send `currency`, or leave it out and rely on the shop's setting in WorkRelay)
 - [ ] Events carry stable, unique `event_id` values; retries reuse the same id
 - [ ] A persistent outbox retries on network errors and 5xx
 - [ ] 4xx responses are logged (the `detail` field says what to fix) and not retried unchanged
@@ -488,6 +496,7 @@ In WorkRelay, check **Integrations → Event history** (every delivery with stat
 | 403 `store_mismatch` | `X-Store-Id` differs from the id used at bind |
 | 400 mentions `occurred_at` | Not ISO 8601 (for example a Unix timestamp or a date without time) |
 | 400 mentions `total_minor` etc. | A decimal or string was sent instead of an integer |
+| Order shows a currency badge such as "USD, not MKD" | The order's `currency` differs from the one the shop is set to in WorkRelay. Correct the payload or the shop's currency; nothing was converted |
 | Order shows "Incomplete data" | No currency, total, items or customer contact was sent (informational) |
 | Status shows `unknown` | The shop's status word is not in the table in section 6 |
 | Order did not update | The event was older than data already stored, or the `event_id` was a duplicate. Check the timeline and Event history |

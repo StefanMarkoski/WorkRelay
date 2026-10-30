@@ -6,7 +6,7 @@
 type Row = Record<string, any>
 
 const SHOPS = [
-  { id: '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a01', currency: 'EUR', base: 11, price: 4600 },
+  { id: '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a01', currency: 'MKD', base: 11, price: 280000 },
   { id: '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a02', currency: 'USD', base: 6, price: 5400 },
 ]
 

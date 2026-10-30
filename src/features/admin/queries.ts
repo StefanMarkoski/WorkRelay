@@ -12,6 +12,9 @@ export interface Tenant {
   integrations: number
   workflows: number
   orders: number
+  /** The distinct currencies of the tenant's shops, and how many shops still have none. */
+  currencies: string[]
+  shops_without_currency: number
 }
 
 /** UI hint only: every admin RPC and the create-tenant function re-check this on the server. */

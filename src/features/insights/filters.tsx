@@ -16,13 +16,13 @@ export function RangeSegmented({ value, onChange, label = 'Time range' }: { valu
 }
 
 /** Hidden unless there is more than one shop to choose between. */
-export function ShopSelect({ shops, value, onChange }: { shops: Pick<Integration, 'id' | 'name' | 'status'>[]; value: string; onChange: (id: string) => void }) {
+export function ShopSelect({ shops, value, onChange }: { shops: Pick<Integration, 'id' | 'name' | 'status' | 'currency'>[]; value: string; onChange: (id: string) => void }) {
   const usable = shops.filter((s) => s.status !== 'revoked')
   if (usable.length < 2) return null
   return (
     <Select aria-label="Shop" className="w-auto min-w-40" value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">All shops</option>
-      {usable.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+      {usable.map((s) => <option key={s.id} value={s.id}>{s.name}{s.currency ? ` (${s.currency})` : ''}</option>)}
     </Select>
   )
 }

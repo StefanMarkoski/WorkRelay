@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { CurrencySelect } from '@/components/common/currency-select'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/input'
@@ -20,8 +21,12 @@ export function ShopRates({ tenants }: { tenants: Tenant[] }) {
 
   return (
     <Card className="mb-6">
-      <CardHeader><CardTitle>API calls per shop</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Shops: currency and API calls</CardTitle></CardHeader>
       <CardBody className="space-y-4">
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Each shop sells in exactly one currency, which owners can also change in the shop's details. Changing it never converts an amount: it gives
+          orders that had no currency the new one, and marks orders that say a different one.
+        </p>
         <p className="max-w-3xl text-sm text-muted-foreground">
           How many times WorkRelay may call a shop's product feed, as calls per number of days. 15 calls per 1 day is about one call every 1h 36m;
           200 per 7 days is about every 50 minutes. The fastest allowed is one call every 5 minutes. Tenants can see this but not change it.
@@ -42,7 +47,7 @@ export function ShopRates({ tenants }: { tenants: Tenant[] }) {
           <p className="border-t p-4 text-sm text-muted-foreground">This tenant has no shops yet.</p>
         ) : (
           <Table>
-            <THead><tr><TH>Shop</TH><TH colSpan={3}>Calls per days</TH><TH className="hidden md:table-cell">Last check</TH><TH><span className="sr-only">Save</span></TH></tr></THead>
+            <THead><tr><TH>Shop</TH><TH>Currency</TH><TH colSpan={3}>Calls per days</TH><TH className="hidden md:table-cell">Last check</TH><TH><span className="sr-only">Save</span></TH></tr></THead>
             <tbody>
               {shops.data!.map((s) => <RateRow key={`${s.id}:${s.calls}:${s.days}`} shop={s} orgId={orgId} />)}
             </tbody>
@@ -86,6 +91,7 @@ function RateRow({ shop, orgId }: { shop: TenantShop; orgId: string }) {
   return (
     <TR>
       <TD className="min-w-32 font-medium [overflow-wrap:anywhere]">{shop.name}</TD>
+      <TD className="min-w-52"><CurrencyCell shop={shop} orgId={orgId} /></TD>
       <TD colSpan={3} className="p-0">
         <form id={`rate-${shop.id}`} onSubmit={save} className="flex flex-wrap items-center gap-3 px-4 py-2">
           <Input aria-label={`Calls for ${shop.name}`} inputMode="numeric" className="h-8 w-20 tabular-nums" value={calls} onChange={(e) => setCalls(e.target.value)} placeholder="—" />
@@ -105,5 +111,34 @@ function RateRow({ shop, orgId }: { shop: TenantShop; orgId: string }) {
         <Button type="submit" form={`rate-${shop.id}`} size="sm" disabled={busy || unchanged || problem !== null}>{busy ? 'Saving…' : empty && shop.calls !== null ? 'Remove' : 'Save'}</Button>
       </TD>
     </TR>
+  )
+}
+
+/** A shop's currency, changed here by a platform admin. A change is saved with its own button, so a stray scroll or click on the list never rewrites it. */
+function CurrencyCell({ shop, orgId }: { shop: TenantShop; orgId: string }) {
+  const qc = useQueryClient()
+  const [value, setValue] = useState(shop.currency ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const changed = value !== '' && value !== (shop.currency ?? '')
+
+  async function save() {
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_set_shop_currency', { p_integration: shop.id, p_currency: value })
+    setBusy(false)
+    if (rpcError) return setError(errorMessage(rpcError))
+    void qc.invalidateQueries({ queryKey: ['admin-tenant-shops', orgId] })
+    void qc.invalidateQueries({ queryKey: ['admin-tenants'] })
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <CurrencySelect aria-label={`Currency for ${shop.name}`} className="h-8 w-40 text-xs" value={value} onChange={setValue} placeholder={shop.currency ? undefined : 'Not set'} disabled={busy} />
+        {changed && <Button type="button" size="sm" disabled={busy} onClick={save}>{busy ? 'Saving…' : 'Save'}</Button>}
+      </div>
+      {error && <p role="alert" className="mt-1 text-xs text-destructive">{error}</p>}
+    </div>
   )
 }

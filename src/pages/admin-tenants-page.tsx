@@ -103,7 +103,7 @@ export function AdminTenantsPage() {
           ) : (
             <Table>
               <THead>
-                <tr><TH>Workspace</TH><TH>Owner</TH><TH className="text-right">Members</TH><TH className="text-right">Integrations</TH><TH className="text-right">Automations</TH><TH className="text-right">Orders</TH><TH>Created</TH></tr>
+                <tr><TH>Workspace</TH><TH>Owner</TH><TH className="text-right">Members</TH><TH className="text-right">Integrations</TH><TH className="text-right">Automations</TH><TH className="text-right">Orders</TH><TH>Currencies</TH><TH>Created</TH></tr>
               </THead>
               <tbody>
                 {tenants.data!.map((t) => (
@@ -114,6 +114,12 @@ export function AdminTenantsPage() {
                     <TD className="text-right tabular-nums">{t.integrations}</TD>
                     <TD className="text-right tabular-nums">{t.workflows}</TD>
                     <TD className="text-right tabular-nums">{t.orders}</TD>
+                    <TD className="text-muted-foreground">
+                      {t.currencies.length ? t.currencies.join(', ') : '—'}
+                      {t.shops_without_currency > 0 && (
+                        <div className="text-xs text-warning">{t.shops_without_currency} shop{t.shops_without_currency === 1 ? '' : 's'} without one</div>
+                      )}
+                    </TD>
                     <TD className="whitespace-nowrap text-muted-foreground">{formatDate(t.created_at)}</TD>
                   </TR>
                 ))}

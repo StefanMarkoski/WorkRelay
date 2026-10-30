@@ -28,7 +28,7 @@ export function InsightsPage() {
         <ShopSelect shops={shops} value={shopId} onChange={setShopId} />
       </Card>
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="grid lg:col-span-2"><OrdersTrendCard range={range} shopId={shopId} /></div>
+        <div className="grid lg:col-span-2"><OrdersTrendCard range={range} shopId={shopId} shopCurrency={shops.find((s) => s.id === shopId)?.currency ?? null} /></div>
         {/* A tall donut beside two short bars; with one shop the two bars sit side by side instead */}
         {share ? (
           <>

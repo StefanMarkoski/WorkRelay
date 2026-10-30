@@ -46,7 +46,7 @@ export function OrderDetailPage() {
     queryKey: ['order', id],
     queryFn: async () => {
       const [order, items, events] = await Promise.all([
-        supabase.from('orders').select('*, integrations(name)').eq('id', id!).maybeSingle(),
+        supabase.from('orders').select('*, integrations(name, currency)').eq('id', id!).maybeSingle(),
         supabase.from('order_items').select('*').eq('order_id', id!).order('position'),
         supabase.from('order_events').select('*').eq('order_id', id!).order('occurred_at', { ascending: false }),
       ])
@@ -108,7 +108,12 @@ export function OrderDetailPage() {
         <StatusBadge status={o.status} />
         <StatusBadge status={o.payment_status} label={`Payment: ${humanize(o.payment_status)}`} />
         <StatusBadge status={o.fulfillment_status} label={`Fulfillment: ${humanize(o.fulfillment_status)}`} />
-        {o.data_quality.length > 0 && <Badge tone="warning" title={o.data_quality.join(', ')}>Incomplete data</Badge>}
+        {o.data_quality.filter((f) => f !== 'currency_mismatch').length > 0 && <Badge tone="warning" title={o.data_quality.join(', ')}>Incomplete data</Badge>}
+        {o.data_quality.includes('currency_mismatch') && (
+          <Badge tone="warning" title="This order says a different currency than its shop is set to. Nothing was converted.">
+            {o.currency ?? '?'}, not {o.integrations?.currency ?? 'the shop currency'}
+          </Badge>
+        )}
         <EditStatus key={o.updated_at} order={o} onSaved={() => void qc.invalidateQueries({ queryKey: ['order', id] })} />
       </div>
 

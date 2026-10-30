@@ -26,14 +26,15 @@ function Figure({ label, value, delta, period }: { label: string; value: string;
  * Orders, or revenue, per day, with the period's totals and how they moved against the period before. Revenue is in one
  * currency at a time (currencies are never added together) and leaves out cancelled orders.
  */
-export function OrdersTrendCard({ range, shopId, onRange }: { range: RangeDays; shopId: string; onRange?: (r: RangeDays) => void }) {
+export function OrdersTrendCard({ range, shopId, shopCurrency = null, onRange }: { range: RangeDays; shopId: string; /** The chosen shop's own currency: shown first when the filter is on one shop. */ shopCurrency?: string | null; onRange?: (r: RangeDays) => void }) {
   const q = useOrdersDaily(range, shopId)
   const [metric, setMetric] = useState<Metric>('orders')
   const [picked, setPicked] = useState<string | null>(null)
 
   const data = q.data
   const currencies = useMemo(() => (data ? currenciesByRevenue(data.rows) : []), [data])
-  const currency = picked && currencies.includes(picked) ? picked : currencies[0] ?? null
+  const preferred = shopId && shopCurrency && currencies.includes(shopCurrency) ? shopCurrency : null
+  const currency = picked && currencies.includes(picked) ? picked : preferred ?? currencies[0] ?? null
 
   if (q.isLoading) return <ChartCard title="Orders and revenue"><div className="h-64 animate-pulse rounded-md bg-secondary/60" /></ChartCard>
   if (q.error || !data) return <ChartCard title="Orders and revenue"><ErrorState onRetry={() => q.refetch()} /></ChartCard>

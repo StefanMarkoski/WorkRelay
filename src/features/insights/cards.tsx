@@ -41,7 +41,7 @@ export function ShopShareCard({ range, shopId }: P): ReactNode {
   if (q.isLoading) return <Loading title="Orders by shop" />
   if (q.error || !q.data) return <Failed title="Orders by shop" retry={() => q.refetch()} />
   const slices = foldSlices(
-    ordersByShop(q.data.rows, q.data.keys).map((s) => ({ key: s.id, label: shops.find((x) => x.id === s.id)?.name ?? 'A removed shop', value: s.orders, color: shopColor(s.id, shops) })),
+    ordersByShop(q.data.rows, q.data.keys).map((s) => ({ key: s.id, label: ((sh) => (sh ? `${sh.name}${sh.currency ? ` · ${sh.currency}` : ''}` : 'A removed shop'))(shops.find((x) => x.id === s.id)), value: s.orders, color: shopColor(s.id, shops) })),
     6,
     (rest) => ({ key: 'other', label: 'Other shops', value: sum(rest.map((r) => r.value)), color: OTHER_COLOR }),
   )

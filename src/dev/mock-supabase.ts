@@ -30,8 +30,8 @@ const orders: Row[] = [
   placed_at: ago(min as number), currency: cur, subtotal_minor: total, discount_minor: 0, shipping_minor: 0, tax_minor: 0, total_minor: total,
   status, payment_status: pay, fulfillment_status: ful, external_status: status, external_payment_status: pay, external_fulfillment_status: ful,
   billing_address: null, shipping_address: { name: name, line1: 'Main St 1', city: 'Skopje', postal_code: '1000', country: 'MK' }, notes: null,
-  data_quality: total ? [] : ['missing_total', 'no_items'], last_event_at: ago(min as number), created_at: ago(min as number), updated_at: ago(min as number),
-  organization_id: ORG, integration_id: integ, integrations: { name: integ === SHOP_1 ? 'Game Store' : 'Game Store 2' },
+  data_quality: total ? (integ === SHOP_1 && cur && cur !== 'MKD' ? ['currency_mismatch'] : []) : ['missing_total', 'no_items'], last_event_at: ago(min as number), created_at: ago(min as number), updated_at: ago(min as number),
+  organization_id: ORG, integration_id: integ, integrations: { name: integ === SHOP_1 ? 'Game Store' : 'Game Store 2', currency: integ === SHOP_1 ? 'MKD' : 'USD' },
 }))
 
 const DEMO_DB: Record<string, Row[]> = {
@@ -67,8 +67,8 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'e2', order_id: 'o1', source: 'workrelay', type: 'note.added', occurred_at: ago(0.5), actor_user_id: 'u1', data: { note: 'Called the customer' } },
   ],
   integrations: [
-    { id: SHOP_2, organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'ignis-gaming-store', external_base_url: null, bound_at: ago(90), last_seen_at: ago(10), created_at: ago(120), track_signups: true, signups_enabled_at: ago(60 * 24 * 5) },
-    { id: SHOP_1, organization_id: ORG, kind: 'commerce', name: 'Game Store', status: 'connected', key_prefix: 'wr_live_7b84', external_store_id: 'pazarmax', external_base_url: null, bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150), track_signups: false, signups_enabled_at: null },
+    { id: SHOP_2, organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'ignis-gaming-store', external_base_url: null, bound_at: ago(90), last_seen_at: ago(10), created_at: ago(120), track_signups: true, signups_enabled_at: ago(60 * 24 * 5), currency: 'USD' },
+    { id: SHOP_1, organization_id: ORG, kind: 'commerce', name: 'Game Store', status: 'connected', key_prefix: 'wr_live_7b84', external_store_id: 'pazarmax', external_base_url: null, bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150), track_signups: false, signups_enabled_at: null, currency: 'MKD' },
   ],
   workflows: [
     { id: 'w1', organization_id: ORG, name: 'Notify Discord when a new order arrives', preset: 'notify', preset_config: { event: 'created', channel: 'discord', url: 'https://discord.com/api/webhooks/1/x' }, enabled: true, status: 'published', current_version_id: 'v1', updated_at: ago(27), created_at: ago(30) },
@@ -107,10 +107,10 @@ const DEMO_RPC: Record<string, unknown> = {
     { user_id: 'u1', email: 'owner@example.com', role: 'owner', created_at: ago(5000) },
     { user_id: 'u2', email: 'teammate@example.com', role: 'member', created_at: ago(2000) },
   ],
-  admin_list_tenants: [{ id: ORG, name: 'Game Shop', created_at: ago(9000), owner_emails: ['owner@example.com'], members: 2, integrations: 2, workflows: 6, orders: 7 }],
+  admin_list_tenants: [{ id: ORG, name: 'Game Shop', created_at: ago(9000), owner_emails: ['owner@example.com'], members: 2, integrations: 2, workflows: 6, orders: 7, currencies: ['MKD', 'USD'], shops_without_currency: 0 }],
   admin_list_tenant_shops: [
-    { id: SHOP_1, name: 'Game Store', status: 'connected', calls: 15, days: 1, last_sync_at: ago(46), last_error: null },
-    { id: SHOP_2, name: 'Game Store 2', status: 'connected', calls: null, days: null, last_sync_at: null, last_error: null },
+    { id: SHOP_1, name: 'Game Store', status: 'connected', currency: 'MKD', calls: 15, days: 1, last_sync_at: ago(46), last_error: null },
+    { id: SHOP_2, name: 'Game Store 2', status: 'connected', currency: 'USD', calls: null, days: null, last_sync_at: null, last_error: null },
   ],
 }
 
@@ -192,6 +192,14 @@ export const supabase: any = {
       return Promise.resolve({ data: rows, error: null })
     }
     if (name === 'product_orders') return Promise.resolve({ data: productOrders(DB, args), error: null })
+    if (name === 'set_integration_currency' || name === 'admin_set_shop_currency') {
+      const id = args?.p_id ?? args?.p_integration
+      const code = String(args?.p_currency ?? '').trim().toUpperCase()
+      if (!/^[A-Z]{3}$/.test(code)) return Promise.resolve({ data: null, error: { message: 'currency must be a three-letter code, such as MKD or USD' } })
+      for (const i of DB.integrations ?? []) if (i.id === id) i.currency = code
+      for (const s of (RPC.admin_list_tenant_shops as Row[]) ?? []) if (s.id === id) s.currency = code
+      return Promise.resolve({ data: null, error: null })
+    }
     if (name === 'set_notify_override') {
       const p = (DB.products ?? []).find((x) => x.id === args?.p_product)
       if (p) p.notify_on_override = args?.p_value ? args.p_value : null

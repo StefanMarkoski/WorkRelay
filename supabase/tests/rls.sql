@@ -112,7 +112,7 @@ select rls_test.eq('B cannot read org A runs', (select count(*) from workflow_ru
 select rls_test.eq('B cannot read org A step runs', (select count(*) from step_runs), 0::bigint);
 select rls_test.eq('B cannot read org A approvals', (select count(*) from approvals), 0::bigint);
 select rls_test.fails('B cannot create a workflow in org A', $$ insert into workflows (organization_id, name) values ('a0000000-0000-0000-0000-000000000001', 'x') $$);
-select rls_test.fails('B cannot create an integration in org A', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x') $$, '42501');
+select rls_test.fails('B cannot create an integration in org A', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x', 'MKD') $$, '42501');
 select rls_test.fails('B cannot join org A', $$ insert into memberships values ('a0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000b', 'member') $$);
 select rls_test.fails('B cannot list org A members', $$ select * from list_members('a0000000-0000-0000-0000-000000000001') $$, '42501');
 select rls_test.fails('B cannot rotate org A key', $$ select rotate_integration_key('a1000000-0000-0000-0000-000000000001') $$, '42501');
@@ -146,7 +146,7 @@ select rls_test.fails('clients cannot call apply_order_plan', $$ select apply_or
 select rls_test.fails('cannot enable a workflow without a published version', $$ update workflows set enabled = true where id = 'a4000000-0000-0000-0000-000000000001' $$);
 select rls_test.fails('cannot add an owner through add_member', $$ select add_member_by_email('a0000000-0000-0000-0000-000000000001', 'e@test.dev', 'owner') $$);
 select rls_test.fails('sole owner cannot demote self', $$ update memberships set role = 'admin' where user_id = '00000000-0000-0000-0000-00000000000a' $$);
-select rls_test.eq('A creates integration and gets a key', (select left(secret_key, 8) from create_integration('a0000000-0000-0000-0000-000000000001', 'New store')), 'wr_live_');
+select rls_test.eq('A creates integration and gets a key', (select left(secret_key, 8) from create_integration('a0000000-0000-0000-0000-000000000001', 'New store', 'MKD')), 'wr_live_');
 select rls_test.eq('A can rename own integration', rls_test.affected($$ update integrations set name = 'Renamed' where id = 'a1000000-0000-0000-0000-000000000001' $$), 1::bigint);
 select rls_test.eq('A can add a member by email', (select count(*) from (select add_member_by_email('a0000000-0000-0000-0000-000000000001', 'e@test.dev', 'member')) s), 1::bigint);
 select rls_test.fails('unknown email is rejected', $$ select add_member_by_email('a0000000-0000-0000-0000-000000000001', 'nobody@test.dev', 'member') $$);
@@ -166,7 +166,7 @@ select rls_test.eq('member can read own org orders', (select count(*) from order
 select rls_test.eq('member cannot read workflows (definitions may hold destination URLs)', (select count(*) from workflows), 0::bigint);
 select rls_test.eq('member cannot read workflow versions', (select count(*) from workflow_versions), 0::bigint);
 select rls_test.eq('member can still read runs', (select count(*) from workflow_runs), 1::bigint);
-select rls_test.fails('member cannot create integrations', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x') $$, '42501');
+select rls_test.fails('member cannot create integrations', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x', 'MKD') $$, '42501');
 select rls_test.fails('member cannot rotate keys', $$ select rotate_integration_key('a1000000-0000-0000-0000-000000000001') $$, '42501');
 select rls_test.fails('member cannot revoke', $$ select revoke_integration('a1000000-0000-0000-0000-000000000001') $$, '42501');
 select rls_test.fails('member cannot create workflows', $$ insert into workflows (organization_id, name) values ('a0000000-0000-0000-0000-000000000001', 'x') $$);
@@ -208,7 +208,7 @@ select rls_test.as_anon();
 select rls_test.fails('anon cannot read orders', $$ select * from orders $$, '42501');
 select rls_test.fails('anon cannot read organizations', $$ select * from organizations $$, '42501');
 select rls_test.fails('anon cannot create organizations', $$ select create_organization('x') $$, '42501');
-select rls_test.fails('anon cannot create integrations', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x') $$, '42501');
+select rls_test.fails('anon cannot create integrations', $$ select create_integration('a0000000-0000-0000-0000-000000000001', 'x', 'MKD') $$, '42501');
 reset role;
 
 -- ---------------------------------------------------------------- immutability and uniqueness (owner level)

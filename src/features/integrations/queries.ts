@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import type { Integration } from '@/types/db'
 
 export const INTEGRATION_COLUMNS =
-  'id, organization_id, kind, name, status, key_prefix, external_store_id, external_base_url, bound_at, last_seen_at, created_at, track_signups, signups_enabled_at'
+  'id, organization_id, kind, name, status, key_prefix, external_store_id, external_base_url, bound_at, last_seen_at, created_at, track_signups, signups_enabled_at, currency'
 
 /** `poll`: refresh every 5 s (the Integrations screen only). Elsewhere it is just a dropdown source. */
 export function useIntegrations(opts: { poll?: boolean } = {}) {

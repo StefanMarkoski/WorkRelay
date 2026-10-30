@@ -92,7 +92,7 @@ export function OverviewPage() {
             {shops.length > 1 && (
               <Select aria-label="Shop" className="w-48" value={shopId} onChange={(e) => setShopId(e.target.value)}>
                 <option value="">All shops</option>
-                {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+                {shops.map((i) => <option key={i.id} value={i.id}>{i.name}{i.currency ? ` (${i.currency})` : ''}</option>)}
               </Select>
             )}
           </>
@@ -131,7 +131,7 @@ export function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <div className="grid lg:col-span-8"><OrdersTrendCard range={range} shopId={shopId} onRange={setRange} /></div>
+        <div className="grid lg:col-span-8"><OrdersTrendCard range={range} shopId={shopId} shopCurrency={shop?.currency ?? null} onRange={setRange} /></div>
         <LiveFeed shopId={shopId} className="lg:col-span-4" />
       </div>
 

@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Ban, Pencil, Plug, Plus, RotateCw } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, Input } from '@/components/ui/input'
@@ -10,12 +11,14 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
+import { CurrencySelect } from '@/components/common/currency-select'
 import { EditShop } from '@/features/integrations/edit-shop'
 import { EventHistory } from '@/features/integrations/event-history'
 import { KeyRevealModal } from '@/features/integrations/key-reveal'
 import { PayloadTester } from '@/features/integrations/payload-tester'
 import { useIntegrations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
+import { currencyLabel } from '@/lib/currencies'
 import { formatDateTime, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration } from '@/types/db'
@@ -33,6 +36,7 @@ export function IntegrationsPage() {
   const integrations = useIntegrations({ poll: true })
   const [tab, setTab] = useState<Tab>('connections')
   const [creating, setCreating] = useState(false)
+  const [newCurrency, setNewCurrency] = useState('')
   const [secret, setSecret] = useState<string | null>(null)
   const [editing, setEditing] = useState<Integration | null>(null)
   const [confirm, setConfirm] = useState<{ kind: 'rotate' | 'revoke'; target: Integration } | null>(null)
@@ -45,12 +49,14 @@ export function IntegrationsPage() {
     e.preventDefault()
     const name = String(new FormData(e.currentTarget).get('name') ?? '').trim()
     if (!name) return setError('Give the connection a name.')
+    if (!newCurrency) return setError('Choose the currency this shop sells in.')
     setBusy(true)
     setError(null)
-    const { data, error: rpcError } = await supabase.rpc('create_integration', { org: current.id, integration_name: name })
+    const { data, error: rpcError } = await supabase.rpc('create_integration', { org: current.id, integration_name: name, p_currency: newCurrency })
     setBusy(false)
     if (rpcError) return setError(errorMessage(rpcError))
     setCreating(false)
+    setNewCurrency('')
     setSecret((data as { secret_key: string }[])[0].secret_key)
     void refresh()
   }
@@ -103,7 +109,7 @@ export function IntegrationsPage() {
           ) : (
             <Table>
               <THead>
-                <tr><TH>Name</TH><TH>Status</TH><TH>Key</TH><TH>Store</TH><TH>Last seen</TH><TH><span className="sr-only">Actions</span></TH></tr>
+                <tr><TH>Name</TH><TH>Currency</TH><TH>Status</TH><TH>Key</TH><TH>Store</TH><TH>Last seen</TH><TH><span className="sr-only">Actions</span></TH></tr>
               </THead>
               <tbody>
                 {integrations.data!.map((i) => (
@@ -111,6 +117,13 @@ export function IntegrationsPage() {
                     <TD className="font-medium">
                       {i.name}
                       {i.track_signups && <div className="mt-0.5 text-[11px] font-normal text-muted-foreground">Customer signups on</div>}
+                    </TD>
+                    <TD>
+                      {i.currency ? (
+                        <span className="font-medium" title={currencyLabel(i.currency)}>{i.currency}</span>
+                      ) : i.status === 'revoked' ? '—' : (
+                        <Badge tone="warning" title="Orders cannot be tied to a currency until one is set">Not set</Badge>
+                      )}
                     </TD>
                     <TD><StatusBadge status={i.status} /></TD>
                     <TD className="font-mono text-xs">{i.key_prefix}…</TD>
@@ -153,6 +166,9 @@ export function IntegrationsPage() {
         <form onSubmit={create} className="space-y-4">
           <Field label="Connection name" hint="For example, the store's name." error={error}>
             {(id) => <Input id={id} name="name" maxLength={120} required autoFocus />}
+          </Field>
+          <Field label="Currency" hint="Every order from this shop is in this currency, and amounts are never converted. You can change it later in the shop's details.">
+            {(id) => <CurrencySelect id={id} value={newCurrency} onChange={setNewCurrency} placeholder="Choose a currency…" required />}
           </Field>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
