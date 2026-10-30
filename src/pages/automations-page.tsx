@@ -10,8 +10,10 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
-import { describePreset, type PresetKind } from '@/domain/presets'
+import { describePreset, shopIds, type PresetKind } from '@/domain/presets'
 import { AUTOMATION_COLUMNS, saveAutomation, setAutomationEnabled, type AutomationRow } from '@/features/automations/api'
+import { ShopPicker } from '@/features/automations/shop-picker'
+import { eligibleShops, normalizeSelection, reconcileSelection, shopLabel, shopStatus, type ShopSelection } from '@/features/automations/shops'
 import { useIntegrations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { timeAgo } from '@/lib/format'
@@ -26,6 +28,8 @@ interface Editing {
   id?: string
   kind: PresetKind
   config: Record<string, string>
+  /** null = all shops */
+  shops: ShopSelection
 }
 
 export function AutomationsPage() {
@@ -36,8 +40,10 @@ export function AutomationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const integrations = useIntegrations()
+  const allShops = integrations.data ?? []
+  const connectedShops = allShops.filter((i) => i.status === 'connected')
   // Shops that send signups. "A customer signs up" only works with at least one of them.
-  const signupShops = (integrations.data ?? []).filter((i) => i.status === 'connected' && i.track_signups)
+  const signupShops = eligibleShops(allShops, 'customer_signed_up')
 
   const query = useQuery({
     queryKey: ['automations', current.id],
@@ -74,10 +80,12 @@ export function AutomationsPage() {
     setBusy(true)
     setError(null)
     const c = editing.config
+    const selection = normalizeSelection(editing.shops, eligibleShops(allShops, editing.kind === 'notify' ? c.event : 'created'))
+    const limit = selection ? { integration_ids: selection } : {}
     const config =
       editing.kind === 'notify'
-        ? { event: c.event, channel: c.channel, url: (c.url ?? '').trim(), ...(c.event === 'customer_signed_up' && c.integration_id ? { integration_id: c.integration_id } : {}) }
-        : { threshold: Number(c.threshold), reviewer_role: c.reviewer_role }
+        ? { event: c.event, channel: c.channel, url: (c.url ?? '').trim(), ...limit }
+        : { threshold: Number(c.threshold), reviewer_role: c.reviewer_role, ...limit }
     try {
       await saveAutomation({ organizationId: current.id, id: editing.id, kind: editing.kind, config, enable: true })
       setEditing(null)
@@ -105,10 +113,14 @@ export function AutomationsPage() {
     setEditing({
       kind,
       config: kind === 'notify' ? { event: 'created', channel: 'discord', url: '' } : { threshold: '100', reviewer_role: 'admin' },
+      shops: null,
     })
   }
   const set = (key: string) => (e: { target: { value: string } }) =>
     setEditing((cur) => (cur ? { ...cur, config: { ...cur.config, [key]: e.target.value } } : cur))
+  // Changing the event can change which shops qualify (signups need the switch on), so the ticked shops are re-checked.
+  const setEvent = (e: { target: { value: string } }) =>
+    setEditing((cur) => (cur ? { ...cur, config: { ...cur.config, event: e.target.value }, shops: reconcileSelection(cur.shops, eligibleShops(allShops, e.target.value)) } : cur))
 
   const addButton = <Button onClick={() => { setError(null); setPicking(true) }}><Plus /> Add automation</Button>
 
@@ -129,10 +141,12 @@ export function AutomationsPage() {
             {query.data!.map((a) => {
               const d = a.preset && a.preset_config ? describePreset(a.preset, a.preset_config) : { title: a.name, summary: 'Custom workflow (read-only)' }
               const Icon = a.preset === 'review_large' ? ClipboardCheck : a.preset === 'notify' ? Bell : Zap
-              // A signup automation with no shop sending signups would sit there looking healthy while never running.
-              const cfg = (a.preset_config ?? {}) as { event?: string; integration_id?: string }
-              const waiting = a.preset === 'notify' && cfg.event === 'customer_signed_up' && !signupShops.some((i) => !cfg.integration_id || i.id === cfg.integration_id)
-              const waitingShop = cfg.integration_id ? integrations.data?.find((i) => i.id === cfg.integration_id)?.name : null
+              // Which shops it covers, and whether any of them can start it. A signup automation whose shops all have
+              // signups off would sit there looking healthy while never running.
+              const cfg = (a.preset_config ?? {}) as { event?: string; integration_ids?: string[]; integration_id?: string }
+              const event = a.preset === 'notify' ? (cfg.event ?? 'created') : 'created'
+              const selection = shopIds(cfg) ?? null
+              const status = a.preset ? shopStatus(event, selection, allShops) : { waiting: false, notes: [] }
               return (
                 <li key={a.id}>
                   <Card className="flex flex-wrap items-center gap-4 p-4">
@@ -141,20 +155,26 @@ export function AutomationsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-[13px] font-semibold">{d.title}</h3>
                         <Badge tone={a.enabled ? 'success' : 'neutral'}>{a.enabled ? 'On' : 'Off'}</Badge>
-                        {waiting && a.enabled && <Badge tone="warning">Waiting for signups</Badge>}
+                        {status.waiting && a.enabled && <Badge tone="warning">Waiting</Badge>}
                       </div>
-                      {waiting && (
+                      {status.waiting && (
                         <p className="mt-1 text-xs">
-                          Customer signups are switched off{waitingShop ? ` for ${waitingShop}` : ' for every shop'}, so this will not run.{' '}
-                          <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Switch them on</Link>
+                          {event === 'customer_signed_up' ? 'None of the shops this covers send signups' : 'None of the shops this covers is connected'}, so this will not run.{' '}
+                          <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Integrations</Link>
                         </p>
                       )}
-                      <p className="mt-1 text-xs text-muted-foreground">{d.summary} · updated {timeAgo(a.updated_at)}</p>
+                      {!status.waiting && status.notes.length > 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">Not receiving from: {status.notes.join(', ')}.</p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {d.summary}{a.preset && connectedShops.length > 1 ? ` · ${shopLabel(selection, allShops)}` : ''} · updated {timeAgo(a.updated_at)}
+                      </p>
                     </div>
                     {a.preset && a.preset_config && (
                       <Button variant="outline" size="sm" onClick={() => {
                         setError(null)
-                        setEditing({ id: a.id, kind: a.preset!, config: Object.fromEntries(Object.entries(a.preset_config!).map(([k, v]) => [k, String(v)])) })
+                        const { integration_ids: _ids, integration_id: _id, ...rest } = a.preset_config as Record<string, unknown>
+                        setEditing({ id: a.id, kind: a.preset!, config: Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, String(v)])), shops: shopIds(a.preset_config as { integration_ids?: string[]; integration_id?: string }) ?? null })
                       }}>Edit</Button>
                     )}
                     <Switch checked={a.enabled} disabled={!a.current_version_id} label={`${d.title}: ${a.enabled ? 'on' : 'off'}`} onChange={(next) => toggle(a, next)} />
@@ -187,7 +207,7 @@ export function AutomationsPage() {
               <>
                 <Field label="Send a message when">
                   {(id) => (
-                    <Select id={id} value={editing.config.event} onChange={set('event')}>
+                    <Select id={id} value={editing.config.event} onChange={setEvent}>
                       <option value="created">a new order arrives</option>
                       <option value="cancelled">an order is cancelled</option>
                       <option value="status_changed">an order changes status</option>
@@ -198,25 +218,13 @@ export function AutomationsPage() {
                     </Select>
                   )}
                 </Field>
-                {editing.config.event === 'customer_first_order' && (
-                  <p className="-mt-2 text-xs text-muted-foreground">Works from orders alone, for every shop. It fires once per customer, on their first order.</p>
+                {editing.config.event === 'customer_signed_up' && signupShops.length === 0 && (
+                  <p role="alert" className="-mt-2 text-xs text-destructive">
+                    No shop sends signups yet, so this would never run. Switch customer signups on under <Link to="/integrations" className="underline">Integrations</Link>, then come back.
+                  </p>
                 )}
-                {editing.config.event === 'customer_signed_up' && (
-                  <>
-                    <Field label="From which shop" hint="Signups reach WorkRelay only from shops that have customer signups switched on.">
-                      {(id) => (
-                        <Select id={id} value={editing.config.integration_id ?? ''} onChange={set('integration_id')}>
-                          <option value="">Any shop with signups on</option>
-                          {signupShops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                        </Select>
-                      )}
-                    </Field>
-                    {signupShops.length === 0 && (
-                      <p role="alert" className="-mt-2 text-xs text-destructive">
-                        No shop sends signups yet, so this would never run. Switch customer signups on under <Link to="/integrations" className="underline">Integrations</Link>, then come back.
-                      </p>
-                    )}
-                  </>
+                {(connectedShops.length > 1 || editing.shops !== null) && (
+                  <ShopPicker shops={allShops} event={editing.config.event} value={editing.shops} onChange={(next) => setEditing((cur) => (cur ? { ...cur, shops: next } : cur))} />
                 )}
                 <Field label="Send it to">
                   {(id) => (
@@ -244,13 +252,16 @@ export function AutomationsPage() {
                     </Select>
                   )}
                 </Field>
+                {(connectedShops.length > 1 || editing.shops !== null) && (
+                  <ShopPicker shops={allShops} event="created" value={editing.shops} onChange={(next) => setEditing((cur) => (cur ? { ...cur, shops: next } : cur))} />
+                )}
                 <p className="text-xs text-muted-foreground">Matching orders appear under Approvals. Deciding records the decision in WorkRelay; it does not change the order in your shop.</p>
               </>
             )}
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-              <Button type="submit" disabled={busy || (editing.kind === 'notify' && editing.config.event === 'customer_signed_up' && signupShops.length === 0)}>{busy ? 'Saving…' : editing.id ? 'Save changes' : 'Turn on'}</Button>
+              <Button type="submit" disabled={busy || editing.shops?.length === 0 || (editing.kind === 'notify' && editing.config.event === 'customer_signed_up' && signupShops.length === 0)}>{busy ? 'Saving…' : editing.id ? 'Save changes' : 'Turn on'}</Button>
             </div>
           </form>
         )}

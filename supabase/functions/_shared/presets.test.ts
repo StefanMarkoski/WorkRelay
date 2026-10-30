@@ -133,7 +133,7 @@ describe('customer notifications', () => {
   it('maps the events to the customer triggers, with an optional shop for signups', () => {
     const t = (config: object) => (buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, ...config }) as any).definition.trigger
     expect(t({ event: 'customer_signed_up' })).toEqual({ type: 'customer_signup' })
-    expect(t({ event: 'customer_signed_up', integration_id: SHOP })).toEqual({ type: 'customer_signup', integration_id: SHOP })
+    expect(t({ event: 'customer_signed_up', integration_id: SHOP })).toEqual({ type: 'customer_signup', integration_ids: [SHOP] }) // the older single form
     expect(t({ event: 'customer_first_order' })).toEqual({ type: 'customer_first_order' })
     expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'customer_signed_up', integration_id: 'not-a-uuid' }).ok).toBe(false)
   })
@@ -156,6 +156,33 @@ describe('order totals in messages follow the currency', () => {
     expect(total(4999, 'EUR')).toBe('49.99 EUR')
     expect(total(5000, 'JPY')).toBe('5000 JPY')
     expect(total(12500, 'KWD')).toBe('12.500 KWD')
+  })
+})
+
+describe('automations limited to shops', () => {
+  const A = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11'
+  const B = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a12'
+  const trig = (event: string, extra: object = {}) => (buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event, ...extra }) as any).definition.trigger
+
+  it('puts the chosen shops on every kind of trigger, and nothing when all shops', () => {
+    for (const [event, type] of [['created', 'order_created'], ['status_changed', 'order_status_changed'], ['customer_first_order', 'customer_first_order'], ['customer_signed_up', 'customer_signup']] as const) {
+      expect(trig(event, { integration_ids: [A, B] })).toMatchObject({ type, integration_ids: [A, B] })
+      expect(trig(event)).not.toHaveProperty('integration_ids')
+    }
+    expect(trig('cancelled', { integration_ids: [A] })).toEqual({ type: 'order_status_changed', to_status: 'cancelled', integration_ids: [A] })
+  })
+
+  it('applies to the large-order review too', () => {
+    const r = buildPresetDefinition('review_large', { threshold: 100, reviewer_role: 'admin', integration_ids: [B] }) as any
+    expect(r.definition.trigger).toEqual({ type: 'order_created', integration_ids: [B] })
+    expect(validateDefinition(r.definition).ok).toBe(true)
+    expect((buildPresetDefinition('review_large', { threshold: 100, reviewer_role: 'admin' }) as any).definition.trigger).toEqual({ type: 'order_created' })
+  })
+
+  it('rejects an empty or malformed shop list', () => {
+    expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'created', integration_ids: [] }).ok).toBe(false)
+    expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'created', integration_ids: ['shop-1'] }).ok).toBe(false)
+    expect(buildPresetDefinition('review_large', { threshold: 100, reviewer_role: 'admin', integration_ids: [] }).ok).toBe(false)
   })
 })
 

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { z } from 'zod'
 import { getCaller } from '../_shared/auth.ts'
 import { json } from '../_shared/keys.ts'
+import { checkTriggerShops, type ShopRow } from '../_shared/trigger-shops.ts'
 import { validateDefinition } from '../_shared/workflow-schema.ts'
 
 const url = Deno.env.get('SUPABASE_URL')!
@@ -42,18 +43,12 @@ Deno.serve(async (req) => {
   const result = validateDefinition(wf.draft_definition)
   if (!result.ok) return reply(422, { error: 'invalid_definition', issues: result.issues })
 
-  // "Customer signed up" only makes sense when a shop actually sends signups. Refuse it here, not just in the form.
-  const trigger = result.value.trigger
-  if (trigger.type === 'customer_signup') {
-    let q = admin.from('integrations').select('id').eq('organization_id', wf.organization_id).eq('status', 'connected').eq('track_signups', true).limit(1)
-    if (trigger.integration_id) q = q.eq('id', trigger.integration_id)
-    const { data: shops } = await q
-    if (!shops || shops.length === 0) {
-      return reply(422, {
-        error: 'invalid_definition',
-        issues: [{ path: 'trigger', message: 'Turn on customer signups for a shop first (Integrations, then Edit on the shop).' }],
-      })
-    }
+  // The shops an automation names must be this workspace's, connected, and (for signups) actually sending signups.
+  // Refused here, not just in the form, so the API cannot publish an automation that could never run.
+  const { data: shops } = await admin.from('integrations').select('id, name, status, track_signups').eq('organization_id', wf.organization_id)
+  const shopProblem = checkTriggerShops(result.value.trigger, (shops ?? []) as ShopRow[])
+  if (shopProblem) {
+    return reply(422, { error: 'invalid_definition', issues: [{ path: 'trigger', message: shopProblem }] })
   }
 
   const { data, error } = await admin.rpc('publish_workflow', {

@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
+import { useIntegrations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatDuration, humanize } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
@@ -18,6 +19,13 @@ const PAGE_SIZE = 25
 
 export function ExecutionsPage() {
   const { current } = useWorkspace()
+  const shops = useIntegrations().data ?? []
+  // The shop column only matters once there is more than one shop to tell apart.
+  const showShop = shops.filter((i) => i.status === 'connected').length > 1
+  const shopOf = (r: WorkflowRun) => {
+    const id = r.context?.order?.integration_id ?? r.context?.event?.integration_id
+    return shops.find((i) => i.id === id)?.name ?? '—'
+  }
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(0)
 
@@ -55,7 +63,7 @@ export function ExecutionsPage() {
           ) : (
             <>
               <Table>
-                <THead><tr><TH>Automation</TH><TH>Status</TH><TH>Trigger</TH><TH>Started</TH><TH>Duration</TH><TH>Attempts</TH></tr></THead>
+                <THead><tr><TH>Automation</TH><TH>Status</TH><TH>Trigger</TH>{showShop && <TH>Shop</TH>}<TH>Started</TH><TH>Duration</TH><TH>Attempts</TH></tr></THead>
                 <tbody>
                   {query.data!.rows.map((r) => (
                     <TR key={r.id}>
@@ -65,6 +73,7 @@ export function ExecutionsPage() {
                       </TD>
                       <TD><StatusBadge status={r.status} /></TD>
                       <TD className="text-muted-foreground">{humanize(r.trigger_source)}</TD>
+                      {showShop && <TD className="text-muted-foreground [overflow-wrap:anywhere]">{shopOf(r)}</TD>}
                       <TD className="whitespace-nowrap">{formatDateTime(r.started_at ?? r.created_at)}</TD>
                       <TD>{formatDuration(r.started_at, r.finished_at)}</TD>
                       <TD>{r.attempt}</TD>

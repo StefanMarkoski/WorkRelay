@@ -12,13 +12,17 @@ const stepId = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/, 'Use lowercase letters
 const ref = stepId.nullable()
 const base = { id: stepId, name: z.string().min(1).max(120) }
 
+/** Limit a trigger to some shops. Left out: all shops, including ones connected later. */
+const shops = z.array(z.uuid()).min(1, 'Pick at least one shop').max(50).optional()
+
 export const triggerSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('webhook'), integration_id: z.uuid() }),
-  z.object({ type: z.literal('order_created') }),
-  z.object({ type: z.literal('order_status_changed'), to_status: z.string().min(1).max(64).optional() }),
-  // Needs the shop's signup webhook switched on (checked when publishing). Without integration_id: any shop.
-  z.object({ type: z.literal('customer_signup'), integration_id: z.uuid().optional() }),
-  z.object({ type: z.literal('customer_first_order') }),
+  z.object({ type: z.literal('order_created'), integration_ids: shops }),
+  z.object({ type: z.literal('order_status_changed'), to_status: z.string().min(1).max(64).optional(), integration_ids: shops }),
+  // Needs signups switched on for the shops it covers (checked when publishing).
+  // `integration_id` (one shop) is the older form and still works.
+  z.object({ type: z.literal('customer_signup'), integration_id: z.uuid().optional(), integration_ids: shops }),
+  z.object({ type: z.literal('customer_first_order'), integration_ids: shops }),
   z.object({ type: z.literal('manual') }),
 ])
 

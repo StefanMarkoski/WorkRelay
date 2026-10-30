@@ -47,6 +47,7 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'w1', organization_id: ORG, name: 'Notify Discord when a new order arrives', preset: 'notify', preset_config: { event: 'created', channel: 'discord', url: 'https://discord.com/api/webhooks/1/x' }, enabled: true, status: 'published', current_version_id: 'v1', updated_at: ago(27), created_at: ago(30) },
     { id: 'w2', organization_id: ORG, name: 'Review orders above 100', preset: 'review_large', preset_config: { threshold: 100, reviewer_role: 'admin' }, enabled: false, status: 'published', current_version_id: 'v2', updated_at: ago(500), created_at: ago(600) },
     { id: 'w3', organization_id: ORG, name: 'Notify Discord when a customer signs up', preset: 'notify', preset_config: { event: 'customer_signed_up', channel: 'discord', url: 'https://discord.com/api/webhooks/3/x', integration_id: 'i2' }, enabled: true, status: 'published', current_version_id: 'v3', updated_at: ago(300), created_at: ago(310) },
+    { id: 'w5', organization_id: ORG, name: 'Notify Slack when a new order arrives', preset: 'notify', preset_config: { event: 'created', channel: 'slack', url: 'https://hooks.slack.com/services/y', integration_ids: ['i1'] }, enabled: true, status: 'published', current_version_id: 'v5', updated_at: ago(100), created_at: ago(110) },
     { id: 'w4', organization_id: ORG, name: 'Notify Slack when a customer signs up', preset: 'notify', preset_config: { event: 'customer_signed_up', channel: 'slack', url: 'https://hooks.slack.com/services/x', integration_id: 'i1' }, enabled: true, status: 'published', current_version_id: 'v4', updated_at: ago(200), created_at: ago(210) },
   ],
   workflow_runs: [
@@ -55,6 +56,7 @@ const DEMO_DB: Record<string, Row[]> = {
     id, status, organization_id: ORG, workflow_id: 'w1', version_id: 'v1', trigger_source: 'order_created', event_id: `evt_${id}`, attempt: 1, error: status === 'failed' ? 'HTTP 404' : null,
     started_at: ago(min as number), finished_at: dur ? new Date(Date.now() - (min as number) * 60_000 + (dur as number) * 1000).toISOString() : null, created_at: ago(min as number),
     workflows: { name: 'Notify Discord when a new order arrives' }, workflow_versions: { version: 1 },
+    context: { order: { integration_id: Number(String(id).slice(1)) % 2 ? 'i1' : 'i2' } },
   })),
   step_runs: [
     { id: 's1', run_id: 'r1', step_key: 'notify', step_name: 'Notify Discord', step_type: 'http_request', position: 0, status: 'succeeded', input: { method: 'POST', url: 'https://discord.com/[redacted]' }, output: { status: 204 }, error: null, attempt: 1, started_at: ago(1), finished_at: ago(0.99) },

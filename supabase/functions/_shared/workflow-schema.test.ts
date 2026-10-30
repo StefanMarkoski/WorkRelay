@@ -34,6 +34,17 @@ describe('validateDefinition', () => {
     expect(ok({ type: 'customer_signed_up' })).toBe(false)
   })
 
+  it('accepts a list of shops on order and customer triggers, but never an empty or malformed one', () => {
+    const A = '6f1b1c1e-3b43-4a7e-9a52-0d9e5d3e3a11'
+    const ok = (trigger: unknown) => validateDefinition(def([rec('a')], trigger)).ok
+    for (const type of ['order_created', 'order_status_changed', 'customer_signup', 'customer_first_order']) {
+      expect(ok({ type, integration_ids: [A] }), type).toBe(true)
+      expect(ok({ type }), type).toBe(true)
+      expect(ok({ type, integration_ids: [] }), type).toBe(false)
+      expect(ok({ type, integration_ids: ['shop'] }), type).toBe(false)
+    }
+  })
+
   it('rejects unknown references, duplicates, loops and unreachable steps', () => {
     const msg = (steps: unknown[]) => {
       const r = validateDefinition(def(steps))

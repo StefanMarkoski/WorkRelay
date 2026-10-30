@@ -17,13 +17,16 @@ export const notifyConfigSchema = z.object({
   event: z.enum(NOTIFY_EVENTS),
   channel: z.enum(NOTIFY_CHANNELS),
   url: safeUrl,
-  /** Only for 'customer_signed_up': limit it to one shop. Left out: any shop with signups switched on. */
+  /** Limit it to these shops. Left out: all shops (including ones connected later). */
+  integration_ids: z.array(z.uuid()).min(1, 'Pick at least one shop').max(50).optional(),
+  /** Older form of the above for the signup event (one shop). Still accepted. */
   integration_id: z.uuid().optional(),
 })
 
 export const reviewLargeConfigSchema = z.object({
   threshold: z.number().positive('Enter an amount above 0').max(100_000_000),
   reviewer_role: z.enum(['admin', 'owner']),
+  integration_ids: z.array(z.uuid()).min(1, 'Pick at least one shop').max(50).optional(),
 })
 
 export type NotifyConfig = z.infer<typeof notifyConfigSchema>
@@ -61,13 +64,21 @@ export function notifyBody(config: NotifyConfig): string {
   return `{"event":"order.${config.event}","order_number":"{{order.display_number}}","status":"{{order.status}}","payment_status":"{{order.payment_status}}","fulfillment_status":"{{order.fulfillment_status}}","customer":"{{order.customer}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
 }
 
+/** The shops an automation is limited to, or undefined for all shops. The older single `integration_id` counts as a list of one. */
+export function shopIds(config: { integration_ids?: string[]; integration_id?: string }): string[] | undefined {
+  if (config.integration_ids?.length) return config.integration_ids
+  return config.integration_id ? [config.integration_id] : undefined
+}
+
 export function buildNotifyDefinition(config: NotifyConfig): WorkflowDefinition {
+  const ids = shopIds(config)
+  const limit = ids ? { integration_ids: ids } : {}
   const trigger: WorkflowDefinition['trigger'] =
-    config.event === 'customer_signed_up' ? { type: 'customer_signup', ...(config.integration_id ? { integration_id: config.integration_id } : {}) }
-    : config.event === 'customer_first_order' ? { type: 'customer_first_order' }
-    : config.event === 'created' ? { type: 'order_created' }
-    : config.event === 'cancelled' ? { type: 'order_status_changed', to_status: 'cancelled' }
-    : { type: 'order_status_changed' }
+    config.event === 'customer_signed_up' ? { type: 'customer_signup', ...limit }
+    : config.event === 'customer_first_order' ? { type: 'customer_first_order', ...limit }
+    : config.event === 'created' ? { type: 'order_created', ...limit }
+    : config.event === 'cancelled' ? { type: 'order_status_changed', to_status: 'cancelled', ...limit }
+    : { type: 'order_status_changed', ...limit }
   return {
     schema_version: 1,
     trigger,
@@ -81,7 +92,7 @@ export function buildNotifyDefinition(config: NotifyConfig): WorkflowDefinition 
 export function buildReviewLargeDefinition(config: ReviewLargeConfig): WorkflowDefinition {
   return {
     schema_version: 1,
-    trigger: { type: 'order_created' },
+    trigger: { type: 'order_created', ...(config.integration_ids?.length ? { integration_ids: config.integration_ids } : {}) },
     steps: [
       // The threshold is entered in major units (e.g. 100 = 100.00); totals are stored in minor units.
       { id: 'check', name: 'Is the order large?', type: 'condition', field: 'order.total_minor', operator: 'gt', value: Math.round(config.threshold * 100), on_true: 'review', on_false: null },

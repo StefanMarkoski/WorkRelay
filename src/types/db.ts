@@ -65,6 +65,8 @@ export interface WorkflowRun {
   created_at: string
   workflows?: { name: string } | null
   workflow_versions?: { version: number } | null
+  /** What started the run. The shop is `order.integration_id` or, for customer events, `event.integration_id`. */
+  context?: { order?: { integration_id?: string }; event?: { integration_id?: string } } | null
 }
 
 export interface StepRun {
