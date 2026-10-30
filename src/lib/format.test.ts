@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatMoney, formatSpent, formatSyncPace, maxSyncCalls } from './format'
+import { formatMajor, formatMoney, formatSpent, formatSyncPace, maxSyncCalls, minorToMajor } from './format'
 
 describe('formatMoney', () => {
   it('treats the minor unit as the currency defines it', () => {
@@ -42,5 +42,17 @@ describe('formatSyncPace', () => {
   it('matches the fastest pace the database accepts (one call per 5 minutes)', () => {
     expect(maxSyncCalls(1)).toBe(288)
     expect(formatSyncPace(maxSyncCalls(1), 1)).toBe('about every 5m')
+  })
+})
+
+describe('plotting money', () => {
+  it('converts minor units to the currency\'s main unit', () => {
+    expect(minorToMajor(4999, 'EUR')).toBeCloseTo(49.99)
+    expect(minorToMajor(5000, 'JPY')).toBe(5000)
+    expect(minorToMajor(12500, 'KWD')).toBeCloseTo(12.5)
+  })
+  it('formats a main-unit amount the way the rest of the app shows money', () => {
+    expect(formatMajor(49.99, 'EUR')).toBe(formatMoney(4999, 'EUR'))
+    expect(formatMajor(5000, 'JPY')).toBe(formatMoney(5000, 'JPY'))
   })
 })

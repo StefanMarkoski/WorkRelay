@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Boxes,
   CheckSquare,
   LayoutDashboard,
@@ -24,6 +25,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, group: 'main' },
+  { to: '/insights', label: 'Insights', icon: BarChart3, group: 'main' },
   { to: '/orders', label: 'Orders', icon: ShoppingCart, group: 'main' },
   { to: '/customers', label: 'Customers', icon: Users, group: 'main' },
   { to: '/inventory', label: 'Inventory', icon: Boxes, group: 'main' },

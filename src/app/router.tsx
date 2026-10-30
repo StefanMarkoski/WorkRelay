@@ -7,6 +7,7 @@ import { CustomerDetailPage } from '@/pages/customer-detail-page'
 import { CustomersPage } from '@/pages/customers-page'
 import { ExecutionDetailPage } from '@/pages/execution-detail-page'
 import { ExecutionsPage } from '@/pages/executions-page'
+import { InsightsPage } from '@/pages/insights-page'
 import { InventoryPage } from '@/pages/inventory-page'
 import { IntegrationsPage } from '@/pages/integrations-page'
 import { ProductDetailPage } from '@/pages/product-detail-page'
@@ -29,6 +30,7 @@ export const router = createHashRouter([
       { path: 'integrations', element: <IntegrationsPage /> },
       { path: 'orders', element: <OrdersPage /> },
       { path: 'orders/:id', element: <OrderDetailPage /> },
+      { path: 'insights', element: <InsightsPage /> },
       { path: 'customers', element: <CustomersPage /> },
       { path: 'customers/:id', element: <CustomerDetailPage /> },
       { path: 'inventory', element: <InventoryPage /> },

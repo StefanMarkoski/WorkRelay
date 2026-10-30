@@ -1,5 +1,5 @@
 /** How many decimals the currency's minor unit has (2 for EUR, 0 for JPY, 3 for KWD). */
-function minorDigits(currency: string): number {
+export function minorDigits(currency: string): number {
   try {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency }).resolvedOptions().maximumFractionDigits ?? 2
   } catch {
@@ -74,3 +74,16 @@ export function formatSyncPace(calls: number | null | undefined, days: number | 
 
 /** The fastest pace the database accepts: one call every 5 minutes. */
 export const maxSyncCalls = (days: number) => days * 288
+
+/** Minor units (cents) to the currency's main unit, for plotting: 4999 EUR -> 49.99, 5000 JPY -> 5000. */
+export const minorToMajor = (minor: number, currency: string) => minor / 10 ** minorDigits(currency)
+
+/** A main-unit amount as money: 49.99 -> "€49.99". The chart axes and readouts use this, so they match every other figure in the app. */
+export function formatMajor(major: number, currency: string): string {
+  const digits = minorDigits(currency)
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(major)
+  } catch {
+    return `${major.toFixed(digits)} ${currency}`
+  }
+}

@@ -120,6 +120,17 @@
     --housing-edge: oklch(0.28 0.008 150);
     --lamp-off: oklch(0.3 0.008 150);
     --signal: oklch(0.78 0.16 156);
+    /* Chart ink. Categorical series are a fixed order, validated against this surface (see PRODUCT/DESIGN notes):
+       green stays reserved for live state and the primary action, so data never wears it. */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --series-6: #008300;
+    --series-other: #898781;
+    --viz-grid: oklch(0.88 0.006 140);
+    --viz-axis: oklch(0.78 0.008 140);
 }
 
 .dark {
@@ -160,6 +171,14 @@
     --housing: oklch(0.21 0.007 150);
     --housing-edge: oklch(0.29 0.009 150);
     --lamp-off: oklch(0.31 0.008 150);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --viz-grid: oklch(0.25 0.008 150);
+    --viz-axis: oklch(0.34 0.009 150);
 }
 
 @layer base {
@@ -173,6 +192,10 @@
     @apply font-sans;
     }
 }
+/* A row that has just arrived in the Live list: a short tint that fades out. State, not decoration. */
+@keyframes live-new { from { background-color: color-mix(in oklab, var(--primary) 16%, transparent); } to { background-color: transparent; } }
+.live-new { animation: live-new 1.8s ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

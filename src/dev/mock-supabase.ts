@@ -5,6 +5,7 @@
  */
 import { mountDataToggle } from './data-toggle'
 import { customerOrders, deriveCustomers, listCustomers } from './mock-customers'
+import { insightsRpc } from './mock-insights'
 import { listProducts, productOrders } from './mock-inventory'
 import { buildDataset, readMode } from './mock-datasets'
 
@@ -179,6 +180,7 @@ export const supabase: any = {
   from: (table: string) => new Query(table),
   rpc: (name: string, args?: Record<string, any>) => {
     if (name === 'list_customers') return Promise.resolve({ data: listCustomers(DB, args), error: null })
+    if (name.startsWith('insights_')) return Promise.resolve({ data: insightsRpc(name, args ?? {}, MODE === 'empty'), error: null })
     if (name === 'list_products') return Promise.resolve({ data: listProducts(DB, args), error: null })
     if (name === 'product_siblings') {
       const me = (DB.products ?? []).find((x) => x.id === args?.p_product)

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { BrandMark } from '@/components/common/brand-mark'
+import { LiveStatusContext } from '@/features/realtime/live-status'
 import { useRealtimeSync } from '@/features/realtime/use-realtime-sync'
 import { ThemeSwitcher } from '@/features/theme/theme-switcher'
 import { LiveIndicator } from './live-indicator'
@@ -13,6 +14,7 @@ export function AppShell() {
   const live = useRealtimeSync()
   const { pathname } = useLocation()
   return (
+    <LiveStatusContext.Provider value={live}>
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-sidebar px-4 text-foreground lg:px-6">
         <div className="flex items-center gap-4">
@@ -58,5 +60,6 @@ export function AppShell() {
         </main>
       </div>
     </div>
+    </LiveStatusContext.Provider>
   )
 }

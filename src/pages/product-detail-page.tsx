@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ChartCard } from '@/components/charts/chart-card'
+import { formatFull } from '@/components/charts/scale'
+import { StepChart } from '@/components/charts/step-chart'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
@@ -29,6 +32,7 @@ export function ProductDetailPage() {
   const { id } = useParams()
   const { current, canManage } = useWorkspace()
   const [page, setPage] = useState(0)
+  const [now] = useState(() => Date.now()) // the right edge of the stock chart
 
   const profile = useQuery({
     queryKey: ['product', id, 'profile'],
@@ -48,7 +52,7 @@ export function ProductDetailPage() {
         .select('id, stock_before, stock_after, source, occurred_at')
         .eq('product_id', id)
         .order('occurred_at', { ascending: false })
-        .limit(20)
+        .limit(200)
       if (error) throw error
       return (data ?? []) as StockEvent[]
     },
@@ -154,6 +158,26 @@ export function ProductDetailPage() {
         )
       })()}
 
+      {(history.data?.length ?? 0) > 1 && (
+        <ChartCard
+          className="mb-4"
+          title="Stock over time"
+          description={p.effective_notify_on !== null ? `Pieces on hand each time the shop reported a change. The line marks the alert level (${formatFull(p.effective_notify_on)}).` : 'Pieces on hand each time the shop reported a change.'}
+          table={{
+            columns: ['When', 'Stock'],
+            rows: [...history.data!].reverse().map((e) => [formatDateTime(e.occurred_at), e.stock_after]),
+          }}
+        >
+          <StepChart
+            points={[...history.data!].reverse().map((e) => ({ t: new Date(e.occurred_at).getTime(), v: e.stock_after }))}
+            now={now}
+            threshold={p.effective_notify_on !== null ? { value: p.effective_notify_on, label: `Notify on ${formatFull(p.effective_notify_on)}` } : undefined}
+            formatValue={(n) => `${formatFull(n)}${p.unit ? ` ${p.unit}` : ''}`}
+            label={`Stock of ${p.name} over time`}
+          />
+        </ChartCard>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Stock history</CardTitle></CardHeader>
@@ -164,7 +188,7 @@ export function ProductDetailPage() {
               <Table>
                 <THead><tr><TH>When</TH><TH className="text-right">From</TH><TH className="text-right">To</TH><TH className="hidden sm:table-cell">Via</TH></tr></THead>
                 <tbody>
-                  {history.data!.map((e) => (
+                  {history.data!.slice(0, 20).map((e) => (
                     <TR key={e.id}>
                       <TD className="whitespace-nowrap text-muted-foreground" title={formatDateTime(e.occurred_at)}>{timeAgo(e.occurred_at)}</TD>
                       <TD className="text-right tabular-nums text-muted-foreground">{e.stock_before === null ? '—' : e.stock_before.toLocaleString()}</TD>

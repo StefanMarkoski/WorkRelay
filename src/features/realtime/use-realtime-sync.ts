@@ -11,11 +11,11 @@ export type LiveStatus = 'connecting' | 'live' | 'offline'
  * client-readable are published (never webhook_events or integrations).
  */
 const TABLES: Record<string, QueryKey[]> = {
-  orders: [['orders'], ['order'], ['overview'], ['customers'], ['customer']],
+  orders: [['orders'], ['order'], ['overview'], ['customers'], ['customer'], ['live'], ['insights']],
   order_events: [['order'], ['overview']],
-  workflow_runs: [['runs'], ['run'], ['overview'], ['automations']],
+  workflow_runs: [['runs'], ['run'], ['overview'], ['automations'], ['live'], ['insights']],
   step_runs: [['run']],
-  approvals: [['approvals'], ['overview']],
+  approvals: [['approvals'], ['overview'], ['live']],
 }
 
 const DEBOUNCE_MS = 300

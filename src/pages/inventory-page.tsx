@@ -10,6 +10,8 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
+import { InventoryHealthCard } from '@/features/insights/cards'
+import { useInventoryHealth } from '@/features/insights/queries'
 import { NotifyEdit } from '@/features/inventory/notify-edit'
 import { PRICE_SOURCE_LABEL } from '@/features/inventory/price-source'
 import { useIntegrations } from '@/features/integrations/queries'
@@ -63,6 +65,8 @@ export function InventoryPage() {
   })
 
   const shops = integrations.data ?? []
+  const health = useInventoryHealth(shopId).data
+  const hasProducts = !!health && health.low + health.ok + health.no_threshold + health.not_reported > 0
 
   return (
     <>
@@ -70,6 +74,12 @@ export function InventoryPage() {
         title="Inventory"
         description="Your products and how many pieces are left, as reported by each shop. Products also appear here once they show up on an order."
       />
+      {hasProducts && (
+        <Card className="mb-6 p-4">
+          <p className="mb-3 text-xs font-medium text-muted-foreground">Stock levels{shopId ? '' : shops.length > 1 ? ' across all shops' : ''}</p>
+          <InventoryHealthCard shopId={shopId} bare />
+        </Card>
+      )}
       <Card className="mb-6 flex flex-wrap items-center gap-3 p-4">
         {shops.length > 1 && (
           <Select aria-label="Shop" className="w-auto min-w-40" value={shopId} onChange={(e) => { setShopId(e.target.value); setPage(0) }}>

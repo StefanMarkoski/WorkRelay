@@ -11,7 +11,10 @@ import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
 import { Select } from '@/components/ui/input'
+import { OrdersTrendCard } from '@/features/insights/orders-trend'
+import type { RangeDays } from '@/features/insights/series'
 import { useIntegrations } from '@/features/integrations/queries'
+import { LiveFeed } from '@/features/live/live-feed'
 import { useOverview } from '@/features/overview/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDuration, formatMoney, humanize, timeAgo } from '@/lib/format'
@@ -60,6 +63,7 @@ const STATUS_BAR: Record<string, string> = {
 export function OverviewPage() {
   const { current } = useWorkspace()
   const [shopId, setShopId] = useState('') // '' = the whole workspace
+  const [range, setRange] = useState<RangeDays>(30)
   const shops = (useIntegrations().data ?? []).filter((i) => i.status !== 'revoked')
   const q = useOverview(shopId)
   const shop = shops.find((i) => i.id === shopId) ?? null
@@ -82,12 +86,17 @@ export function OverviewPage() {
       <PageHeader
         title="Overview"
         description={shop ? `Orders, automations and activity for ${shop.name} only.` : `Workspace health, orders, and automations for ${current.name}.`}
-        actions={shops.length > 1 ? (
-          <Select aria-label="Shop" className="w-48" value={shopId} onChange={(e) => setShopId(e.target.value)}>
-            <option value="">All shops</option>
-            {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-          </Select>
-        ) : undefined}
+        actions={
+          <>
+            <Link to="/insights" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">More in Insights</Link>
+            {shops.length > 1 && (
+              <Select aria-label="Shop" className="w-48" value={shopId} onChange={(e) => setShopId(e.target.value)}>
+                <option value="">All shops</option>
+                {shops.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+              </Select>
+            )}
+          </>
+        }
       />
 
       {brandNew && (
@@ -119,6 +128,11 @@ export function OverviewPage() {
           note={d.runsFailed === 0 ? 'Nothing needs a look' : 'Open Executions to see why'} />
         <Stat index={3} label="Pending approvals" value={d.pendingApprovals} caption={d.pendingApprovals === 0 ? 'queue clear' : undefined} tone="warning" lit={d.pendingApprovals > 0} to="/approvals"
           note={d.pendingApprovals === 0 ? 'Nothing is waiting' : 'Waiting for a decision'} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid lg:col-span-8"><OrdersTrendCard range={range} shopId={shopId} onRange={setRange} /></div>
+        <LiveFeed shopId={shopId} className="lg:col-span-4" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
