@@ -406,6 +406,7 @@ How WorkRelay uses it:
   it to the alert level, is re-armed by a cancellation that lifts it back above the level, and is started over by every report from the shop. A
   product that is already low by the shop's own number is not announced twice. Every low-stock message ends with its **Source**: the shop's name
   for a number the shop reported, or *WorkRelay (estimated for <shop>)* for an estimate.
+- **Failures.** An event WorkRelay could not accept, and an automation run that failed, are listed under **Failures** with a plain explanation. They are kept for 90 days by default; an owner or admin sets 1 to 365 days under **Settings → Failures**, and the failures already older than that are removed the moment you save, and later ones as they age (events that went through and runs that succeeded are never removed by this).
 - **Event history.** Every push and every scheduled pull appears under **Integrations → Event history** as `inventory.push` or
   `inventory.pull`, with a short summary (how many products, never the products themselves), so you can see that a feed arrived, was
   rejected or failed, and why. These entries are kept for 30 days.

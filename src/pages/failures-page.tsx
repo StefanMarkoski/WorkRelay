@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { explainFailure } from '@/features/failures/explain'
+import { useFailureRetention } from '@/features/failures/retention'
 import type { Failure } from '@/features/failures/queries'
 import { useIntegrations } from '@/features/integrations/queries'
 import { shopLabel } from '@/features/integrations/shop-label'
@@ -31,6 +32,8 @@ const PERIODS = [
   { days: 1, label: 'Last 24 hours' },
   { days: 7, label: 'Last 7 days' },
   { days: 30, label: 'Last 30 days' },
+  { days: 90, label: 'Last 90 days' },
+  { days: 365, label: 'Last year' },
 ]
 
 function Details({ f }: { f: Failure }) {
@@ -76,6 +79,9 @@ export function FailuresPage() {
   const [kind, setKind] = useState<Kind>('')
   const [shopId, setShopId] = useState('')
   const [days, setDays] = useState(7)
+  const retention = useFailureRetention(current.id).data ?? null
+  // Nothing older than the workspace keeps failures exists, so those periods would only be empty.
+  const periods = PERIODS.filter((p) => retention === null || p.days <= retention || p.days <= 7)
   const [page, setPage] = useState(0)
   const [open, setOpen] = useState<string | null>(null)
 
@@ -118,9 +124,14 @@ export function FailuresPage() {
           </Select>
         )}
         <Select aria-label="Period" className="w-auto min-w-40" value={days} onChange={(e) => { setDays(Number(e.target.value)); setPage(0) }}>
-          {PERIODS.map((p) => <option key={p.days} value={p.days}>{p.label}</option>)}
+          {periods.map((p) => <option key={p.days} value={p.days}>{p.label}</option>)}
         </Select>
         {shopId && <p className="text-xs text-muted-foreground">Automation runs belong to no single shop, so they are not listed while a shop is chosen.</p>}
+        {retention !== null && (
+          <p className="ml-auto text-xs text-muted-foreground">
+            Failures are kept for {retention} {retention === 1 ? 'day' : 'days'}, then removed. <Link to="/settings" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Change this in Settings</Link>.
+          </p>
+        )}
       </Card>
       <Card>
         {query.isLoading ? (

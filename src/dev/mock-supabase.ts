@@ -6,7 +6,7 @@
 import { mountDataToggle } from './data-toggle'
 import { customerOrders, deriveCustomers, listCustomers } from './mock-customers'
 import { insightsRpc } from './mock-insights'
-import { listFailures } from './mock-failures'
+import { failuresOlderThan, listFailures } from './mock-failures'
 import { listProducts, listSyncRuns, productOrders, stockEstimates, syncRunChanges } from './mock-inventory'
 import { buildDataset, readMode } from './mock-datasets'
 
@@ -37,6 +37,7 @@ const orders: Row[] = [
 
 const DEMO_DB: Record<string, Row[]> = {
   memberships: [{ role: 'owner', user_id: 'u1', organization_id: ORG, organizations: { id: ORG, name: 'Game Shop' } }],
+  organizations: [{ id: ORG, name: 'Game Shop', failure_retention_days: 90 }],
   orders,
   order_items: [
     { id: 'it1', order_id: 'o1', position: 0, sku: 'GC-50', name: 'Gift card 50', quantity: 2, unit_price_minor: 7000000 },
@@ -220,6 +221,12 @@ export const supabase: any = {
     if (name === 'list_products') return Promise.resolve({ data: listProducts(DB, args), error: null })
     if (name === 'list_sync_runs') return Promise.resolve({ data: MODE === 'empty' ? [] : listSyncRuns(DB, args), error: null })
     if (name === 'sync_run_changes') return Promise.resolve({ data: syncRunChanges(args), error: null })
+    if (name === 'failures_older_than') return Promise.resolve({ data: failuresOlderThan(DB, args), error: null })
+    if (name === 'set_failure_retention') {
+      if (!(args && args.p_days >= 1 && args.p_days <= 365)) return Promise.resolve({ data: null, error: { message: 'Keep failures for between 1 and 365 days.' } })
+      for (const o of DB.organizations ?? []) if (o.id === args?.p_org) o.failure_retention_days = args?.p_days
+      return Promise.resolve({ data: failuresOlderThan(DB, { p_days: args?.p_days }), error: null })
+    }
     if (name === 'list_failures') return Promise.resolve({ data: MODE === 'empty' ? [] : listFailures(DB, args), error: null })
     if (name === 'stock_estimates') return Promise.resolve({ data: stockEstimates(DB, args), error: null })
     if (name === 'set_integration_estimate_stock') {

@@ -1,6 +1,13 @@
 type Row = Record<string, any>
 
 /** Mirrors list_failures for the mock build. The reasons are real texts the system writes. */
+const DEMO_AGES_MIN = [8, 25, 70, 130, 400, 1100, 2000, 4300, 9000, 60 * 24 * 40, 60 * 24 * 100]
+
+/** Mirrors failures_older_than for the mock build: how many of the demo failures are older than a number of days. */
+export function failuresOlderThan(_db: Record<string, Row[]>, args: Record<string, any> = {}): number {
+  return DEMO_AGES_MIN.filter((m) => m > Number(args.p_days) * 24 * 60).length
+}
+
 export function listFailures(db: Record<string, Row[]>, args: Record<string, any> = {}): Row[] {
   const { p_kind, p_integration, p_days = 7, p_limit = 25, p_offset = 0 } = args
   const shops = db.integrations ?? []

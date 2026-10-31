@@ -6,6 +6,7 @@ import { Field, Input, Select } from '@/components/ui/input'
 import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { ErrorState, TableSkeleton } from '@/components/common/states'
+import { FailureRetentionCard } from '@/features/failures/retention'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, humanize } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
@@ -117,6 +118,8 @@ export function SettingsPage() {
           {memberError && <p role="alert" className="px-4 pb-4 text-sm text-destructive">{memberError}</p>}
           <p className="border-t px-4 py-3 text-xs text-muted-foreground">People must sign up first; invitation emails are not available yet.</p>
         </Card>
+
+        <FailureRetentionCard orgId={current.id} canManage={canManage} />
       </div>
     </>
   )

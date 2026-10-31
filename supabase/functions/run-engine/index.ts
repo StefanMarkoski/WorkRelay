@@ -24,6 +24,10 @@ Deno.serve(async (req) => {
   if (authError || authorized !== true) return json(401, { error: 'unauthorized' })
   try {
     // Due product pulls ride on the same tick; a failing pull must never stop the automations from running.
+    // The cleanup of old failures rides on the tick too (the database lets it run at most every 5 minutes), and is never allowed to stop anything.
+    void db.rpc('purge_old_failures').then(({ error }) => {
+      if (error) consoleLogger.error('failure cleanup failed', { message: error.message })
+    })
     const [result, pulls] = await Promise.all([
       tick(deps),
       pullDueProducts(pullDeps).catch((err) => {

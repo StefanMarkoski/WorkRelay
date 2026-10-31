@@ -311,7 +311,7 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 | "The last check failed: …" | Read the message: a non-2xx answer, a body that is not JSON or not in the product format, a redirect, a private address, or a timeout over 15 seconds |
 | An order shows a currency badge such as "USD, not MKD" | The order's `currency` differs from the shop's. Nothing was converted |
 
-Anything the shop sends that is refused with `400` names the field in `detail` (never the value), so a retry with a fix will succeed. The same refusal is listed under **Failures** in WorkRelay, with a plain explanation and what to do about it. The full list of status codes and retry advice is in
+Anything the shop sends that is refused with `400` names the field in `detail` (never the value), so a retry with a fix will succeed. The same refusal is listed under **Failures** in WorkRelay, with a plain explanation and what to do about it. Failures are kept for 90 days by default; a workspace owner or admin can choose anything from 1 to 365 days under Settings, and failures older than that are removed automatically, the moment you save a smaller number and as they age afterwards. The full list of status codes and retry advice is in
 section 7 of the [reference](./shop-webhook-integration.md).
 
 Machine-readable schemas: [`order-webhook.schema.json`](./order-webhook.schema.json), [`customer-webhook.schema.json`](./customer-webhook.schema.json),
