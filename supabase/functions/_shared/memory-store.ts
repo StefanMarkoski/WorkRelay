@@ -104,6 +104,12 @@ export class MemoryStore implements IngestStore {
     return a.items.length
   }
 
+  /** The refused pushes the handler wrote to the sync history. */
+  failedSyncs: Parameters<IngestStore['recordFailedSync']>[0][] = []
+  async recordFailedSync(a: Parameters<IngestStore['recordFailedSync']>[0]) {
+    this.failedSyncs.push(a)
+  }
+
   /** The pushes the handler remembered (the real storage is the record_product_push SQL function). */
   pushRecords: Parameters<IngestStore['recordProductPush']>[0][] = []
   failPushRecords = false

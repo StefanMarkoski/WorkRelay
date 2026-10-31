@@ -6,7 +6,8 @@
 import { mountDataToggle } from './data-toggle'
 import { customerOrders, deriveCustomers, listCustomers } from './mock-customers'
 import { insightsRpc } from './mock-insights'
-import { listProducts, productOrders, stockEstimates } from './mock-inventory'
+import { listFailures } from './mock-failures'
+import { listProducts, listSyncRuns, productOrders, stockEstimates, syncRunChanges } from './mock-inventory'
 import { buildDataset, readMode } from './mock-datasets'
 
 type Row = Record<string, any>
@@ -217,6 +218,9 @@ export const supabase: any = {
     if (name === 'list_customers') return Promise.resolve({ data: listCustomers(DB, args), error: null })
     if (name.startsWith('insights_')) return Promise.resolve({ data: insightsRpc(name, args ?? {}, MODE === 'empty'), error: null })
     if (name === 'list_products') return Promise.resolve({ data: listProducts(DB, args), error: null })
+    if (name === 'list_sync_runs') return Promise.resolve({ data: MODE === 'empty' ? [] : listSyncRuns(DB, args), error: null })
+    if (name === 'sync_run_changes') return Promise.resolve({ data: syncRunChanges(args), error: null })
+    if (name === 'list_failures') return Promise.resolve({ data: MODE === 'empty' ? [] : listFailures(DB, args), error: null })
     if (name === 'stock_estimates') return Promise.resolve({ data: stockEstimates(DB, args), error: null })
     if (name === 'set_integration_estimate_stock') {
       for (const i of DB.integrations ?? []) if (i.id === args?.p_id) i.estimate_stock = !!args?.p_enabled

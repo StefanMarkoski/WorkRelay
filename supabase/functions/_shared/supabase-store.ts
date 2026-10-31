@@ -112,14 +112,30 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
     },
 
     async applyProducts(a) {
-      const { data, error } = await db.rpc('apply_product_sync', {
+      // run_product_sync is apply_product_sync plus a row in the sync history
+      const { data, error } = await db.rpc('run_product_sync', {
         p_integration: a.integrationId,
         p_items: a.items,
         p_source: a.source,
         p_at: a.at,
+        p_trigger: 'shop',
+        p_by_name: a.byName ?? null,
+        p_by_role: a.byRole ?? null,
       })
       if (error) throw new Error(error.message)
       return typeof data === 'number' ? data : 0
+    },
+
+    async recordFailedSync(a) {
+      const { error } = await db.rpc('record_failed_sync_run', {
+        p_integration: a.integrationId,
+        p_source: 'push',
+        p_trigger: 'shop',
+        p_error: a.error,
+        p_by_name: a.byName ?? null,
+        p_by_role: a.byRole ?? null,
+      })
+      if (error) throw new Error(error.message)
     },
 
     async recordProductPush(a) {

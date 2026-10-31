@@ -18,6 +18,8 @@ export async function handleInventoryWebhook(req: Request, deps: HandlerDeps): P
 
   // Every push is shown in Event history, as a short summary (never the whole feed). Best effort: it must not fail a push.
   const note = async (status: 'processed' | 'ignored' | 'failed', payload: Record<string, unknown>, error?: string) => {
+    // a refused push is a row in the sync history as well
+    if (status === 'failed') await deps.store.recordFailedSync({ integrationId: integration.id, error: error ?? 'failed' }).catch(() => undefined)
     try {
       const recorded = await deps.store.recordEvent({
         organizationId: integration.organizationId,
@@ -52,6 +54,8 @@ export async function handleInventoryWebhook(req: Request, deps: HandlerDeps): P
       items: toDatabaseItems(parsed.data.products),
       source: 'push',
       at: new Date().toISOString(),
+      byName: parsed.data.synced_by?.name || null,
+      byRole: parsed.data.synced_by?.role || null,
     })
     await deps.store.touchIntegration(integration.id).catch(() => undefined) // last-seen is best effort
     await note('processed', summary)

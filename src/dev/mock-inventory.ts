@@ -67,3 +67,42 @@ export function stockEstimates(db: Record<string, Row[]>, args: Record<string, a
       return { product_id: p.id, estimated: p.stock - sold, sold_since: sold, as_of: p.reported_at }
     })
 }
+
+/** Demo sync history (mock only): a mix of pushes, scheduled and manual pulls, and two failures. */
+export function demoSyncRuns(db: Record<string, Row[]>): Row[] {
+  const shops = db.integrations ?? []
+  const a = shops[0], b = shops[1] ?? shops[0]
+  if (!a) return []
+  const ago = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
+  const base = { organization_id: a.organization_id, error: null }
+  return [
+    { id: 'sr1', integration_id: a.id, source: 'push', trigger: 'shop', by_name: 'Marko', by_role: 'Admin', received: 120, changed: 14, status: 'ok', created_at: ago(12), ...base },
+    { id: 'sr2', integration_id: b.id, source: 'pull', trigger: 'scheduled', by_name: null, by_role: null, received: 40, changed: 3, status: 'ok', created_at: ago(35), ...base },
+    { id: 'sr3', integration_id: a.id, source: 'pull', trigger: 'manual', by_name: null, by_role: null, received: 118, changed: 0, status: 'ok', created_at: ago(95), ...base },
+    { id: 'sr4', integration_id: b.id, source: 'pull', trigger: 'scheduled', by_name: null, by_role: null, received: 0, changed: 0, status: 'failed', created_at: ago(180), organization_id: a.organization_id, error: 'The shop answered with HTTP 500' },
+    { id: 'sr5', integration_id: a.id, source: 'push', trigger: 'shop', by_name: null, by_role: null, received: 0, changed: 0, status: 'failed', created_at: ago(300), organization_id: a.organization_id, error: 'products.0.stock: expected number, received string' },
+    { id: 'sr6', integration_id: a.id, source: 'push', trigger: 'shop', by_name: 'Ana', by_role: null, received: 2, changed: 2, status: 'ok', created_at: ago(1500), ...base },
+  ]
+}
+
+const DEMO_CHANGES: Row[] = [
+  { sku: 'BIKE-ROAD-700', name: 'Road bike 700c', stock_before: 12, stock_after: 3 },
+  { sku: 'GC-50', name: 'Gift card 50', stock_before: 9, stock_after: 4 },
+  { sku: 'KEY-STEAM-10', name: 'Steam key 10', stock_before: null, stock_after: 250 },
+]
+
+/** Mirrors list_sync_runs (sorting and paging) and sync_run_changes. */
+export function listSyncRuns(db: Record<string, Row[]>, args: Record<string, any> = {}): Row[] {
+  const { p_integration, p_sort = 'time', p_desc = true, p_limit = 25, p_offset = 0 } = args
+  const name = (id: string) => (db.integrations ?? []).find((i) => i.id === id)?.name ?? 'Shop'
+  const key: Record<string, (r: Row) => string | number> = {
+    time: (r) => new Date(r.created_at).getTime(), source: (r) => r.source, shop: (r) => name(r.integration_id).toLowerCase(),
+    by: (r) => String(r.by_name ?? '').toLowerCase(), products: (r) => r.received, changes: (r) => r.changed, result: (r) => r.status,
+  }
+  const pick = key[p_sort] ?? key.time
+  const rows = demoSyncRuns(db).filter((r) => !p_integration || r.integration_id === p_integration)
+  rows.sort((x, y) => (pick(x) < pick(y) ? -1 : pick(x) > pick(y) ? 1 : 0) * (p_desc ? -1 : 1) || new Date(y.created_at).getTime() - new Date(x.created_at).getTime())
+  return rows.slice(p_offset, p_offset + p_limit).map((r) => ({ ...r, integration_name: name(r.integration_id), total_count: rows.length }))
+}
+export const syncRunChanges = (args: Record<string, any> = {}): Row[] =>
+  (['sr1', 'sr2', 'sr6'].includes(args.p_run) ? DEMO_CHANGES : []).map((c) => ({ ...c, total_count: args.p_run === 'sr1' ? 14 : DEMO_CHANGES.length }))

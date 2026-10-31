@@ -47,7 +47,12 @@ export interface IngestStore {
     items: Record<string, unknown>[]
     source: 'push' | 'pull'
     at: string
+    /** Who pressed the button in the shop (push only), kept in the sync history. */
+    byName?: string | null
+    byRole?: string | null
   }): Promise<number>
+  /** A push that was refused: it is a row in the sync history too, with the reason. Best effort. */
+  recordFailedSync(a: { integrationId: string; error: string; byName?: string | null; byRole?: string | null }): Promise<void>
   /** A push was applied: remember when, and who pressed the button, so the app can say "synced 5 minutes ago". Best effort. */
   recordProductPush(a: { integrationId: string; byName: string | null; byRole: string | null }): Promise<void>
   /** A push was applied: tell the automations who synced (merged with the other chunks of the same sync). Best effort. */

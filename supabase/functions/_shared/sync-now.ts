@@ -59,7 +59,7 @@ export async function handleSyncNow(req: Request, deps: SyncNowDeps): Promise<Re
 
   // The call is spent whatever the shop answers, exactly like a scheduled one. The outcome (and any error) is also recorded
   // for Event history by pullShop. The Authorization value never leaves this function.
-  const outcome = await pullShop({ integrationId, sourceUrl: claimed.sourceUrl, authHeader: claimed.authHeader }, deps.pull)
+  const outcome = await pullShop({ integrationId, sourceUrl: claimed.sourceUrl, authHeader: claimed.authHeader, trigger: 'manual' }, deps.pull)
   return outcome.ok
     ? json(200, { status: 'ok', products: outcome.products, calls_left: claimed.callsLeft })
     : json(200, { status: 'failed', error: outcome.error, calls_left: claimed.callsLeft })

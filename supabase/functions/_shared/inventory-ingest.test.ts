@@ -173,6 +173,17 @@ describe('the payload', () => {
     })
   })
 
+  it('hands who pressed the button to the sync history, and records a refused push there with its reason', async () => {
+    await send({ products: [{ sku: 'A', stock: 1 }], synced_by: { name: ' Marko ', role: 'Admin' } })
+    expect(store.productReports[0]).toMatchObject({ source: 'push', byName: 'Marko', byRole: 'Admin' })
+    expect(store.failedSyncs).toHaveLength(0)
+    expect((await send({ products: [{ sku: 'A', stock: 'many' }] })).status).toBe(400)
+    expect((await send('not json{')).status).toBe(400)
+    expect(store.failedSyncs).toHaveLength(2)
+    expect(store.failedSyncs[0].error).toContain('products.0.stock')
+    expect(store.failedSyncs[1].error).toBeTruthy()
+  })
+
   it('accepts zero stock and a negative stock, and an empty list', async () => {
     expect((await send({ products: [{ sku: 'A', stock: 0 }, { sku: 'B', stock: -2 }] })).status).toBe(200)
     expect((await send({ products: [] })).status).toBe(200)

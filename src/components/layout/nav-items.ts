@@ -7,6 +7,7 @@ import {
   Plug,
   Settings,
   ShoppingCart,
+  TriangleAlert,
   Users,
   Zap,
   type LucideIcon,
@@ -32,6 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/automations', label: 'Automations', icon: Zap, group: 'main', adminOnly: true },
   { to: '/executions', label: 'Executions', icon: Play, group: 'main' },
   { to: '/approvals', label: 'Approvals', icon: CheckSquare, group: 'main' },
+  { to: '/failures', label: 'Failures', icon: TriangleAlert, group: 'main' },
   { to: '/settings', label: 'Settings', icon: Settings, group: 'management' },
   { to: '/integrations', label: 'Integrations', icon: Plug, group: 'shops' },
 ]

@@ -288,3 +288,29 @@ export interface ProductSibling {
   reported_at: string | null
   low: boolean
 }
+
+/** A row of list_sync_runs: one sync, from the shop (push) or from WorkRelay (pull). */
+export interface SyncRun {
+  id: string
+  integration_id: string
+  integration_name: string
+  source: 'push' | 'pull'
+  trigger: 'shop' | 'scheduled' | 'manual'
+  by_name: string | null
+  by_role: string | null
+  received: number
+  changed: number
+  status: 'ok' | 'failed'
+  error: string | null
+  created_at: string
+  total_count: number
+}
+
+/** A row of sync_run_changes: a product the sync added or whose stock it moved. */
+export interface SyncChange {
+  sku: string
+  name: string
+  stock_before: number | null
+  stock_after: number
+  total_count: number
+}

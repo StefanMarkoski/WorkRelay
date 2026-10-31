@@ -14,13 +14,15 @@ export interface DueSync {
   integrationId: string
   sourceUrl: string
   authHeader: string | null
+  /** Who started this pull: the schedule (the default) or a person pressing Sync now. Kept in the sync history. */
+  trigger?: 'scheduled' | 'manual'
 }
 
 export interface PullStore {
   claimDue(limit: number): Promise<DueSync[]>
-  apply(a: { integrationId: string; items: Record<string, unknown>[]; at: string }): Promise<number>
+  apply(a: { integrationId: string; items: Record<string, unknown>[]; at: string; trigger?: 'scheduled' | 'manual' }): Promise<number>
   /** Saves the outcome and shows it in Event history. `count` is how many products the answer held. */
-  record(integrationId: string, error: string | null, count?: number): Promise<void>
+  record(integrationId: string, error: string | null, count?: number, trigger?: 'scheduled' | 'manual'): Promise<void>
 }
 
 export interface PullHttp {
@@ -53,7 +55,7 @@ export async function pullShop(shop: DueSync, deps: PullDeps): Promise<PullOutco
     // Whatever went wrong, the shop's saved Authorization value must never end up in a message that is stored or shown.
     const message = shop.authHeader && shop.authHeader.length >= 4 ? raw.split(shop.authHeader).join('[hidden]') : raw
     deps.log.info('product pull failed', { integration_id: shop.integrationId, reason: message })
-    await deps.store.record(shop.integrationId, message).catch(() => undefined)
+    await deps.store.record(shop.integrationId, message, undefined, shop.trigger).catch(() => undefined)
     return { ok: false, error: message }
   }
   try {
@@ -72,7 +74,7 @@ export async function pullShop(shop: DueSync, deps: PullDeps): Promise<PullOutco
     const parsed = inventoryEnvelope(PULL_MAX_PRODUCTS).safeParse(Array.isArray(value) ? { products: value } : value)
     if (!parsed.success) return await fail(`Unexpected response: ${describeIssues(parsed.error)}`.slice(0, 500))
 
-    const applied = await deps.store.apply({ integrationId: shop.integrationId, items: toDatabaseItems(parsed.data.products), at: sentAt })
+    const applied = await deps.store.apply({ integrationId: shop.integrationId, items: toDatabaseItems(parsed.data.products), at: sentAt, trigger: shop.trigger })
     await deps.store.record(shop.integrationId, null, applied)
     return { ok: true, products: applied }
   } catch (err) {

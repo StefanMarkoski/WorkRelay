@@ -2,6 +2,7 @@ import { ShieldCheck } from 'lucide-react'
 import { MotionConfig, motion } from 'motion/react'
 import { NavLink } from 'react-router-dom'
 import { useIsPlatformAdmin } from '@/features/admin/queries'
+import { useRecentFailureCount } from '@/features/failures/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS, type NavItem } from './nav-items'
@@ -28,7 +29,8 @@ const Label = ({ children }: { children: string }) => (
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const isAdmin = useIsPlatformAdmin().data === true
-  const { canManage } = useWorkspace()
+  const { canManage, current } = useWorkspace()
+  const failures = useRecentFailureCount(current.id).data ?? 0
   const visible = (g: NavItem['group']) => NAV_ITEMS.filter((i) => i.group === g && (!i.adminOnly || canManage))
 
   const item = ({ to, label, icon: Icon, comingSoon }: NavItem) => (
@@ -40,7 +42,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <Icon className={cn('size-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:scale-110', isActive && 'text-primary')} />
             {label}
           </span>
-          {comingSoon ? (
+          {to === '/failures' && failures > 0 ? (
+            <span className="relative rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] leading-none font-semibold text-destructive tabular-nums" title="Failures in the last 24 hours">
+              <span className="sr-only">{failures} in the last 24 hours</span>
+              <span aria-hidden>{failures > 99 ? '99+' : failures}</span>
+            </span>
+          ) : comingSoon ? (
             <span className="relative rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground uppercase">Soon</span>
           ) : (
             isActive && <motion.span aria-hidden initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 500, damping: 20 }} className="relative size-1.5 rounded-full bg-primary" />

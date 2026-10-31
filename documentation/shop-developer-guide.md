@@ -234,6 +234,7 @@ Content-Type: application/json
   off, or limited to some shops. If your shop also pushes automatically on a timer or after each sale, tell the team, so they can leave that shop out of the automation or have WorkRelay switch it off.
   Scheduled calls from WorkRelay and its **Sync now** button never announce.
 - Each push (and each scheduled call) appears in Integrations → Event history as `inventory.push` or `inventory.pull`, with a short summary, for 30 days.
+- Every sync, pushed by the shop or asked for by WorkRelay, also appears in **Inventory → Sync history**: when, which shop, who started it (your `synced_by`), how many products, which ones changed (stock before and after), and the reason when it failed. Kept for 30 days.
 
 Besides the button, you can also push whenever a product's stock changes (after a sale, a restock or an admin edit). Batch changes for a few seconds so a busy shop sends one request, not one per order.
 
@@ -310,7 +311,7 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 | "The last check failed: …" | Read the message: a non-2xx answer, a body that is not JSON or not in the product format, a redirect, a private address, or a timeout over 15 seconds |
 | An order shows a currency badge such as "USD, not MKD" | The order's `currency` differs from the shop's. Nothing was converted |
 
-Anything the shop sends that is refused with `400` names the field in `detail` (never the value), so a retry with a fix will succeed. The full list of status codes and retry advice is in
+Anything the shop sends that is refused with `400` names the field in `detail` (never the value), so a retry with a fix will succeed. The same refusal is listed under **Failures** in WorkRelay, with a plain explanation and what to do about it. The full list of status codes and retry advice is in
 section 7 of the [reference](./shop-webhook-integration.md).
 
 Machine-readable schemas: [`order-webhook.schema.json`](./order-webhook.schema.json), [`customer-webhook.schema.json`](./customer-webhook.schema.json),

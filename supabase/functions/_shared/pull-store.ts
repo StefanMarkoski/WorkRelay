@@ -14,18 +14,23 @@ export function createPullStore(db: SupabaseClient): PullStore {
       }))
     },
     async apply(a) {
-      const { data, error } = await db.rpc('apply_product_sync', {
+      const { data, error } = await db.rpc('run_product_sync', {
         p_integration: a.integrationId,
         p_items: a.items,
         p_source: 'pull',
         p_at: a.at,
+        p_trigger: a.trigger ?? 'scheduled',
       })
       if (error) throw new Error(error.message)
       return typeof data === 'number' ? data : 0
     },
-    async record(integrationId, message, count) {
+    async record(integrationId, message, count, trigger) {
       const { error } = await db.rpc('record_product_sync', { p_integration: integrationId, p_error: message, p_count: count ?? null })
       if (error) throw new Error(error.message)
+      // a failed pull is a row in the sync history too (a good one is written by run_product_sync)
+      if (message !== null) {
+        await db.rpc('record_failed_sync_run', { p_integration: integrationId, p_source: 'pull', p_trigger: trigger ?? 'scheduled', p_error: message })
+      }
     },
   }
 }

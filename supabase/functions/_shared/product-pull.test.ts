@@ -6,7 +6,7 @@ const log: Logger = { info() {}, error() {} }
 const SENT_AT = new Date('2026-10-30T12:00:00Z')
 
 function setup(due: DueSync[], reply: (url: string, headers: Record<string, string>) => Promise<{ status: number; body: string }>) {
-  const applied: { integrationId: string; items: Record<string, unknown>[]; at: string }[] = []
+  const applied: { integrationId: string; items: Record<string, unknown>[]; at: string; trigger?: 'scheduled' | 'manual' }[] = []
   const records: [string, string | null, number | undefined][] = []
   const store: PullStore = {
     async claimDue() {
@@ -33,6 +33,12 @@ describe('a successful pull', () => {
     expect(await t.run()).toEqual({ pulled: 1, failed: 0 })
     expect(t.applied).toEqual([{ integrationId: 'i1', items: [{ sku: 'BIKE-1', stock: 4, notify_on: 5 }], at: SENT_AT.toISOString() }])
     expect(t.records).toEqual([['i1', null, 1]]) // the count of products applied is recorded for Event history
+  })
+
+  it('tells the store whether a person or the schedule started it, for the sync history', async () => {
+    const t = setup([shop({ trigger: 'manual' }), shop({ integrationId: 'i2' })], ok({ products: [{ sku: 'A', stock: 1 }] }))
+    await t.run()
+    expect(t.applied.map((a) => [a.integrationId, a.trigger])).toEqual([['i1', 'manual'], ['i2', undefined]])
   })
 
   it('accepts a bare list as well as { products }', async () => {

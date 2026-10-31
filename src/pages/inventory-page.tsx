@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { Boxes, Search } from 'lucide-react'
+import { Boxes, History, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/input'
 import { Segmented } from '@/components/ui/segmented'
@@ -78,6 +79,11 @@ export function InventoryPage() {
       <PageHeader
         title="Inventory"
         description="Your products and how many pieces are left, as reported by each shop. Products also appear here once they show up on an order."
+        actions={
+          <Link to="/inventory/syncs" className={buttonVariants({ variant: 'outline' })}>
+            <History aria-hidden /> Sync history
+          </Link>
+        }
       />
       {hasProducts && (
         <Card className="mb-6 p-4">
