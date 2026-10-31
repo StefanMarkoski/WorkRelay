@@ -7,6 +7,61 @@ import { validateDefinition } from './workflow-schema.ts'
 const URL_OK = 'https://discord.com/api/webhooks/123/SECRET-TOKEN'
 const order = { external_id: '1001', order_number: '#1001', customer_name: 'Ana "The Boss" Petrova\nline2', customer_email: 'ana@example.com', total_minor: 15000, currency: 'EUR', status: 'cancelled', payment_status: 'paid', fulfillment_status: 'unfulfilled' }
 
+describe('descriptive messages', () => {
+  const full = {
+    external_id: '1042', order_number: '#1042', customer_name: 'Ana Petrova', customer_email: 'ana@example.com', total_minor: 4999, currency: 'EUR', status: 'delivered',
+    items_text: '1× Black tee (M), 2× Mug', shop: 'Game Store', status_from: 'shipped',
+    // things that must never reach a shared channel
+    customer_phone: '+389 70 111 222', shipping_address: { line1: '1 Secret Street' }, billing_address: { line1: '2 Secret Street' }, notes: 'gate code 4321',
+  }
+  const customer = { name: 'Ana Petrova', email: 'ana@example.com', phone: '+389 70 111 222', external_id: 'c9', shop: 'Game Store' }
+  const text = (event: string, ctx: Record<string, unknown>, channel = 'discord') => {
+    const r = buildPresetDefinition('notify', { channel, event, url: URL_OK }) as any
+    const body = renderTemplate(r.definition.steps[0].body, templateView(ctx), { json: true })
+    const parsed = JSON.parse(body)
+    return { body, message: (parsed.content ?? parsed.text ?? parsed.message) as string, parsed }
+  }
+
+  it('a new order says who, what was bought, the total and the shop', () => {
+    expect(text('created', { order: full }).message).toBe('New order #1042 from Ana Petrova (ana@example.com): 49.99 EUR. Bought: 1× Black tee (M), 2× Mug. Shop: Game Store')
+  })
+  it('a status change says what it changed from, and a cancellation says who and what', () => {
+    expect(text('status_changed', { order: full }).message).toBe('Order #1042 from Ana Petrova (ana@example.com) changed from shipped to delivered (49.99 EUR). Bought: 1× Black tee (M), 2× Mug. Shop: Game Store')
+    expect(text('status_changed', { order: { ...full, status_from: null } }).message).toContain('is now delivered')
+    expect(text('cancelled', { order: { ...full, status: 'cancelled' } }).message).toBe('Order #1042 from Ana Petrova (ana@example.com) was cancelled (49.99 EUR). Bought: 1× Black tee (M), 2× Mug. Shop: Game Store')
+  })
+  it('a signup and a first order say who, at which shop, and (first order) what was bought', () => {
+    expect(text('customer_signed_up', { customer }).message).toBe('New customer signed up: Ana Petrova (ana@example.com). Shop: Game Store')
+    expect(text('customer_first_order', { customer, order: full }).message).toBe(
+      'New customer Ana Petrova (ana@example.com) placed their first order: #1042, 49.99 EUR. Bought: 1× Black tee (M), 2× Mug. Shop: Game Store')
+  })
+  it('manages with a name or an email missing, and with nothing at all', () => {
+    expect(text('created', { order: { ...full, customer_name: null } }).message).toContain('from ana@example.com:')
+    expect(text('created', { order: { ...full, customer_email: null } }).message).toContain('from Ana Petrova:')
+    expect(text('created', { order: { ...full, customer_name: '  ', customer_email: '' } }).message).toContain('from unknown customer:')
+    expect(text('created', { order: { external_id: '7', total_minor: 100 } }).message).toBe('New order #7 from unknown customer: 1.00. Bought: no items listed. Shop: unknown shop')
+  })
+  it('never shows a phone number, an address or a note, in any channel', () => {
+    for (const channel of ['discord', 'slack']) {
+      for (const [event, ctx] of [['created', { order: full }], ['status_changed', { order: full }], ['cancelled', { order: full }], ['customer_signed_up', { customer }], ['customer_first_order', { customer, order: full }]] as const) {
+        const { message } = text(event, ctx, channel)
+        for (const secret of ['+389', 'Secret Street', 'gate code', '4321']) expect(message, `${channel} ${event}`).not.toContain(secret)
+      }
+    }
+  })
+  it('turns mention parsing off for Discord, so a customer named @everyone pings nobody', () => {
+    const t = text('created', { order: { ...full, customer_name: '@everyone <@123456>' } })
+    expect(t.message).toContain('@everyone <@123456>') // shown as text
+    expect(t.parsed.allowed_mentions).toEqual({ parse: [] }) // but Discord is told not to act on it
+    for (const event of ['created', 'cancelled', 'status_changed', 'customer_signed_up', 'customer_first_order', 'low_stock', 'products_synced']) {
+      expect(text(event, { order: full, customer, product: {}, sync: {} }).parsed.allowed_mentions, event).toEqual({ parse: [] })
+    }
+  })
+  it('gives a generic webhook the items, the shop and the email as fields', () => {
+    expect(text('created', { order: full }, 'generic').parsed).toMatchObject({ event: 'order.created', email: 'ana@example.com', items: '1× Black tee (M), 2× Mug', shop: 'Game Store', customer: 'Ana Petrova' })
+  })
+})
+
 describe('templates', () => {
   it('adds friendly fields to the view', () => {
     const v = templateView({ order }) as any
@@ -94,7 +149,8 @@ describe('presets running on the engine', () => {
     expect(store.run.status).toBe('succeeded')
     expect(sent[0].url).toBe(URL_OK)
     const message = JSON.parse(sent[0].body!).content as string
-    expect(message).toBe('Order #1001 was cancelled (150.00 EUR)')
+    expect(message).toBe('Order #1001 from Ana "The Boss" Petrova\nline2 (ana@example.com) was cancelled (150.00 EUR). Bought: no items listed. Shop: unknown shop')
+    expect(JSON.parse(sent[0].body!).allowed_mentions).toEqual({ parse: [] })
     expect(JSON.stringify(store.steps)).not.toContain('SECRET-TOKEN')
   })
 

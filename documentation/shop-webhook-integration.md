@@ -404,7 +404,7 @@ How WorkRelay uses it:
   **Estimated stock (optional).** A shop that has *Estimate stock between syncs* switched on also alerts before it reports again, with the same
   automation: nothing more to switch on. The estimate is the last reported stock minus the pieces ordered since. It alerts once when the orders take
   it to the alert level, is re-armed by a cancellation that lifts it back above the level, and is started over by every report from the shop. A
-  product that is already low by the shop's own number is not announced twice. Every low-stock message ends with its **Source**: the shop's name
+  product that is already low by the shop's own number is not announced twice. The estimate is checked once at the end of each order, so an order that takes many products to their level at once sends up to **3 single alerts per shop per 90 seconds** and one summary for the rest, and an order the shop later edits to other products re-arms the ones it lost. Every low-stock message ends with its **Source**: the shop's name
   for a number the shop reported, or *WorkRelay (estimated for <shop>)* for an estimate.
 - **Failures.** An event WorkRelay could not accept, and an automation run that failed, are listed under **Failures** with a plain explanation. They are kept for 90 days by default; an owner or admin sets 1 to 365 days under **Settings → Failures**, and the failures already older than that are removed the moment you save, and later ones as they age (events that went through and runs that succeeded are never removed by this).
 - **Event history.** Every push and every scheduled pull appears under **Integrations → Event history** as `inventory.push` or

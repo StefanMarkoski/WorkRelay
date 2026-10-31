@@ -34,12 +34,20 @@ update workflows set current_version_id = 'a5000000-0000-0000-0000-0000000000d1'
 update workflows set current_version_id = 'a5000000-0000-0000-0000-0000000000d2' where id = 'a4000000-0000-0000-0000-0000000000d2';
 update workflows set enabled = true;
 
+-- The estimate is checked when a transaction commits; this test never commits, so it asks for the check to run now.
+create function el_test.flush() returns void language plpgsql as $$
+begin
+  execute 'set constraints all immediate';
+  execute 'set constraints all deferred';
+end $$;
+
 create function el_test.order_of(oid text, shop text, sku text, qty int, at text) returns void language plpgsql as $$
 begin
   insert into orders (id, organization_id, integration_id, external_id, placed_at, status, last_event_at)
   values (('a3000000-0000-0000-0000-0000000000' || oid)::uuid, 'a0000000-0000-0000-0000-0000000000d1', ('a1000000-0000-0000-0000-0000000000' || shop)::uuid, oid, at::timestamptz, 'pending', now());
   insert into order_items (organization_id, order_id, position, sku, name, quantity)
   values ('a0000000-0000-0000-0000-0000000000d1', ('a3000000-0000-0000-0000-0000000000' || oid)::uuid, 0, sku, 'x', qty);
+  perform el_test.flush();
 end $$;
 
 select el_test.order_of('a1', 'd1', 'P1', 3, '2026-10-30 11:00+00');
@@ -58,6 +66,7 @@ select el_test.check('another order while it is still low does not alert again',
   (select count(*) = 1 from low_stock_events));
 
 update orders set status = 'cancelled' where id = 'a3000000-0000-0000-0000-0000000000a2';
+select el_test.flush();
 select el_test.check('cancelling the order that tipped it lifts the estimate to 6 and re-arms the alert',
   (select not low_alerted_estimate from products where id = 'a2000000-0000-0000-0000-0000000000d1'));
 
@@ -68,6 +77,7 @@ select el_test.check('the next crossing alerts again: a second estimated event, 
 delete from order_items where order_id = 'a3000000-0000-0000-0000-0000000000a4';
 insert into order_items (organization_id, order_id, position, sku, name, quantity)
 values ('a0000000-0000-0000-0000-0000000000d1', 'a3000000-0000-0000-0000-0000000000a4', 0, 'P1', 'x', 2);
+select el_test.flush();
 select el_test.check('an edited order (items deleted and written again) does not announce the same crossing twice',
   (select count(*) = 2 from low_stock_events where kind = 'estimated'));
 

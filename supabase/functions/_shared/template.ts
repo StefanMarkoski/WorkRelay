@@ -9,6 +9,13 @@ function minorDigits(currency: string): number {
   }
 }
 
+/** "Ana Petrova (ana@example.com)", or just the name, or just the email, or the fallback. Never the phone or an address. */
+function personLine(name: string | null | undefined, email: string | null | undefined, fallback: string): string {
+  const n = name?.trim()
+  const e = email?.trim()
+  return n && e ? `${n} (${e})` : n || e || fallback
+}
+
 /** Adds human-friendly fields to the run context for use in messages. Raw fields stay available. */
 export function templateView(ctx: Record<string, unknown>): Record<string, unknown> {
   const order = { ...((ctx.order as Record<string, unknown> | undefined) ?? {}) }
@@ -20,10 +27,20 @@ export function templateView(ctx: Record<string, unknown>): Record<string, unkno
   order.customer = (order.customer_name as string | null) || (order.customer_email as string | null) || 'unknown customer'
   const digits = currency ? minorDigits(currency) : 2
   order.total = total == null ? 'no total' : `${(total / 10 ** digits).toFixed(digits)}${currency ? ` ${currency}` : ''}`
+  // The customer as "Ana Petrova (ana@example.com)": the full name and the email, whichever of them the shop sent.
+  order.customer_line = personLine(order.customer_name as string | null, order.customer_email as string | null, 'unknown customer')
+  // "is now delivered", or "changed from shipped to delivered" when the event says what it came from.
+  const status = (order.status as string | null) || 'unknown'
+  const from = order.status_from as string | null | undefined
+  order.status_phrase = from && from !== status ? `changed from ${from} to ${status}` : `is now ${status}`
+  order.items_text = (order.items_text as string | null | undefined) || 'no items listed'
+  order.shop = (order.shop as string | null | undefined) || 'unknown shop'
   const out: Record<string, unknown> = { ...ctx, order }
   if (ctx.customer && typeof ctx.customer === 'object') {
     const c = { ...(ctx.customer as Record<string, unknown>) }
     c.display_name = (c.name as string | null) || (c.email as string | null) || 'a customer'
+    c.line = personLine(c.name as string | null, c.email as string | null, 'a customer')
+    c.shop = (c.shop as string | null | undefined) || 'unknown shop'
     out.customer = c
   }
   return out

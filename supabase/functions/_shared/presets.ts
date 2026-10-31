@@ -46,12 +46,15 @@ export const EVENT_LABELS: Record<NotifyConfig['event'], string> = {
 }
 export const CHANNEL_LABELS: Record<NotifyConfig['channel'], string> = { discord: 'Discord', slack: 'Slack', generic: 'a webhook URL' }
 
+// The messages say what a team needs at a glance (who, what was bought, how much, which shop) and nothing a shared channel should not
+// show: no phone numbers, addresses, notes or payment details. Customer and product names are shop-controlled text, so Discord is told
+// never to parse mentions in them (see notifyBody).
 const MESSAGES: Record<NotifyConfig['event'], string> = {
-  created: 'New order {{order.display_number}} from {{order.customer}}: {{order.total}}',
-  cancelled: 'Order {{order.display_number}} was cancelled ({{order.total}})',
-  status_changed: 'Order {{order.display_number}} is now {{order.status}} ({{order.total}})',
-  customer_signed_up: 'New customer signed up: {{customer.display_name}} ({{customer.email}})',
-  customer_first_order: 'New customer {{customer.display_name}} ({{customer.email}}) placed their first order: {{order.display_number}}, {{order.total}}',
+  created: 'New order {{order.display_number}} from {{order.customer_line}}: {{order.total}}. Bought: {{order.items_text}}. Shop: {{order.shop}}',
+  cancelled: 'Order {{order.display_number}} from {{order.customer_line}} was cancelled ({{order.total}}). Bought: {{order.items_text}}. Shop: {{order.shop}}',
+  status_changed: 'Order {{order.display_number}} from {{order.customer_line}} {{order.status_phrase}} ({{order.total}}). Bought: {{order.items_text}}. Shop: {{order.shop}}',
+  customer_signed_up: 'New customer signed up: {{customer.line}}. Shop: {{customer.shop}}',
+  customer_first_order: 'New customer {{customer.line}} placed their first order: {{order.display_number}}, {{order.total}}. Bought: {{order.items_text}}. Shop: {{customer.shop}}',
   products_synced: '{{sync.by}} has synced their products{{sync.where}}',
   // The sentence is written by the database (one product, or a summary of several), so one template covers both. The source is the shop's
   // name for a number the shop reported, or "WorkRelay (estimated for <shop>)" for an estimate.
@@ -61,7 +64,7 @@ const MESSAGES: Record<NotifyConfig['event'], string> = {
 /** Placeholders sit inside JSON string literals; the engine escapes their values. */
 export function notifyBody(config: NotifyConfig): string {
   const text = MESSAGES[config.event]
-  if (config.channel === 'discord') return `{"content":"${text}"}`
+  if (config.channel === 'discord') return `{"content":"${text}","allowed_mentions":{"parse":[]}}`
   if (config.channel === 'slack') return `{"text":"${text}"}`
   if (config.event === 'customer_signed_up') {
     return `{"event":"customer.signed_up","customer":"{{customer.display_name}}","email":"{{customer.email}}","phone":"{{customer.phone}}","external_id":"{{customer.external_id}}","message":"${text}"}`
@@ -73,9 +76,9 @@ export function notifyBody(config: NotifyConfig): string {
     return `{"event":"product.low_stock","product":"{{product.name}}","sku":"{{product.sku}}","stock":"{{product.stock}}","notify_on":"{{product.threshold}}","unit":"{{product.unit}}","shop":"{{product.shop}}","source":"{{product.source}}","kind":"{{product.kind}}","count":"{{product.count}}","estimated":"{{product.estimated}}","message":"${text}"}`
   }
   if (config.event === 'customer_first_order') {
-    return `{"event":"customer.first_order","customer":"{{customer.display_name}}","email":"{{customer.email}}","order_number":"{{order.display_number}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
+    return `{"event":"customer.first_order","customer":"{{customer.display_name}}","email":"{{customer.email}}","order_number":"{{order.display_number}}","items":"{{order.items_text}}","shop":"{{customer.shop}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
   }
-  return `{"event":"order.${config.event}","order_number":"{{order.display_number}}","status":"{{order.status}}","payment_status":"{{order.payment_status}}","fulfillment_status":"{{order.fulfillment_status}}","customer":"{{order.customer}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
+  return `{"event":"order.${config.event}","order_number":"{{order.display_number}}","status":"{{order.status}}","payment_status":"{{order.payment_status}}","fulfillment_status":"{{order.fulfillment_status}}","customer":"{{order.customer}}","email":"{{order.customer_email}}","items":"{{order.items_text}}","shop":"{{order.shop}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
 }
 
 /** The shops an automation is limited to, or undefined for all shops. The older single `integration_id` counts as a list of one. */
