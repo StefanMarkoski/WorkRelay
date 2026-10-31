@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, ClipboardCheck, Plus, Zap } from 'lucide-react'
+import { Bell, ClipboardCheck, Plus, Trash2, Zap } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/page-header'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
 import { describePreset, shopIds, type PresetKind } from '@/domain/presets'
-import { AUTOMATION_COLUMNS, saveAutomation, setAutomationEnabled, type AutomationRow } from '@/features/automations/api'
+import { AUTOMATION_COLUMNS, deleteAutomation, saveAutomation, setAutomationEnabled, type AutomationRow } from '@/features/automations/api'
 import { ShopPicker } from '@/features/automations/shop-picker'
 import { duplicatesThatFire } from '@/features/automations/duplicates'
 import { eligibleShops, normalizeSelection, reconcileSelection, shopLabel, shopStatus, type ShopSelection } from '@/features/automations/shops'
@@ -54,6 +54,7 @@ export function AutomationsPage() {
         .from('workflows')
         .select(AUTOMATION_COLUMNS)
         .eq('organization_id', current.id)
+        .is('deleted_at', null)
         // Preset automations, plus any custom workflow that was actually published. Unpublished leftovers are hidden.
         .or('preset.not.is.null,current_version_id.not.is.null')
         .order('created_at', { ascending: false })
@@ -64,6 +65,25 @@ export function AutomationsPage() {
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['automations', current.id] })
     void qc.invalidateQueries({ queryKey: ['overview'] })
+  }
+
+  const [deleting, setDeleting] = useState<AutomationRow | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  async function confirmDelete() {
+    if (!deleting) return
+    setDeleteBusy(true)
+    setDeleteError(null)
+    try {
+      await deleteAutomation(deleting.id)
+      setDeleting(null)
+      refresh()
+      for (const key of ['overview', 'signup-automations']) void qc.invalidateQueries({ queryKey: [key] })
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete the automation.')
+    } finally {
+      setDeleteBusy(false)
+    }
   }
 
   if (!canManage) {
@@ -187,6 +207,9 @@ export function AutomationsPage() {
                         setEditing({ id: a.id, kind: a.preset!, config: Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, String(v)])), shops: shopIds(a.preset_config as { integration_ids?: string[]; integration_id?: string }) ?? null })
                       }}>Edit</Button>
                     )}
+                    <Button variant="ghost" size="sm" onClick={() => { setDeleteError(null); setDeleting(a) }} aria-label={`Delete ${d.title}`}>
+                      <Trash2 /> Delete
+                    </Button>
                     <Switch checked={a.enabled} disabled={!a.current_version_id} label={`${d.title}: ${a.enabled ? 'on' : 'off'}`} onChange={(next) => toggle(a, next)} />
                   </Card>
                 </li>
@@ -197,6 +220,26 @@ export function AutomationsPage() {
       <p className="mt-3 text-xs text-muted-foreground">
         Automations notify, flag and create review tasks. They do not change anything in your shop. Results appear under Executions.
       </p>
+
+      <Modal open={deleting !== null} onClose={() => setDeleting(null)} title="Delete this automation?">
+        {deleting && (
+          <div className="space-y-4">
+            <p className="text-sm font-medium [overflow-wrap:anywhere]">
+              {deleting.preset && deleting.preset_config ? describePreset(deleting.preset, deleting.preset_config).title : deleting.name}
+            </p>
+            <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+              <li>It stops sending {deleting.enabled ? 'right away' : 'for good'}, and it cannot be switched on again.</li>
+              <li>Its past runs stay under Executions, so nothing in your history is lost.</li>
+              <li>If you only want a pause, switch it off instead.</li>
+            </ul>
+            {deleteError && <p role="alert" className="text-sm text-destructive">{deleteError}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDeleting(null)}>Cancel</Button>
+              <Button variant="destructive" disabled={deleteBusy} onClick={confirmDelete}>{deleteBusy ? 'Deleting…' : 'Delete'}</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={picking} onClose={() => setPicking(false)} title="Add an automation">
         <div className="space-y-2">

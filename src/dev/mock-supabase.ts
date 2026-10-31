@@ -159,6 +159,7 @@ class Query {
   }
   select() { return this }
   eq(col: string, val: unknown) { this.filters.push((r) => !(col in r) || r[col] === val); return this }
+  is(col: string, val: unknown) { this.filters.push((r) => (val === null ? r[col] == null : r[col] === val)); return this }
   neq(col: string, val: unknown) { this.filters.push((r) => !(col in r) || r[col] !== val); return this }
   // Only the shop filter used by Overview, Executions and Approvals is understood (context->order->>integration_id.eq.X,...); others are ignored.
   or(filter?: string) {
@@ -226,6 +227,11 @@ export const supabase: any = {
       return Promise.resolve({ data: rows, error: null })
     }
     if (name === 'product_orders') return Promise.resolve({ data: productOrders(DB, args), error: null })
+    if (name === 'delete_automation') {
+      const w = (DB.workflows ?? []).find((x) => x.id === args?.p_id)
+      if (w) Object.assign(w, { deleted_at: w.deleted_at ?? new Date().toISOString(), enabled: false, preset_key: null })
+      return Promise.resolve({ data: null, error: null })
+    }
     if (name === 'admin_set_push_enabled') {
       for (const s of (RPC.admin_list_tenant_shops as Row[]) ?? []) if (s.id === args?.p_integration) s.push_enabled = !!args?.p_enabled
       for (const r of DB.integration_sync ?? []) if (r.integration_id === args?.p_integration) r.push_enabled = !!args?.p_enabled

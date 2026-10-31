@@ -30,7 +30,7 @@ export function useOverview(shopId = '') {
         workflowRows, runsOk, runsFailed, pendingApprovals, pendingList,
         recentRuns, recentOrders, recentEvents, integrations, failedEvents, ...statusCounts
       ] = await Promise.all([
-        supabase.from('workflows').select('id, enabled, preset_config').eq('organization_id', org).or(VISIBLE_AUTOMATIONS),
+        supabase.from('workflows').select('id, enabled, preset_config').eq('organization_id', org).is('deleted_at', null).or(VISIBLE_AUTOMATIONS),
         byContext(count('workflow_runs').eq('status', 'succeeded').gte('created_at', since7)),
         byContext(count('workflow_runs').eq('status', 'failed').gte('created_at', since7)),
         byContext(count('approvals').eq('status', 'pending')),

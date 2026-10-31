@@ -90,6 +90,15 @@ export async function saveAutomation(input: {
   }
 }
 
+/**
+ * Deletes an automation: it leaves the list and never fires again. Its past runs stay under Executions (the database keeps the
+ * automation itself, switched off), so no history is lost. Only owners and admins can.
+ */
+export async function deleteAutomation(id: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_automation', { p_id: id })
+  if (error) throw new Error(errorMessage(error))
+}
+
 export async function setAutomationEnabled(id: string, enabled: boolean): Promise<void> {
   const { error } = await supabase.from('workflows').update({ enabled }).eq('id', id)
   if (error) throw new Error(errorMessage(error))
