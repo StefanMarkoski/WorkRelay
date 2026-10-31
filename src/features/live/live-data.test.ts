@@ -42,7 +42,7 @@ describe('mergeLive', () => {
   })
 
   it('puts a push among the other things, newest first', () => {
-    const items = mergeLive([order('1', '2026-10-30T10:00:00Z')], [], [], [{ id: 's', integration_id: 'shopA', by_name: null, by_role: null, products: 3, created_at: '2026-10-30T10:00:30Z' }])
+    const items = mergeLive([order('1', '2026-10-30T10:00:00Z')], [], [], [{ id: 's', integration_id: 'shopA', by_name: null, by_role: null, products: 3, notified: 0, created_at: '2026-10-30T10:00:30Z' }])
     expect(items.map((i) => i.kind)).toEqual(['sync', 'order'])
   })
 
