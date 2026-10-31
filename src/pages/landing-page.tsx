@@ -1,5 +1,4 @@
 import { Suspense, lazy, useCallback, useState } from "react";
-import { BrandMark } from "@/components/common/brand-mark";
 import { ThemeSwitcher } from "@/features/theme/theme-switcher";
 import {
   useDemoFeed,
@@ -7,7 +6,9 @@ import {
 } from "@/features/landing/demo-feed";
 import { RelayUnitFlat } from "@/features/landing/relay-unit-flat";
 import { Modules } from "@/features/landing/modules";
+import { PublicHeader, navItemClass } from "@/features/landing/public-header";
 import {
+  DevDocs,
   FinalCta,
   Ledger,
   LoginLink,
@@ -34,7 +35,7 @@ function NavLink({ to, children }: { to: string; children: string }) {
     <button
       type="button"
       onClick={() => scrollTo(to)}
-      className="rounded px-1 text-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      className={navItemClass}
     >
       {children}
     </button>
@@ -89,28 +90,18 @@ function Instrument() {
 export function LandingPage() {
   return (
     <div className="world min-h-dvh">
-      <header className="sticky top-0 z-30 border-b bg-background">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-6">
-          <a
-            href="#/"
-            className="flex items-center gap-3 font-display text-lg font-semibold tracking-tight"
-          >
-            <BrandMark />
-            WorkRelay
-          </a>
-          <nav aria-label="Page" className="hidden items-center gap-6 md:flex">
+      <PublicHeader
+        nav={
+          <>
             <NavLink to="what-you-get">What you get</NavLink>
             <NavLink to="how-it-works">How it works</NavLink>
+            <a href="#/docs" className={navItemClass}>
+              Dev Docs
+            </a>
             <NavLink to="trust">Trust</NavLink>
-          </nav>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block">
-              <ThemeSwitcher />
-            </div>
-            <LoginLink className="h-10 sm:h-8">Log in</LoginLink>
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <main>
         <section className="relative overflow-hidden">
@@ -157,6 +148,7 @@ export function LandingPage() {
         <Modules />
         <Ledger />
         <Setup />
+        <DevDocs />
         <Trust />
         <FinalCta />
       </main>

@@ -3,6 +3,7 @@
 This guide is for the developers of the shop (commerce app). It explains how the shop connects to WorkRelay and
 sends order events so that every order appears in the right WorkRelay workspace, and only there.
 
+- **New here? Start with [`shop-developer-guide.md`](./shop-developer-guide.md)**: what to build, what WorkRelay does with it, and who switches what on. This page is the full reference.
 - Machine-readable schema: [`order-webhook.schema.json`](./order-webhook.schema.json)
 - Optional customer signups: section 9, [`customer-webhook.schema.json`](./customer-webhook.schema.json)
 - Optional products and stock: section 10, [`product-feed.schema.json`](./product-feed.schema.json)

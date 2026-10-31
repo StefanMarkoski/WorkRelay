@@ -5,9 +5,9 @@ import { DispatchSlip } from './dispatch-slip'
 
 export const LOGIN_HREF = '#/login'
 
-export function LoginLink({ className, children = 'Continue with log in', size = 'default' }: { className?: string; children?: React.ReactNode; size?: 'default' | 'lg' }) {
+export function LoginLink({ className, children = 'Continue with log in', size = 'default', href = LOGIN_HREF }: { className?: string; children?: React.ReactNode; size?: 'default' | 'lg'; href?: string }) {
   return (
-    <a href={LOGIN_HREF} className={cn(buttonVariants({ size }), 'font-medium', size === 'lg' && 'h-11 px-5 text-[0.9375rem]', className)}>
+    <a href={href} className={cn(buttonVariants({ size }), 'font-medium', size === 'lg' && 'h-11 px-5 text-[0.9375rem]', className)}>
       {children}
       <ArrowRight data-icon="inline-end" />
     </a>
@@ -85,6 +85,57 @@ export function Setup() {
         <div className="lg:col-span-6 lg:col-start-7">
           <DispatchSlip />
         </div>
+      </div>
+    </section>
+  )
+}
+
+const COVERS = [
+  'Orders and the customers they make',
+  'Signups, with a notification for every new account',
+  'Stock: let WorkRelay fetch your products, or push them from a button',
+  'One currency per shop',
+  'Test commands, a go-live checklist and what to check when something is missing',
+]
+
+export function DevDocs() {
+  return (
+    <section id="dev-docs" aria-labelledby="docs-title" className="mx-auto grid max-w-[1200px] scroll-mt-16 items-center gap-12 px-6 py-20 sm:py-28 lg:grid-cols-12 lg:gap-8">
+      <div className="lg:col-span-6">
+        <H2><span id="docs-title">Built for the developer who connects the shop.</span></H2>
+        <p className="mt-5 max-w-[48ch] text-muted-foreground">One guide covers what to send, what WorkRelay does with it, and what to ask the team to switch on. Copy a command, run it, and see it appear.</p>
+        <ul className="mt-8 space-y-3">
+          {COVERS.map((c) => (
+            <li key={c} className="flex gap-4">
+              <Lamp />
+              <span className="max-w-[52ch]">{c}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-10">
+          <a href="#/docs" className={cn(buttonVariants({ size: 'lg' }), 'h-11 px-5 text-[0.9375rem] font-medium')}>
+            Open the Dev Docs
+            <ArrowRight data-icon="inline-end" />
+          </a>
+        </p>
+      </div>
+      <div className="lg:col-span-6">
+        <figure aria-label="Two sample commands and their answers">
+          <pre className="housing overflow-x-auto p-5 font-mono text-[12.5px] leading-relaxed text-white/85">
+            <span className="text-white/45"># 1. Bind your key to your store id, once</span>{'\n'}
+            curl -X POST "$BASE/bind" \{'\n'}
+            {'  '}-H "Authorization: Bearer $KEY" \{'\n'}
+            {'  '}-d <span className="text-[oklch(0.82_0.1_150)]">'{'{'}"store_id":"your-store-id"{'}'}'</span>{'\n'}
+            <span className="text-white/45"># {'{'}"status":"bound"{'}'}</span>{'\n\n'}
+            <span className="text-white/45"># 2. Send a stock update</span>{'\n'}
+            curl -X POST "$BASE/inventory-webhook" \{'\n'}
+            {'  '}-H "Authorization: Bearer $KEY" \{'\n'}
+            {'  '}-H "X-Store-Id: your-store-id" \{'\n'}
+            {'  '}-d <span className="text-[oklch(0.82_0.1_150)]">'{'{'}"products":[{'{'}"sku":"PEN-BLU","stock":1{'}'}]{'}'}'</span>{'\n'}
+            <span className="text-white/45"># {'{'}"status":"processed","applied":1{'}'}</span>
+          </pre>
+          <figcaption className="mt-3 font-mono text-[11px] text-muted-foreground">Sample commands. The Dev Docs have all five, with every field.</figcaption>
+        </figure>
       </div>
     </section>
   )
