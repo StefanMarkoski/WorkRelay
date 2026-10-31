@@ -195,6 +195,22 @@ describe('failures', () => {
     expect(store.events[1].rawPayload).toEqual({ unparseable: true, reason: 'too_deeply_nested' })
   })
 
+  it('refuses a negative amount of money in any field, and accepts a free order', async () => {
+    for (const [n, order] of [
+      ['total', { totals: { total_minor: -500 } }],
+      ['subtotal', { totals: { subtotal_minor: -1 } }],
+      ['discount', { totals: { discount_minor: -1 } }],
+      ['shipping', { totals: { shipping_minor: -1 } }],
+      ['tax', { totals: { tax_minor: -1 } }],
+      ['unit price', { items: [{ sku: 'A', unit_price_minor: -100 }] }],
+    ] as const) {
+      const res = await handleOrderWebhook(post(ev({ event_id: `neg-${n}` }, order)), deps())
+      expect(res.status, n).toBe(400)
+      expect(JSON.stringify(await res.json()), n).toContain('Too small')
+    }
+    expect((await handleOrderWebhook(post(ev({ event_id: 'zero' }, { totals: { total_minor: 0, discount_minor: 0 } })), deps())).status).toBe(200)
+  })
+
   it('rejects wrong types without echoing submitted values', async () => {
     const res = await handleOrderWebhook(post(ev({}, { totals: { total_minor: 'secret-ish 12.50' } })), deps())
     expect(res.status).toBe(400)

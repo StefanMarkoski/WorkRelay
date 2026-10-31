@@ -109,12 +109,12 @@ Only `external_id` is required. **Everything else is optional**: send what you h
 | `placed_at` | ISO 8601 date-time | When the customer placed the order |
 | `currency` | 3-letter code | e.g. `EUR`. Optional: if you leave it out, the order takes the currency the shop is set to in WorkRelay (see below) |
 | `customer` | object | `name` (up to 200), `email` (valid email), `phone` (up to 64) |
-| `totals` | object | `subtotal_minor`, `discount_minor`, `shipping_minor`, `tax_minor`, `total_minor`: **integers in minor units** |
+| `totals` | object | `subtotal_minor`, `discount_minor`, `shipping_minor`, `tax_minor`, `total_minor`: **integers in minor units, never below zero** |
 | `status` | string, 1 to 64 | Order status, see section 6 |
 | `payment_status` | string, 1 to 64 | As reported by the shop |
 | `fulfillment_status` | string, 1 to 64 | As reported by the shop |
 | `billing_address`, `shipping_address` | object | `name`, `line1`, `line2`, `city`, `region`, `postal_code`, `country`, `phone` (all optional strings) |
-| `items` | array, up to 1000 | Each: `external_id`, `sku`, `name`, `quantity` (integer 0 to 1,000,000), `unit_price_minor` (integer) |
+| `items` | array, up to 1000 | Each: `external_id`, `sku`, `name`, `quantity` (integer 0 to 1,000,000), `unit_price_minor` (integer, never below zero) |
 | `notes` | string, up to 5000 | Notes from the shop |
 
 **Each shop has one currency.** The workspace sets it in WorkRelay when connecting the store (and can change it in the shop's details). It decides how
@@ -125,7 +125,7 @@ WorkRelay counts and reports that shop's money, and WorkRelay **never converts**
 - An order sent with a **different** currency is kept exactly as sent (nothing is relabelled, converted or dropped) and is marked on the order
   as a currency mismatch, so a misconfigured shop is easy to spot. Fix the shop or the payload and resend; the order is then clean.
 
-**Money is always an integer in minor units**: `49.99 EUR` is `4999`. The minor unit follows the currency: `5000 JPY` is ¥5,000 (yen have no decimals) and `12500 KWD` is 12.500 KWD (three decimals). Decimal strings or floats are rejected.
+**Money is always an integer in minor units**: `49.99 EUR` is `4999`. The minor unit follows the currency: `5000 JPY` is ¥5,000 (yen have no decimals) and `12500 KWD` is 12.500 KWD (three decimals). Decimal strings, floats and negative amounts are rejected: a refund is shown through `payment_status`, not as a negative total.
 Unknown extra fields are ignored (the original payload is kept for diagnostics).
 
 ### Examples
@@ -491,7 +491,7 @@ In WorkRelay, check **Integrations → Event history** (every delivery with stat
 - [ ] Key stored server-side only; not in logs, URLs, browser code or the repository
 - [ ] Bind succeeded (`bound` or `already_bound`); `X-Store-Id` identical on every request
 - [ ] `occurred_at` is the time of the change in the shop, in ISO 8601 with `Z` or an offset
-- [ ] Money sent as integer minor units, in the shop's currency (send `currency`, or leave it out and rely on the shop's setting in WorkRelay)
+- [ ] Money sent as integer minor units (never negative: a refund is a `payment_status`), in the shop's currency (send `currency`, or leave it out and rely on the shop's setting in WorkRelay)
 - [ ] Events carry stable, unique `event_id` values; retries reuse the same id
 - [ ] A persistent outbox retries on network errors and 5xx
 - [ ] 4xx responses are logged (the `detail` field says what to fix) and not retried unchanged

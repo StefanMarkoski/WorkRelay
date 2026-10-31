@@ -12,6 +12,8 @@ import { z } from 'zod'
 const optional = <T extends z.ZodType>(schema: T) => schema.nullish()
 
 const minor = z.number().int().safe() // integer minor units (cents)
+/** An amount of money is never below zero: a refund is a payment status, not a negative total. */
+const money = minor.min(0)
 const currency = z.string().regex(/^[A-Za-z]{3}$/).transform((v) => v.toUpperCase())
 const timestamp = z.iso.datetime({ offset: true })
 
@@ -42,7 +44,7 @@ export const orderItemSchema = z.object({
   sku: optional(z.string().max(200)),
   name: optional(z.string().max(500)),
   quantity: optional(z.number().int().min(0).max(1_000_000)),
-  unit_price_minor: optional(minor),
+  unit_price_minor: optional(money),
 })
 
 export const orderSchema = z.object({
@@ -59,11 +61,11 @@ export const orderSchema = z.object({
   ),
   totals: optional(
     z.object({
-      subtotal_minor: optional(minor),
-      discount_minor: optional(minor),
-      shipping_minor: optional(minor),
-      tax_minor: optional(minor),
-      total_minor: optional(minor),
+      subtotal_minor: optional(money),
+      discount_minor: optional(money),
+      shipping_minor: optional(money),
+      tax_minor: optional(money),
+      total_minor: optional(money),
     }),
   ),
   status: optional(rawStatus),
