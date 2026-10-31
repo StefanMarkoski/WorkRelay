@@ -65,6 +65,15 @@ insert into order_events (organization_id, order_id, source, type, occurred_at, 
   ('a0000000-0000-0000-0000-0000000000a1', 'a3000000-0000-0000-0000-0000000000a1', 'external', 'order.status_changed', now(), '{"event_id":"o1s","applied":["status"],"status_to":"completed"}');
 select pg_temp.check('a status change starts the status automation only for shop 2''s order', pg_temp.fired() = '4');
 
+-- the shop repeating a status the order already has is not a status change
+delete from workflow_runs;
+insert into order_events (organization_id, order_id, source, type, occurred_at, data) values
+  ('a0000000-0000-0000-0000-0000000000a1', 'a3000000-0000-0000-0000-0000000000a2', 'external', 'order.updated', now(), '{"event_id":"o2s-same","applied":["status"],"status_from":"completed","status_to":"completed"}');
+select pg_temp.check('the same status sent again starts no status automation', pg_temp.fired() = '');
+insert into order_events (organization_id, order_id, source, type, occurred_at, data) values
+  ('a0000000-0000-0000-0000-0000000000a1', 'a3000000-0000-0000-0000-0000000000a2', 'external', 'order.status_changed', now(), '{"event_id":"o2s-real","applied":["status"],"status_from":"completed","status_to":"cancelled"}');
+select pg_temp.check('...a real change from completed to cancelled does', pg_temp.fired() = '4');
+
 -- ------------------------------------------------------------- first orders, per shop
 delete from workflow_runs;
 delete from customer_events;
