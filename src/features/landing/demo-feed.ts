@@ -8,23 +8,31 @@ export const UNIT_CHANNELS = UNIT_COLS * UNIT_ROWS
 export interface FeedEvent {
   /** Increases for every event so React keys stay unique as the list scrolls. */
   seq: number
-  order: string
+  /** What the event is about: an order number, a product, a shop or a person. */
+  subject: string
   text: string
   channel: number
+  /** True when the shop sent it, so a packet travels from the shop to the unit first. */
+  inbound: boolean
 }
 
-const SCRIPT: { text: string; channel: number }[] = [
-  { text: 'received', channel: 2 },
-  { text: 'Discord notified', channel: 2 },
-  { text: 'received', channel: 13 },
-  { text: 'held for approval', channel: 13 },
-  { text: 'received', channel: 21 },
-  { text: 'Slack notified', channel: 21 },
-  { text: 'received', channel: 6 },
-  { text: 'received', channel: 26 },
-  { text: 'Discord notified', channel: 26 },
-  { text: 'received', channel: 17 },
+/**
+ * One turn of the sample feed. `subject: null` means "the current order": its number advances on every `newOrder`,
+ * and the follow-ups after it (a notification, an approval hold) belong to that order.
+ */
+const SCRIPT: { subject: string | null; text: string; channel: number; inbound?: boolean; newOrder?: boolean }[] = [
+  { subject: null, text: 'received', channel: 2, inbound: true, newOrder: true },
+  { subject: null, text: 'Discord notified', channel: 2 },
+  { subject: 'TEE-BLK-M', text: 'low stock: 4 left', channel: 13, inbound: true },
+  { subject: 'TEE-BLK-M', text: 'Slack notified', channel: 13 },
+  { subject: null, text: 'received', channel: 21, inbound: true, newOrder: true },
+  { subject: null, text: 'held for approval', channel: 21 },
+  { subject: 'Ana P.', text: 'signed up', channel: 6, inbound: true },
+  { subject: 'Game Store', text: 'synced 240 products', channel: 26, inbound: true },
+  { subject: null, text: 'received', channel: 17, inbound: true, newOrder: true },
+  { subject: null, text: 'Discord notified', channel: 17 },
 ]
+const ORDERS_PER_CYCLE = SCRIPT.filter((e) => e.newOrder).length
 
 /** How long a packet takes from the shop to the unit. The scene and the feed both read this so they land together. */
 export const PACKET_TRAVEL_MS = 1500
@@ -35,10 +43,10 @@ const FIRST_ORDER = 1042
 
 function eventAt(seq: number): FeedEvent {
   const s = SCRIPT[seq % SCRIPT.length]
-  // Every received/notified pair belongs to one order, so the number advances on each "received".
-  const orders = SCRIPT.slice(0, (seq % SCRIPT.length) + 1).filter((e) => e.text === 'received').length
-  const cycle = Math.floor(seq / SCRIPT.length) * SCRIPT.filter((e) => e.text === 'received').length
-  return { seq, order: `#${FIRST_ORDER + cycle + orders - 1}`, text: s.text, channel: s.channel }
+  // Every received/notified pair belongs to one order, so the number advances on each new order.
+  const orders = SCRIPT.slice(0, (seq % SCRIPT.length) + 1).filter((e) => e.newOrder).length
+  const cycle = Math.floor(seq / SCRIPT.length) * ORDERS_PER_CYCLE
+  return { seq, subject: s.subject ?? `#${FIRST_ORDER + cycle + orders - 1}`, text: s.text, channel: s.channel, inbound: s.inbound === true }
 }
 
 export interface Launch {
@@ -48,19 +56,19 @@ export interface Launch {
 
 /**
  * Lit lamp indices, the latest events, and the packet the shop has just sent.
- * An order's "received" event and its lamp only appear once its packet has travelled to the unit; follow-ups
- * (a notification, an approval hold) start at the unit, so they appear at once. With reduced motion the unit shows one fixed moment.
+ * Whatever the shop sends (an order, a stock report, a signup, a product sync) only appears once its packet has travelled to the unit;
+ * follow-ups (a notification, an approval hold) start at the unit, so they appear at once. With reduced motion the unit shows one fixed moment.
  */
 export function useDemoFeed(reducedMotion: boolean) {
   const [state, setState] = useState(() => {
-    const events = [eventAt(2), eventAt(3), eventAt(4)].reverse()
+    const events = [eventAt(3), eventAt(4), eventAt(5)].reverse()
     return { events, lit: new Set<number>([13, 21]) }
   })
   const [launch, setLaunch] = useState<Launch | null>(null)
 
   useEffect(() => {
     if (reducedMotion) return
-    let seq = 4
+    let seq = 5
     const timers = new Set<number>()
     const later = (fn: () => void, ms: number) => {
       const t = window.setTimeout(() => {
@@ -85,7 +93,7 @@ export function useDemoFeed(reducedMotion: boolean) {
           })
         }, HOLD_MS)
       }
-      if (next.text === 'received') {
+      if (next.inbound) {
         setLaunch({ seq: next.seq, channel: next.channel })
         later(arrive, PACKET_TRAVEL_MS)
       } else {

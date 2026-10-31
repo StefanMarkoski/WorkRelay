@@ -24,7 +24,7 @@ import { PACKET_TRAVEL_MS, UNIT_CHANNELS, UNIT_COLS, UNIT_ROWS, type Launch } fr
 
 /**
  * The landing page's one 3D scene: a small matte diorama. A shop on the left, a cable across the base, and the
- * relay unit on the right. Orders leave the shop as flat packets, travel the cable, and light a lamp on the unit.
+ * relay unit on the right. Orders, stock reports and signups leave the shop as flat packets, travel the cable, and light a lamp on the unit.
  * Matte on purpose: rough materials, flat lamps and packets, no glow, so it reads as a manufactured object.
  * Rendering stops when the scene is off screen or the tab is hidden, and is on-demand with reduced motion.
  */
@@ -89,7 +89,7 @@ function paintBaseLegends(canvas: HTMLCanvasElement) {
   ctx.textAlign = 'center'
   const at = (x: number, z: number): [number, number] => [((x + SLAB_W / 2) / SLAB_W) * w, ((z + SLAB_D / 2) / SLAB_D) * h]
   ctx.fillText('YOUR SHOP', ...at(SHOP_X, SHOP_Z + 1.75))
-  ctx.fillText('ONE WEBHOOK PER ORDER', ...at(-0.6, CABLE_Z + 0.5))
+  ctx.fillText('ONE WEBHOOK PER EVENT', ...at(-0.6, CABLE_Z + 0.5))
 }
 
 function makeTexture(width: number, height: number, paint: (c: HTMLCanvasElement) => void): CanvasTexture {

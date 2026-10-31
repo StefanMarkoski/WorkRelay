@@ -12,7 +12,7 @@ export function RelayUnitFlat({ lit }: { lit: ReadonlySet<number> }) {
         <span aria-hidden className="relative h-px flex-1 bg-border">
           <span className="absolute top-1/2 left-[45%] h-2 w-4 -translate-y-1/2 rounded-sm bg-primary" />
         </span>
-        <span className="shrink-0">ONE WEBHOOK PER ORDER</span>
+        <span className="shrink-0">ONE WEBHOOK PER EVENT</span>
       </div>
       <div className="housing h-[76%] p-[4%]">
         <div className="flex items-baseline justify-between font-mono text-[11px] tracking-wide text-[oklch(0.58_0.012_150)] sm:text-xs">

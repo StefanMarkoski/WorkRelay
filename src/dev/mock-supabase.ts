@@ -267,7 +267,8 @@ export const supabase: any = {
   channel: () => channel,
   removeChannel: () => Promise.resolve('ok'),
   auth: {
-    getSession: () => Promise.resolve({ data: { session: { user: { id: 'u1', email: 'owner@example.com' } } } }),
+    // `localStorage['mock-signed-out'] = '1'` shows the signed-out pages (the landing page) in the preview.
+    getSession: () => Promise.resolve({ data: { session: localStorage.getItem('mock-signed-out') === '1' ? null : { user: { id: 'u1', email: 'owner@example.com' } } } }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signOut: () => Promise.resolve({}),
     signInWithPassword: () => Promise.resolve({ error: null, data: {} }),

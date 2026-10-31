@@ -6,6 +6,7 @@ import {
   usePrefersReducedMotion,
 } from "@/features/landing/demo-feed";
 import { RelayUnitFlat } from "@/features/landing/relay-unit-flat";
+import { Modules } from "@/features/landing/modules";
 import {
   FinalCta,
   Ledger,
@@ -48,7 +49,7 @@ function Instrument() {
   const flat = <RelayUnitFlat lit={lit} />;
 
   return (
-    <figure aria-label="Sample orders travelling from a shop to a relay unit">
+    <figure aria-label="Sample events travelling from a shop to a relay unit">
       {webglFailed ? (
         flat
       ) : (
@@ -63,10 +64,10 @@ function Instrument() {
       )}
       <figcaption>
         <p className="mt-6 text-xs text-muted-foreground">
-          Sample feed: invented orders, shown to explain how an order travels.
+          Sample feed: invented events, shown to explain how an order, a stock report or a signup travels.
         </p>
         <ul
-          aria-label="Sample order events"
+          aria-label="Sample events"
           className="mt-2 divide-y border-y font-mono text-[13px]"
         >
           {events.map((e) => (
@@ -75,8 +76,8 @@ function Instrument() {
                 aria-hidden
                 className="size-2 shrink-0 rounded-full bg-primary"
               />
-              <span className="w-14 shrink-0 text-foreground">{e.order}</span>
-              <span className="text-muted-foreground">{e.text}</span>
+              <span className="w-24 shrink-0 truncate text-foreground">{e.subject}</span>
+              <span className="min-w-0 truncate text-muted-foreground">{e.text}</span>
             </li>
           ))}
         </ul>
@@ -120,14 +121,15 @@ export function LandingPage() {
           <div className="relative mx-auto grid max-w-[1200px] items-center gap-12 px-6 pt-14 pb-20 sm:pt-20 sm:pb-28 lg:grid-cols-12 lg:gap-8">
             <div className="lg:col-span-5">
               <h1 className="world-rise font-display text-balance text-[2.75rem] leading-[0.98] font-semibold tracking-[-0.03em] sm:text-6xl lg:text-[4.25rem]">
-                Every order, the moment it happens.
+                Your shop, the moment it happens.
               </h1>
               <p
                 className="world-rise mt-6 max-w-[42ch] text-lg text-muted-foreground"
                 style={{ "--i": 1 } as React.CSSProperties}
               >
-                Connect any custom shop with a single webhook. WorkRelay keeps
-                each order organised and sends the follow-ups for you.
+                Orders, stock and customers in one live view. Connect any custom
+                shop with a single webhook, and WorkRelay keeps it organised and
+                tells your team what needs attention.
               </p>
               <div
                 className="world-rise mt-10 flex flex-wrap items-center gap-6"
@@ -152,6 +154,7 @@ export function LandingPage() {
           </div>
         </section>
 
+        <Modules />
         <Ledger />
         <Setup />
         <Trust />
@@ -162,7 +165,7 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground">
           <span>© {new Date().getFullYear()} WorkRelay</span>
           <span className="font-mono text-xs">
-            Order data shown on this page is sample data.
+            Everything shown on this page is sample data.
           </span>
           <div className="sm:hidden">
             <ThemeSwitcher />
