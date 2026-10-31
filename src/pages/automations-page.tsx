@@ -13,6 +13,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/state
 import { describePreset, shopIds, type PresetKind } from '@/domain/presets'
 import { AUTOMATION_COLUMNS, saveAutomation, setAutomationEnabled, type AutomationRow } from '@/features/automations/api'
 import { ShopPicker } from '@/features/automations/shop-picker'
+import { duplicatesThatFire } from '@/features/automations/duplicates'
 import { eligibleShops, normalizeSelection, reconcileSelection, shopLabel, shopStatus, type ShopSelection } from '@/features/automations/shops'
 import { useIntegrations } from '@/features/integrations/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
@@ -123,6 +124,8 @@ export function AutomationsPage() {
   const setEvent = (e: { target: { value: string } }) =>
     setEditing((cur) => (cur ? { ...cur, config: { ...cur.config, event: e.target.value }, shops: reconcileSelection(cur.shops, eligibleShops(allShops, e.target.value)) } : cur))
 
+  const duplicates = duplicatesThatFire(query.data ?? [])
+
   const addButton = <Button onClick={() => { setError(null); setPicking(true) }}><Plus /> Add automation</Button>
 
   return (
@@ -157,7 +160,13 @@ export function AutomationsPage() {
                         <h3 className="text-[13px] font-semibold">{d.title}</h3>
                         <Badge tone={a.enabled ? 'success' : 'neutral'}>{a.enabled ? 'On' : 'Off'}</Badge>
                         {status.waiting && a.enabled && <Badge tone="warning">Waiting</Badge>}
+                        {duplicates.has(a.id) && <Badge tone="warning">Duplicate</Badge>}
                       </div>
+                      {duplicates.has(a.id) && (
+                        <p role="status" className="mt-1 text-xs">
+                          {duplicates.get(a.id)} automations with exactly the same settings are switched on, so every message arrives {duplicates.get(a.id) === 2 ? 'twice' : `${duplicates.get(a.id)} times`}. Switch all but one off.
+                        </p>
+                      )}
                       {status.waiting && (
                         <p className="mt-1 text-xs">
                           {event === 'customer_signed_up' ? 'None of the shops this covers send signups' : 'None of the shops this covers is connected'}, so this will not run.{' '}

@@ -9,10 +9,12 @@ export interface AutomationRow {
   enabled: boolean
   status: 'draft' | 'published'
   current_version_id: string | null
+  /** A hash of what makes the automation "the same" as another (set by the database; never the URL). */
+  preset_key: string | null
   updated_at: string
 }
 
-export const AUTOMATION_COLUMNS = 'id, name, preset, preset_config, enabled, status, current_version_id, updated_at'
+export const AUTOMATION_COLUMNS = 'id, name, preset, preset_config, enabled, status, current_version_id, preset_key, updated_at'
 
 async function publishError(error: unknown): Promise<string> {
   try {

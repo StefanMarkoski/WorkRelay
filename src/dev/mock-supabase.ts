@@ -104,6 +104,24 @@ const DEMO_DB: Record<string, Row[]> = {
   ],
 }
 
+// Dev-only stand-in for preset_fingerprint (migration 0023): the same kind, event, channel, destination and shops are "the same".
+function mockPresetKey(preset: string | null, cfg: Row | null): string | null {
+  if (!preset || !cfg) return null
+  const ids: string[] = Array.isArray(cfg.integration_ids) && cfg.integration_ids.length ? cfg.integration_ids : cfg.integration_id ? [cfg.integration_id] : []
+  const shops = ids.length ? [...new Set(ids.map((i) => String(i).toLowerCase()))].sort().join(',') : '*'
+  return preset === 'notify'
+    ? ['notify', cfg.event, cfg.channel, String(cfg.url ?? '').trim().replace(/\/+$/, ''), shops].join('|')
+    : ['review_large', Number(cfg.threshold), cfg.reviewer_role, shops].join('|')
+}
+/** The message the database gives for a duplicate, or null when there is none. */
+function mockDuplicate(rows: Row[], preset: string | null, cfg: Row | null, selfId?: string): string | null {
+  const key = mockPresetKey(preset, cfg)
+  const other = key ? rows.find((w) => w.id !== selfId && mockPresetKey(w.preset, w.preset_config) === key) : null
+  return other ? `This exact automation already exists: "${other.name}" (${other.enabled ? 'it is turned on' : 'it is turned off'}). Edit that one instead.` : null
+}
+DEMO_DB.workflows.push({ ...DEMO_DB.workflows[0], id: 'w7', current_version_id: 'v7', updated_at: ago(8), created_at: ago(9) }) // an old duplicate of the first one, made before the rule existed
+for (const w of DEMO_DB.workflows) w.preset_key = mockPresetKey(w.preset, w.preset_config)
+
 const DEMO_RPC: Record<string, unknown> = {
   is_platform_admin: typeof location !== 'undefined' && new URLSearchParams(location.search).has('admin'),
   list_members: [
@@ -155,7 +173,12 @@ class Query {
   limit(n: number) { this.max = n; return this }
   range(from: number, to: number) { this.range_ = [from, to]; return this }
   patch?: Row
+  failure?: { message: string }
   insert(row?: Row) {
+    if (this.table === 'workflows') {
+      const message = mockDuplicate(DB.workflows ?? [], row?.preset ?? null, row?.preset_config ?? null)
+      if (message) { this.failure = { message }; return this }
+    }
     const now = new Date().toISOString()
     ;(DB[this.table] ??= []).unshift({ id: `new${Math.random().toString(36).slice(2, 7)}`, created_at: now, updated_at: now, enabled: false, status: 'draft', current_version_id: null, ...row })
     return this
@@ -167,12 +190,20 @@ class Query {
     const sliced = this.range_ ? all.slice(this.range_[0], this.range_[1] + 1) : this.max ? all.slice(0, this.max) : all
     return { all, sliced }
   }
-  single() { return Promise.resolve({ data: this.rows().all[0] ?? { id: 'new' }, error: null }) }
+  single() { return Promise.resolve(this.failure ? { data: null, error: this.failure } : { data: this.rows().all[0] ?? { id: 'new' }, error: null }) }
   maybeSingle() { return Promise.resolve({ data: this.rows().all[0] ?? null, error: null }) }
   then(resolve: (v: unknown) => unknown) {
+    if (this.failure) return Promise.resolve({ data: null, error: this.failure }).then(resolve)
+    if (this.patch && this.table === 'workflows' && 'preset_config' in this.patch) {
+      for (const r of this.rows().all) {
+        const message = mockDuplicate(DB.workflows ?? [], r.preset, this.patch.preset_config, r.id)
+        if (message) return Promise.resolve({ data: null, error: { message } }).then(resolve)
+      }
+    }
     if (this.patch) for (const r of this.rows().all) Object.assign(r, this.patch, { current_version_id: r.current_version_id ?? 'v-local', updated_at: new Date().toISOString() })
     const { all, sliced } = this.rows()
-    return Promise.resolve({ data: sliced, error: null, count: all.length }).then(resolve)
+    // Copies, like a real database returns: handing back the very objects the mock mutates would hide every change from the cache.
+    return Promise.resolve({ data: sliced.map((r) => ({ ...r })), error: null, count: all.length }).then(resolve)
   }
 }
 const channel: any = { on() { return channel }, subscribe(cb?: (s: string) => void) { cb?.('SUBSCRIBED'); return channel } }
