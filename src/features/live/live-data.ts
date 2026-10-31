@@ -11,6 +11,8 @@ export interface LiveItem {
   title: string
   to: string
   status?: string
+  /** A plain-words aside under the title, e.g. whether a sync reached any automation. */
+  note?: string
   shopId: string | null
 }
 
@@ -32,6 +34,8 @@ export function mergeLive(orders: LiveOrder[], runs: LiveRun[], approvals: LiveA
     ...syncs.map((x): LiveItem => ({
       id: `s-${x.id}`, kind: 'sync', at: x.created_at, to: '/inventory', shopId: x.integration_id,
       // "Marko (Admin) synced their products", or "A shop synced..." is not said: when nobody is named the subject is the shop itself
+      // Said outright, so "it did not arrive" is never a mystery: either automations were started, or none was set up for it
+      note: x.notified > 0 ? `${x.notified} automation${x.notified === 1 ? '' : 's'} notified` : 'No automation was set up for this',
       title: `${x.by_name && x.by_role ? `${x.by_name} (${x.by_role})` : x.by_name ?? x.by_role ?? 'A shop'} synced their products${x.products > 0 ? `: ${x.products.toLocaleString()} products` : ''}`,
     })),
   ]
@@ -40,7 +44,7 @@ export function mergeLive(orders: LiveOrder[], runs: LiveRun[], approvals: LiveA
 
 interface LiveOrder { id: string; order_number: string | null; external_id: string; customer_name: string | null; total_minor: number | null; currency: string | null; created_at: string; integration_id: string }
 interface LiveRun { id: string; status: string; created_at: string; started_at: string | null; context: unknown; workflows: { name: string } | null }
-export interface LiveSync { id: string; integration_id: string; by_name: string | null; by_role: string | null; products: number; created_at: string }
+export interface LiveSync { id: string; integration_id: string; by_name: string | null; by_role: string | null; products: number; notified: number; created_at: string }
 interface LiveApproval { id: string; title: string; status: string; created_at: string; context: unknown }
 
 export function useLiveItems(shopId: string) {
@@ -57,7 +61,7 @@ export function useLiveItems(shopId: string) {
         byShop(supabase.from('orders').select('id, order_number, external_id, customer_name, total_minor, currency, created_at, integration_id').eq('organization_id', org).order('created_at', { ascending: false }).limit(10)),
         byContext(supabase.from('workflow_runs').select('id, status, created_at, started_at, context, workflows(name)').eq('organization_id', org).order('created_at', { ascending: false }).limit(10)),
         byContext(supabase.from('approvals').select('id, title, status, created_at, context').eq('organization_id', org).order('created_at', { ascending: false }).limit(6)),
-        byShop(supabase.from('product_sync_events').select('id, integration_id, by_name, by_role, products, created_at').eq('organization_id', org).order('created_at', { ascending: false }).limit(6)),
+        byShop(supabase.from('product_sync_events').select('id, integration_id, by_name, by_role, products, notified, created_at').eq('organization_id', org).order('created_at', { ascending: false }).limit(6)),
       ])
       const failed = [orders, runs, approvals, syncs].find((r) => r.error)
       if (failed?.error) throw failed.error

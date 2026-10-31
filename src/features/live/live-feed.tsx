@@ -78,6 +78,7 @@ export function LiveFeed({ shopId, className }: { shopId: string; className?: st
                   <span className="line-clamp-2 text-[13px] font-medium [overflow-wrap:anywhere]">{i.title}</span>
                   <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
                     {i.status && <StatusBadge status={i.status} />}
+                    {i.note && <span>{i.note} ·</span>}
                     <span>{timeAgo(i.at)}{showShop && i.shopId ? ` · ${((s) => (s ? shopLabel(s) : ''))(shops.find((x) => x.id === i.shopId))}` : ''}</span>
                   </span>
                 </span>

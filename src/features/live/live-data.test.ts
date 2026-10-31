@@ -30,9 +30,12 @@ describe('mergeLive', () => {
     expect(r.status).toBe('succeeded')
   })
   it('shows a shop pushing its products, naming who pressed the button and how many were sent', () => {
-    const sync = (over: object = {}) => ({ id: 's1', integration_id: 'shopA', by_name: 'Marko', by_role: 'Admin', products: 1250, created_at: '2026-10-30T10:00:00Z', ...over })
+    const sync = (over: object = {}) => ({ id: 's1', integration_id: 'shopA', by_name: 'Marko', by_role: 'Admin', products: 1250, notified: 1, created_at: '2026-10-30T10:00:00Z', ...over })
     const [s] = mergeLive([], [], [], [sync()])
     expect(s).toMatchObject({ kind: 'sync', id: 's-s1', to: '/inventory', shopId: 'shopA', title: 'Marko (Admin) synced their products: 1,250 products' })
+    expect(s.note).toBe('1 automation notified')
+    expect(mergeLive([], [], [], [sync({ notified: 2 })])[0].note).toBe('2 automations notified')
+    expect(mergeLive([], [], [], [sync({ notified: 0 })])[0].note).toBe('No automation was set up for this')
     expect(mergeLive([], [], [], [sync({ by_role: null })])[0].title).toBe('Marko synced their products: 1,250 products')
     expect(mergeLive([], [], [], [sync({ by_name: null })])[0].title).toBe('Admin synced their products: 1,250 products')
     expect(mergeLive([], [], [], [sync({ by_name: null, by_role: null, products: 0 })])[0].title).toBe('A shop synced their products')

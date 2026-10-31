@@ -59,7 +59,7 @@ select ps_test.check('the run names who synced, which shop, and where it came fr
 
 -- the next chunks of the same sync are not new notifications
 select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Marko', 'Admin', 500);
-select ps_test.check('another chunk from the same person within five minutes joins the same sync: still one event, one set of runs, counts added up',
+select ps_test.check('another chunk from the same person right after joins the same sync: still one event, one set of runs, counts added up',
   (select count(*) = 1 and bool_and(products = 1000) from product_sync_events) and (select count(*) = 2 from workflow_runs));
 
 -- someone else, or the same person after a pause, is a new sync
@@ -67,10 +67,36 @@ select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Ana', '
 select ps_test.check('a different person is a new sync and notifies again',
   (select count(*) = 2 from product_sync_events) and (select count(*) = 4 from workflow_runs)
   and (select count(*) = 2 from workflow_runs where context->'sync'->>'by' = 'Ana (Staff)'));
-update product_sync_events set created_at = now() - interval '6 minutes' where by_name = 'Marko';
+update product_sync_events set updated_at = now() - interval '2 minutes' where by_name = 'Marko';
 select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Marko', 'Admin', 10);
-select ps_test.check('the same person after more than five minutes is a new sync',
+select ps_test.check('the same person after 90 quiet seconds is a new sync, so a second click notifies again',
   (select count(*) = 3 from product_sync_events) and (select count(*) = 6 from workflow_runs));
+
+-- a long sync is still one: each request follows the last within the window, however long the whole thing takes
+delete from workflow_runs; delete from product_sync_events;
+select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Long', 'Run', 500);
+update product_sync_events set created_at = now() - interval '30 minutes', updated_at = now() - interval '60 seconds';
+select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Long', 'Run', 500);
+select ps_test.check('a sync that has been going for half an hour is still one sync while requests keep arriving (60 seconds apart)',
+  (select count(*) = 1 and bool_and(products = 1000) from product_sync_events) and (select count(*) = 2 from workflow_runs));
+update product_sync_events set updated_at = now() - interval '91 seconds';
+select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Long', 'Run', 5);
+select ps_test.check('...and 91 seconds of quiet ends it', (select count(*) = 2 from product_sync_events));
+
+-- ------------------------------------------------------------------------------------------------ what it started
+delete from workflow_runs; delete from product_sync_events;
+select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Count', 'Check', 1);
+select ps_test.check('each sync records how many automations it started (the any-shop one and the Game Store one: two)',
+  (select notified = 2 from product_sync_events));
+select announce_products_synced('a1000000-0000-0000-0000-0000000000b9', 'Count', 'Check', 1);
+select ps_test.check('...for the other shop, its own two',
+  (select notified = 2 from product_sync_events where integration_id = 'a1000000-0000-0000-0000-0000000000b9'));
+update workflows set enabled = false;
+select announce_products_synced('a1000000-0000-0000-0000-0000000000a9', 'Nobody', 'Home', 1);
+select ps_test.check('with every automation off the sync is recorded as having notified none, so the app can say so',
+  (select notified = 0 from product_sync_events where by_name = 'Nobody') and (select count(*) = 4 from workflow_runs));
+update workflows set enabled = true where id <> 'a4000000-0000-0000-0000-0000000000e4';
+delete from workflow_runs; delete from product_sync_events;
 
 -- ------------------------------------------------------------------------------------------------ who is named
 delete from workflow_runs; delete from product_sync_events;

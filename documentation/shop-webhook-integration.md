@@ -431,8 +431,8 @@ There is no `event_id`: reports are safe to repeat, so on a network error or 5xx
 | `synced_by` | `{"name":"Marko","role":"Admin"}`: who pressed the sync button in your admin. Both parts are optional (up to 120 and 60 characters) |
 
 Every push that was applied can start the workspace's **a shop syncs its products** automation. Whether it does is the team's choice in WorkRelay (the automation, and which shops it covers), never something the shop sets in the request. The automation, whose message reads *"Marko (Admin) has synced their products (Game Store)"*.
-Without `synced_by` the message names the shop instead. Requests from the same shop and the same person within 5 minutes, such as the chunks of one big sync,
-are announced **once**. Scheduled checks and Sync now from inside WorkRelay never announce.
+Without `synced_by` the message names the shop instead. Requests from the same shop and the same person that arrive close together (each within 90 seconds of the one before), such as the chunks of one big sync,
+are announced **once**. A request after 90 seconds of quiet is a new sync and is announced again. Scheduled checks and Sync now from inside WorkRelay never announce.
 
 Every applied push also updates the shop's **"Synced 12m ago"** line on the Inventory page, with `synced_by` shown as who sent it, and appears in the Live feed on the Overview.
 
