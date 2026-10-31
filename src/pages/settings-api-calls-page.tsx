@@ -100,7 +100,7 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
         )}
       </CardHeader>
       <CardBody>
-        <dl className="mb-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mb-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt className="text-xs text-muted-foreground">Calls</dt>
             <dd className="mt-0.5 font-medium">
@@ -117,11 +117,6 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
             <dt className="text-xs text-muted-foreground">Next check</dt>
             <dd className="mt-0.5 font-medium">{hasRate && !paused && sync?.source_url ? formatDateTime(sync?.next_sync_at) : '—'}</dd>
           </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Quick sync from your shop</dt>
-            <dd className="mt-0.5 font-medium">{sync?.push_enabled ? 'Allowed' : 'Not allowed'}</dd>
-            <dd className="text-xs text-muted-foreground">{sync?.push_enabled ? 'Your shop can send stock to WorkRelay at any time' : 'Set by WorkRelay'}</dd>
-          </div>
         </dl>
         {sync?.last_error && (
           <p role="status" className="mb-4 rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">
@@ -132,7 +127,7 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
         {!hasRate && (
           <p className="mb-4 text-sm text-muted-foreground">
             No schedule is set for this shop, so WorkRelay will not call it. Ask WorkRelay to set how many calls per how many days this shop gets.
-            Quick sync from your shop, once WorkRelay allows it, works without a schedule.
+            Your shop can still send stock to WorkRelay at any time without a schedule.
           </p>
         )}
 

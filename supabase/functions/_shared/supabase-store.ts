@@ -119,7 +119,7 @@ export function createSupabaseStore(db: SupabaseClient): IngestStore {
         p_at: a.at,
       })
       if (error) throw new Error(error.message)
-      return typeof data === 'number' && data >= 0 ? data : 'disabled'
+      return typeof data === 'number' ? data : 0
     },
 
     async recordProductPush(a) {

@@ -118,18 +118,12 @@ describe('shop integration guide', () => {
       expect(feeds[0].products[1]).toEqual({ sku: 'NAIL-100', stock: 4800, notify_on: 5000 }) // the "only what you know" example
     })
 
-    it('the example is applied by a shop that switched pushing on, and ignored by one that did not', async () => {
+    it('the example is applied by any connected shop', async () => {
       const on = new MemoryStore()
-      const ref = await on.addIntegration(KEY, { status: 'connected', externalStoreId: 's' })
-      on.pushEnabled.add(ref.id)
+      await on.addIntegration(KEY, { status: 'connected', externalStoreId: 's' })
       const ok = await push(on, feeds[0])
       expect(ok.status).toBe(200)
       expect(await ok.json()).toEqual({ status: 'processed', applied: 2 })
-      const off = new MemoryStore()
-      await off.addIntegration(KEY, { status: 'connected', externalStoreId: 's' })
-      const res = await push(off, feeds[0])
-      expect(res.status).toBe(202)
-      expect(await res.json()).toEqual({ status: 'ignored', reason: 'inventory_push_disabled' })
     })
 
     it('the curl example in the guide is a valid push', async () => {

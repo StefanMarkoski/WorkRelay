@@ -398,7 +398,7 @@ How WorkRelay uses it:
   a product never alerts (it only starts tracking), so connecting a shop whose products are already low does not send a burst.
 - **Event history.** Every push and every scheduled pull appears under **Integrations → Event history** as `inventory.push` or
   `inventory.pull`, with a short summary (how many products, never the products themselves), so you can see that a feed arrived, was
-  ignored because quick sync is not allowed for the shop yet, or failed and why. These entries are kept for 30 days.
+  rejected or failed, and why. These entries are kept for 30 days.
 - **No deleting.** Products are never removed by a report. A product you stop sending simply keeps its last numbers.
 
 ### Push: `POST /inventory-webhook`
@@ -406,8 +406,7 @@ How WorkRelay uses it:
 Same key and the same `X-Store-Id` as the order webhook (the key is already bound; there is no second bind). The body is the feed above:
 **up to 500 products and 1 MB per request.**
 
-**Switching it on:** WorkRelay switches *quick sync* on for the shop (a platform setting, so ask WorkRelay; the workspace sees whether it is allowed under
-**Settings → API Calls → Inventory**). It is off by default and per shop; until then pushes are answered with `202` and not applied.
+**Nothing to switch on.** Any connected shop can push at any time and as often as it likes; there is no per-shop switch and no limit. The calls per days that WorkRelay sets (**Settings → API Calls → Inventory**) only limit WorkRelay's own calls to your products endpoint.
 
 ```bash
 curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" \
@@ -418,7 +417,6 @@ curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-
 | Status | Body | Meaning |
 |---|---|---|
 | 200 | `{"status":"processed","applied":2}` | Applied. `applied` is the number of products in the request |
-| 202 | `{"status":"ignored","reason":"inventory_push_disabled"}` | Quick sync is not allowed for this shop yet. Ask WorkRelay to switch it on, then resend |
 | 400 | `{"error":"invalid_payload","detail":"products.0.stock: ..."}` | Fix the payload (the detail names the field, never the value). The whole request is rejected |
 | 401, 403, 405, 500 | as in section 7 | Same meaning and the same retry guidance |
 

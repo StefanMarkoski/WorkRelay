@@ -22,7 +22,6 @@ const send = (body: unknown, headers?: Record<string, string>) => handleInventor
 beforeEach(async () => {
   store = new MemoryStore()
   shop = await store.addIntegration(KEY, { status: 'connected', externalStoreId: 'shop-1' })
-  store.pushEnabled.add(shop.id)
 })
 
 describe('authentication', () => {
@@ -37,13 +36,10 @@ describe('authentication', () => {
   })
 })
 
-describe('the opt-in', () => {
-  it('ignores a push from a shop that has not switched pushing on', async () => {
-    store.pushEnabled.clear()
-    const res = await send({ products: [{ sku: 'A', stock: 1 }] })
-    expect(res.status).toBe(202)
-    expect(await res.json()).toEqual({ status: 'ignored', reason: 'inventory_push_disabled' })
-    expect(store.productReports).toHaveLength(0)
+describe('no opt-in', () => {
+  it('applies a push from any connected shop, with no switch to turn on first and no limit on how often', async () => {
+    for (let n = 0; n < 5; n++) expect((await send({ products: [{ sku: 'A', stock: n }] })).status).toBe(200)
+    expect(store.productReports).toHaveLength(5)
   })
 })
 
@@ -54,12 +50,6 @@ describe('Event history', () => {
     expect(store.events).toHaveLength(1)
     expect(store.events[0]).toMatchObject({ status: 'processed', integrationId: shop.id })
     expect(store.events[0].rawPayload).toEqual({ products: 30, skus: products.slice(0, 10).map((p) => p.sku) })
-  })
-
-  it('records a push that was ignored because pushing is off, with the reason', async () => {
-    store.pushEnabled.clear()
-    await send({ products: [{ sku: 'A', stock: 1 }] })
-    expect(store.events[0]).toMatchObject({ status: 'ignored', error: expect.stringContaining('inventory_push_disabled') })
   })
 
   it('records a rejected push as failed, with the field but not the value, and keeps the body out', async () => {
@@ -113,10 +103,7 @@ describe('telling the team a shop synced', () => {
     expect(store.pushRecords).toHaveLength(1)
   })
 
-  it('announces nothing when quick sync is not allowed, when the push is rejected, or when there was nothing in it', async () => {
-    store.pushEnabled.clear()
-    await send({ products: [{ sku: 'A', stock: 1 }], synced_by: { name: 'Marko' } })
-    store.pushEnabled.add(shop.id)
+  it('announces nothing when the push is rejected, or when there was nothing in it', async () => {
     await send({ products: [{ sku: 'A', stock: 'many' }], synced_by: { name: 'Marko' } })
     await send({ products: [], synced_by: { name: 'Marko' } })
     expect(store.announcements).toHaveLength(0)
@@ -152,10 +139,7 @@ describe('remembering the last push', () => {
     expect(store.pushRecords).toEqual([{ integrationId: shop.id, byName: 'Marko', byRole: 'Admin' }])
   })
 
-  it('records nothing when the push was not applied or had nothing in it', async () => {
-    store.pushEnabled.clear()
-    await send({ products: [{ sku: 'A', stock: 1 }] })
-    store.pushEnabled.add(shop.id)
+  it('records nothing when the push was rejected or had nothing in it', async () => {
     await send({ products: [{ sku: 'A', stock: 'many' }] })
     await send({ products: [] })
     expect(store.pushRecords).toHaveLength(0)

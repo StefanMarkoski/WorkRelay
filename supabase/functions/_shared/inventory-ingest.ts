@@ -53,10 +53,6 @@ export async function handleInventoryWebhook(req: Request, deps: HandlerDeps): P
       source: 'push',
       at: new Date().toISOString(),
     })
-    if (result === 'disabled') {
-      await note('ignored', summary, 'inventory_push_disabled: quick sync is not allowed for this shop yet; ask WorkRelay to switch it on')
-      return json(202, { status: 'ignored', reason: 'inventory_push_disabled' })
-    }
     await deps.store.touchIntegration(integration.id).catch(() => undefined) // last-seen is best effort
     await note('processed', summary)
     // Remember the push, whoever pressed what: it is a real sync, and "synced 5 minutes ago" depends on it.

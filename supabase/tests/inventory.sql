@@ -55,10 +55,10 @@ insert into order_items (organization_id, order_id, position, sku, name) values
 select inv_test.check('an existing product is not changed by a later order line',
   (select name = 'Road bike' from products where sku = 'BIKE-1'));
 
--- ------------------------------------------------------------------------------------------------ push needs opt-in
-select inv_test.check('push is ignored (-1) until the shop switches it on, and changes nothing',
-  apply_product_sync('a1000000-0000-0000-0000-0000000000f1', '[{"sku":"BIKE-1","stock":9}]', 'push') = -1
-  and (select stock is null from products where sku = 'BIKE-1'));
+-- ------------------------------------------------------------------------------------------------ push needs no opt-in
+-- (an empty feed, so the products below stay as they are; 0 applied, where a refused push used to answer -1)
+select inv_test.check('a push is accepted from a shop that never switched anything on',
+  apply_product_sync('a1000000-0000-0000-0000-0000000000f1', '[]', 'push') = 0);
 select inv_test.fails('pull is refused for a shop that is not connected',
   $$select apply_product_sync(gen_random_uuid(), '[]', 'pull')$$);
 
@@ -86,8 +86,8 @@ select inv_test.fails('an owner of another workspace cannot set the source',
   $$select set_sync_source('a1000000-0000-0000-0000-0000000000f2', 'https://x.example', null, false, false)$$, '42501');
 reset role;
 
-select inv_test.check('with the switch still off, a push is ignored even though the owner asked for it',
-  apply_product_sync('a1000000-0000-0000-0000-0000000000f1', '[{"sku":"BIKE-1","stock":9}]', 'push') = -1);
+select inv_test.check('...and still accepted with the old switch off, whatever the owner asked for',
+  apply_product_sync('a1000000-0000-0000-0000-0000000000f1', '[]', 'push') = 0);
 
 -- the platform admin switches pushing on
 select inv_test.as_user('00000000-0000-0000-0000-0000000000f3');

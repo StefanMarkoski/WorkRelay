@@ -41,13 +41,13 @@ export interface IngestStore {
     externalId: string | null
     registeredAt: string | null
   }): Promise<'ok' | 'disabled'>
-  /** Apply a product/stock report. 'disabled' when a push arrives from a shop that has not switched pushing on. */
+  /** Apply a product/stock report; returns how many items were applied. */
   applyProducts(a: {
     integrationId: string
     items: Record<string, unknown>[]
     source: 'push' | 'pull'
     at: string
-  }): Promise<number | 'disabled'>
+  }): Promise<number>
   /** A push was applied: remember when, and who pressed the button, so the app can say "synced 5 minutes ago". Best effort. */
   recordProductPush(a: { integrationId: string; byName: string | null; byRole: string | null }): Promise<void>
   /** A push was applied: tell the automations who synced (merged with the other chunks of the same sync). Best effort. */
