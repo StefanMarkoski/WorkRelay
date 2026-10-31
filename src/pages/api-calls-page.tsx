@@ -13,22 +13,21 @@ import { useIntegrationSyncs } from '@/features/integrations/sync'
 import { lastSynced } from '@/features/integrations/sync-freshness'
 import { SyncNowControl } from '@/features/integrations/sync-now-button'
 import { shopLabel } from '@/features/integrations/shop-label'
-import { ApiCallsKinds, SettingsTabs } from '@/features/settings/settings-tabs'
+import { ApiCallsTabs } from '@/features/api-calls/api-calls-tabs'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatSyncPace, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration, IntegrationSync } from '@/types/db'
 
-export function SettingsApiCallsPage() {
+export function ApiCallsPage() {
   const integrations = useIntegrations()
   const syncs = useIntegrationSyncs()
   const shops = (integrations.data ?? []).filter((i) => i.status !== 'revoked')
 
   return (
     <>
-      <PageHeader title="Settings" description="Workspace details and who can access them." />
-      <SettingsTabs />
-      <ApiCallsKinds />
+      <PageHeader title="API Calls" description="How WorkRelay talks to your shops' APIs, and how often." />
+      <ApiCallsTabs />
       <div className="mb-5 max-w-3xl">
         <h2 className="font-display text-lg font-semibold tracking-[-0.01em]">Inventory API calls</h2>
         <p className="mt-1 text-sm text-muted-foreground">

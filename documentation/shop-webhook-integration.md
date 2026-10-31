@@ -409,7 +409,7 @@ How WorkRelay uses it:
 Same key and the same `X-Store-Id` as the order webhook (the key is already bound; there is no second bind). The body is the feed above:
 **up to 500 products and 1 MB per request.**
 
-**Nothing to switch on.** Any connected shop can push at any time and as often as it likes; there is no per-shop switch and no limit. The calls per days that WorkRelay sets (**Settings → API Calls → Inventory**) only limit WorkRelay's own calls to your products endpoint.
+**Nothing to switch on.** Any connected shop can push at any time and as often as it likes; there is no per-shop switch and no limit. The calls per days that WorkRelay sets (**API Calls → Inventory**) only limit WorkRelay's own calls to your products endpoint.
 
 ```bash
 curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" \
@@ -439,7 +439,7 @@ Every applied push also updates the shop's **"Synced 12m ago"** line on the Inve
 
 ### Pull: WorkRelay calls the shop
 
-Under **Settings → API Calls → Inventory**, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
+Under **API Calls → Inventory**, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
 value. WorkRelay then requests the URL on a schedule:
 
 ```
@@ -452,7 +452,7 @@ The shop answers `200` (any `2xx`) with the feed above, either `{"products":[...
 catalogue, or at least every product whose stock should be kept current.
 
 - **How often is set by WorkRelay**, per shop, as *calls per number of days* (for example 15 calls per day is about one call every
-  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on Settings → API Calls → Inventory. The fastest possible is one
+  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on API Calls → Inventory. The fastest possible is one
   call every 5 minutes. A call that fails still counts, and is not retried before the next scheduled time.
 - **Limits:** up to **5,000 products and 5 MB** per answer, **15 seconds** to respond. Larger catalogues are not supported yet.
 - **Safety rules:** the URL must be `https`, must resolve to a public address (no private networks or `localhost`), and **redirects are not
@@ -460,7 +460,7 @@ catalogue, or at least every product whose stock should be kept current.
   sent only to that URL.
 - **Timestamps:** each product is stamped with the moment WorkRelay *sent* the request unless it carries its own `updated_at`, so a push
   that happened while the answer was on its way is not overwritten.
-- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on Settings → API Calls → Inventory, and nothing from
+- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on API Calls → Inventory, and nothing from
   that answer is applied.
 - A schedule can be paused per shop. If no schedule has been set for a shop, WorkRelay does not call it; ask WorkRelay to set one.
 

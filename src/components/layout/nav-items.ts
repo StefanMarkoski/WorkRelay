@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Boxes,
+  Cable,
   CheckSquare,
   LayoutDashboard,
   Play,
@@ -35,5 +36,6 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/approvals', label: 'Approvals', icon: CheckSquare, group: 'main' },
   { to: '/failures', label: 'Failures', icon: TriangleAlert, group: 'main' },
   { to: '/settings', label: 'Settings', icon: Settings, group: 'management' },
+  { to: '/api-calls', label: 'API Calls', icon: Cable, group: 'management' },
   { to: '/integrations', label: 'Integrations', icon: Plug, group: 'shops' },
 ]

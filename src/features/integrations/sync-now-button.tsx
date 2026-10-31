@@ -59,7 +59,7 @@ export function SyncNowControl({ shopId, className }: { shopId: string; classNam
         <p className="text-xs text-muted-foreground" aria-live="polite">
           {canManage && eligible.length === 1 && eligible[0].state.available && eligible[0].sync?.days ? callsLeftText(eligible[0].state, eligible[0].sync.days) : ''}
           {canManage && !shopId && eligible.length > 0 && eligible.length < targets.length
-            ? `${eligible.length === 1 && eligible[0].sync?.days ? ' · ' : ''}${targets.length - eligible.length} shop${targets.length - eligible.length === 1 ? '' : 's'} skipped (see Settings → API Calls → Inventory)`
+            ? `${eligible.length === 1 && eligible[0].sync?.days ? ' · ' : ''}${targets.length - eligible.length} shop${targets.length - eligible.length === 1 ? '' : 's'} skipped (see API Calls → Inventory)`
             : ''}
         </p>
         {canManage && (

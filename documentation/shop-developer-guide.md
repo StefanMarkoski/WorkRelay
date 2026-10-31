@@ -31,7 +31,7 @@ Some switches live with the WorkRelay team, not in your code. Ask them for the o
 | Receive customer signups (on/off per shop) | Shop owner or admin | Integrations → Edit → *Receive customer signups* |
 | Notifications ("a customer signs up", "a new order arrives", "a shop syncs its products"…) | Shop owner or admin | Automations |
 | **Schedule** for calls to your products endpoint (calls per days) | **WorkRelay** | Platform admin |
-| Your products **URL** and its **token** | Shop owner or admin | Settings → API Calls → Inventory |
+| Your products **URL** and its **token** | Shop owner or admin | API Calls → Inventory |
 
 ## 3. Start here: the order webhook
 
@@ -194,7 +194,7 @@ What to build:
 
 | Requirement | Detail |
 |---|---|
-| Method and URL | `GET`, **https**, a public address. The shop owner enters the URL in Settings → API Calls → Inventory |
+| Method and URL | `GET`, **https**, a public address. The shop owner enters the URL in API Calls → Inventory |
 | Authentication | Create a **dedicated read-only token** just for this. The shop owner enters it in WorkRelay, and it is sent as the `Authorization` header exactly as entered (for example `Bearer abc123`). It is stored privately and never shown again. **Do not reuse the WorkRelay secret key**: that one lets anyone write stock into your workspace, this one only lets WorkRelay read your catalogue. Compare it in constant time, and refuse everything else with `401` |
 | Response | Any `2xx` with JSON: either `{"products":[...]}` or just the list `[...]` |
 | Content | The full catalogue, or at least every product whose stock should stay current. Products you leave out are untouched, never deleted |
@@ -203,7 +203,7 @@ What to build:
 | Pagination | None: one request returns everything |
 | Cost | Keep it cheap: read from a cache or a single query. A schedule can mean many calls a day |
 
-If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in Settings → API Calls → Inventory and in
+If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in API Calls → Inventory and in
 Integrations → Event history. A failed call still counts toward the schedule.
 
 The shop owner (or the team) can also press **Sync now** on the Inventory page to run a check immediately. It only works where WorkRelay has set a schedule for the shop, the

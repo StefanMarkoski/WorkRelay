@@ -18,8 +18,8 @@ export function syncNowState(sync: Sync | null | undefined, now: number): SyncNo
   if (!sync || sync.calls === null || sync.days === null) {
     return { available: false, reason: 'WorkRelay has not set up scheduled checks for this shop yet. Ask WorkRelay to set them up.' }
   }
-  if (!sync.source_url) return { available: false, reason: 'Add the products URL first (Settings → API Calls → Inventory).' }
-  if (sync.paused) return { available: false, reason: 'Checks for this shop are paused. Turn the pause off under Settings → API Calls → Inventory.' }
+  if (!sync.source_url) return { available: false, reason: 'Add the products URL first (API Calls → Inventory).' }
+  if (sync.paused) return { available: false, reason: 'Checks for this shop are paused. Turn the pause off under API Calls → Inventory.' }
 
   const start = sync.window_start ? Date.parse(sync.window_start) : null
   const renewsAt = start === null ? null : start + sync.days * DAY

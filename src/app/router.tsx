@@ -16,7 +16,7 @@ import { SyncHistoryPage } from '@/pages/sync-history-page'
 import { OrderDetailPage } from '@/pages/order-detail-page'
 import { OrdersPage } from '@/pages/orders-page'
 import { OverviewPage } from '@/pages/overview-page'
-import { SettingsApiCallsPage } from '@/pages/settings-api-calls-page'
+import { ApiCallsPage } from '@/pages/api-calls-page'
 import { SettingsPage } from '@/pages/settings-page'
 
 export const router = createHashRouter([
@@ -40,8 +40,11 @@ export const router = createHashRouter([
       { path: 'inventory/syncs', element: <SyncHistoryPage /> },
       { path: 'inventory/:id', element: <ProductDetailPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'settings/api-calls', element: <Navigate to="/settings/api-calls/inventory" replace /> },
-      { path: 'settings/api-calls/inventory', element: <SettingsApiCallsPage /> },
+      { path: 'api-calls', element: <Navigate to="/api-calls/inventory" replace /> },
+      { path: 'api-calls/inventory', element: <ApiCallsPage /> },
+      // API Calls used to live under Settings: old links and bookmarks still land on it
+      { path: 'settings/api-calls', element: <Navigate to="/api-calls/inventory" replace /> },
+      { path: 'settings/api-calls/inventory', element: <Navigate to="/api-calls/inventory" replace /> },
       { path: 'admin/tenants', element: <AdminTenantsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
