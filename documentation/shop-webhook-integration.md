@@ -388,10 +388,12 @@ send just `sku` and `stock` for a quick update. Fields you do not know about are
 
 How WorkRelay uses it:
 
-- **Newer wins, per product.** A report older than what WorkRelay already holds fills in anything missing but never overwrites, so a
-  late retry or a slow pull cannot undo a more recent push. Sending the same report twice changes nothing.
-- **Price.** If you report a price, that is the price shown ("from the shop"). If you do not, WorkRelay shows the unit price from the
-  product's most recent order line ("from orders"). If there is neither, no price is shown.
+- **Newer wins, per product, for stock.** A stock report older than what WorkRelay already holds fills in anything missing but never
+  overwrites, so a late retry or a slow pull cannot undo a more recent push. Sending the same report twice changes nothing.
+- **Price: the latest sync wins.** A price you report is always taken, however the item is dated and whether the sync was a scheduled
+  pull, Sync now or a push someone typed by hand; a sync that carries no price leaves the price alone. The price is shown "from the
+  shop". If you never report one, WorkRelay shows the unit price from the product's most recent order line ("from orders"). If there is
+  neither, no price is shown. Every price change is listed in **Inventory → Sync history** (before and after).
 - **Notify on.** A product is *low* when its stock is **at or below** its notify-on number. The number can come from the shop
   (`notify_on`), or be typed in by hand on the Inventory page, and a hand-set number wins. A hand-set number is never changed by a
   report; entering 0 there removes it so the shop's number applies again. Different products can have very different numbers
@@ -402,8 +404,9 @@ How WorkRelay uses it:
   shop per 90 seconds** (the lowest stock first), and every other product in that sync arrives as **one summary message** ("5 more products in
   Game Store are already at or below their alert levels (A, B, C, …)"). Every one of them is marked low, so none alerts a second time.
   **Estimated stock (optional).** A shop that has *Estimate stock between syncs* switched on also alerts before it reports again, with the same
-  automation: nothing more to switch on. The estimate is the last reported stock minus the pieces ordered since. It alerts once when the orders take
-  it to the alert level, is re-armed by a cancellation that lifts it back above the level, and is started over by every report from the shop. A
+  automation: nothing more to switch on. The estimate is the last reported stock minus the pieces ordered since, leaving out **cancelled** orders and orders whose `fulfillment_status` is
+  **`returned`** (they give their pieces back; a partial return cannot be expressed, so send `returned` only when the whole order came back). It alerts once when the orders take
+  it to the alert level, is re-armed by a cancellation or a return that lifts it back above the level, and is started over by every report from the shop. A
   product that is already low by the shop's own number is not announced twice. The estimate is checked once at the end of each order, so an order that takes many products to their level at once sends up to **3 single alerts per shop per 90 seconds** and one summary for the rest, and an order the shop later edits to other products re-arms the ones it lost. Every low-stock message ends with its **Source**: the shop's name
   for a number the shop reported, or *WorkRelay (estimated for <shop>)* for an estimate.
 - **Failures.** An event WorkRelay could not accept, and an automation run that failed, are listed under **Failures** with a plain explanation. They are kept for 90 days by default; an owner or admin sets 1 to 365 days under **Settings → Failures**, and the failures already older than that are removed the moment you save, and later ones as they age (events that went through and runs that succeeded are never removed by this).
@@ -473,6 +476,90 @@ catalogue, or at least every product whose stock should be kept current.
 - A schedule can be paused per shop. If no schedule has been set for a shop, WorkRelay does not call it; ask WorkRelay to set one.
 
 Machine-readable schema: [`product-feed.schema.json`](./product-feed.schema.json) (the pull answer may hold up to 5,000 products, a push up to 500).
+
+### Write-back: WorkRelay tells your shop its stock number (optional)
+
+Off by default, and switched on per shop by the **workspace owner**. When it is on and an order, a cancellation or a return changes WorkRelay's
+estimate for a product, WorkRelay sends your shop the new number for that product. It needs *Estimate stock between syncs* switched on, because the
+estimate is the number that is sent.
+
+- **What is sent:** the SKU and the new absolute stock number, with a sequence number and a time. Never a difference, so a repeat changes nothing.
+  Never a name, an email, a price or anything about the customer. An estimate below zero is not sent.
+- **Set up in WorkRelay** (Integrations → Edit shop): the shop's public **https stock address** (the standard port 443, no login in the address), a **signing secret** (`wr_sign_…`, shown once), then
+  **Send test**, then the switch. Changing the address or the secret switches write-back off until the shop passes a new test.
+- **Turning it off in WorkRelay stops everything**, even if your shop is ready to receive: nothing queued is sent afterwards, and the check is made
+  again just before each request leaves. Any member of the workspace can switch it off.
+
+WorkRelay sends `POST <your stock address>` with `Content-Type: application/json` and these headers:
+
+| Header | Value |
+|---|---|
+| `X-WorkRelay-Timestamp` | Unix seconds when WorkRelay signed the request |
+| `X-WorkRelay-Request-Id` | A UUID, new for every request (a retry gets a new one) |
+| `X-WorkRelay-Signature` | `v1=` followed by the hex HMAC-SHA256 of `timestamp + "." + request id + "." + the raw body`, keyed with your signing secret |
+
+```json
+{
+  "type": "stock.update",
+  "request_id": "7d6c1f0e-2f4b-4b6e-9f4a-3c9f8f1d2a10",
+  "sent_at": "2026-10-31T12:00:00.000Z",
+  "store_id": "shop-eu-001",
+  "items": [
+    { "sku": "TEE-BLK-M", "stock": 7, "seq": 412, "as_of": "2026-10-31T11:59:58.120Z" },
+    { "sku": "MUG-WHITE", "stock": 11, "seq": 413, "as_of": "2026-10-31T11:59:58.120Z" }
+  ]
+}
+```
+
+**Verify every request before you act on it.** Anyone who finds the address can send a request; only WorkRelay can sign one. Check the signature with
+a constant-time comparison, reject a timestamp more than 5 minutes from your clock, and ignore a `request_id` you have already seen.
+
+```js
+// Node.js. `headers` has lower-case names; `rawBody` is the body exactly as it arrived (do not parse and re-serialize it).
+function verifyWorkRelay(secret, headers, rawBody) {
+  const crypto = require('crypto')
+  const ts = headers['x-workrelay-timestamp']
+  if (!ts || Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false
+  const expected = 'v1=' + crypto.createHmac('sha256', secret)
+    .update(ts + '.' + headers['x-workrelay-request-id'] + '.' + rawBody).digest('hex')
+  const given = String(headers['x-workrelay-signature'] || '')
+  return given.length === expected.length && crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected))
+}
+```
+
+```php
+<?php
+// PHP. $rawBody is file_get_contents('php://input'); header names are as PHP gives them.
+function verifyWorkRelay(string $secret, array $headers, string $rawBody): bool {
+    $ts = $headers['X-WorkRelay-Timestamp'] ?? '';
+    if ($ts === '' || abs(time() - (int) $ts) > 300) return false;
+    $expected = 'v1=' . hash_hmac('sha256', $ts . '.' . ($headers['X-WorkRelay-Request-Id'] ?? '') . '.' . $rawBody, $secret);
+    return hash_equals($expected, $headers['X-WorkRelay-Signature'] ?? '');
+}
+```
+
+- **The test.** *Send test* posts a signed `stock.test` request with a random `challenge`. Your endpoint passes by verifying the signature and
+  answering `200` with JSON `{"challenge": "<the same value>"}`. An endpoint that accepts anything cannot pass, which is the point.
+
+```json
+{
+  "type": "stock.test",
+  "request_id": "0b8a2c64-6c6e-4a43-8a52-5f0d7f6a9b11",
+  "sent_at": "2026-10-31T12:00:00.000Z",
+  "store_id": "shop-eu-001",
+  "challenge": "9f2c4d1e7a8b4c3d9e0f1a2b3c4d5e6f"
+}
+```
+
+- **Answering.** Any `2xx` means accepted. Anything else, a timeout (10 seconds) or a redirect (never followed) is a failure: each SKU is tried again
+  1 minute and then 5 minutes later, then given up on. **5 failed requests in a row switch write-back off by itself**, and the reason is shown
+  next to the switch. Answer quickly and do the work after answering.
+- **Order and repeats.** A request carries up to 100 SKUs, at most 20 requests a minute, and one at a time per shop. Apply a number only if its `seq`
+  is higher than the one you last applied for that SKU; a lower one is an older number that arrived late.
+- **When your next report disagrees.** If a later sync reports a different number than the one WorkRelay sent, nothing is overwritten. WorkRelay
+  records both numbers and the difference, and the owner chooses: keep the shop's number, or send WorkRelay's again.
+- **Your own safeguards.** Allow-list WorkRelay's requests by signature, not by IP address. Keep the signing secret out of your repository. If it leaks,
+  press *Replace secret* in WorkRelay: the old one stops working at once.
 
 ## 11. Testing the connection
 

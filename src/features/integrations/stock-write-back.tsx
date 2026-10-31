@@ -1,0 +1,182 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { KeyRound } from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { CopyButton } from '@/components/common/copy-button'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Field, Input } from '@/components/ui/input'
+import { Modal } from '@/components/ui/modal'
+import { Switch } from '@/components/ui/switch'
+import { useWorkspace } from '@/features/workspace/workspace-provider'
+import { timeAgo } from '@/lib/format'
+import { errorMessage, supabase } from '@/lib/supabase'
+import type { Integration } from '@/types/db'
+import { useIntegrations } from './queries'
+import { refusalText } from './sync'
+
+/**
+ * Stock write-back for one shop: WorkRelay sends the shop its stock number after an order, a cancellation or a return changes the
+ * estimate. Every rule is enforced by the database; this panel only walks the owner through it in order: address, secret, signed test,
+ * switch. Only the workspace owner can set it up or switch it on. Any member can switch it off.
+ */
+export function StockWriteBack({ shop: initial }: { shop: Integration }) {
+  const { current, isOwner } = useWorkspace()
+  const qc = useQueryClient()
+  const shop = useIntegrations().data?.find((s) => s.id === initial.id) ?? initial
+  const [url, setUrl] = useState(shop.stock_push_url ?? '')
+  const [busy, setBusy] = useState<'url' | 'secret' | 'test' | 'switch' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
+  const [secret, setSecret] = useState<string | null>(null)
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ['integrations', current.id] })
+  const addressChanged = url.trim() !== (shop.stock_push_url ?? '')
+  const ready = shop.estimate_stock && !!shop.stock_push_url && shop.stock_push_has_secret && !!shop.stock_push_verified_at && !shop.stock_push_locked
+
+  async function run(kind: NonNullable<typeof busy>, fn: () => Promise<void>) {
+    setBusy(kind)
+    setError(null)
+    try {
+      await fn()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : errorMessage(e))
+    } finally {
+      setBusy(null)
+      void refresh()
+    }
+  }
+  const rpc = async (name: string, args: Record<string, unknown>) => {
+    const { data, error: err } = await supabase.rpc(name, args)
+    if (err) throw new Error(errorMessage(err))
+    return data
+  }
+
+  const saveAddress = () => run('url', async () => { await rpc('set_stock_push_url', { p_integration: shop.id, p_url: url }); setTestResult(null) })
+  const makeSecret = () => run('secret', async () => { setSecret((await rpc('rotate_stock_push_secret', { p_integration: shop.id })) as string); setTestResult(null) })
+  const sendTest = () => run('test', async () => {
+    setTestResult(null)
+    const { data, error: err } = await supabase.functions.invoke('stock-push-test', { body: { integration_id: shop.id } })
+    if (err) throw new Error(await refusalText(err))
+    const r = data as { status: 'ok' | 'failed'; error?: string }
+    setTestResult(r.status === 'ok' ? { ok: true, text: 'The shop answered correctly. Write-back can be switched on.' } : { ok: false, text: r.error ?? 'The shop did not answer correctly.' })
+    void qc.invalidateQueries({ queryKey: ['stock-pushes'] })
+  })
+  const setEnabled = (on: boolean) => run('switch', async () => { await rpc('set_stock_push_enabled', { p_integration: shop.id, p_enabled: on }); void qc.invalidateQueries({ queryKey: ['stock-pushes'] }) })
+
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium">
+            Send stock numbers to this shop{' '}
+            {shop.stock_push_enabled ? <Badge tone="success">On</Badge> : shop.stock_push_locked ? <Badge tone="danger">Blocked</Badge> : <Badge>Off</Badge>}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Optional, and off until the workspace owner switches it on. When an order, a cancellation or a return changes WorkRelay&apos;s estimate for a
+            product, WorkRelay sends your shop the new number for that product: the SKU and the number, nothing else, signed with a secret only your
+            shop and WorkRelay know. If the shop&apos;s next report disagrees, the owner decides which number stays.
+          </p>
+        </div>
+        <Switch
+          checked={shop.stock_push_enabled}
+          onChange={(on) => void setEnabled(on)}
+          label="Send stock numbers to this shop"
+          disabled={busy !== null || (shop.stock_push_enabled ? false : !isOwner || !ready)}
+        />
+      </div>
+
+      {shop.stock_push_paused_reason && !shop.stock_push_enabled && (
+        <p role="status" className="mt-3 border-t pt-3 text-xs text-foreground">{shop.stock_push_paused_reason}</p>
+      )}
+      {shop.stock_push_locked && (
+        <p role="status" className="mt-3 border-t pt-3 text-xs text-foreground">WorkRelay has blocked stock write-back for this shop. Contact WorkRelay to have it lifted.</p>
+      )}
+
+      {!shop.estimate_stock ? (
+        <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+          Switch on <span className="font-medium text-foreground">Estimate stock between syncs</span> and save first: the estimate is the number that gets sent.
+        </p>
+      ) : !isOwner ? (
+        <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+          {shop.stock_push_enabled ? 'You can switch this off at any time. ' : ''}Only the workspace owner can set it up or switch it on.
+          {shop.stock_push_verified_at ? ` The shop last passed its test ${timeAgo(shop.stock_push_verified_at)}.` : ''}
+        </p>
+      ) : (
+        <div className="mt-3 space-y-4 border-t pt-3">
+          <Field
+            label="The shop's stock address"
+            hint="A public https address on your shop that accepts WorkRelay's signed requests. Changing it switches write-back off until the shop passes a new test."
+          >
+            {(id) => (
+              <div className="flex gap-2">
+                <Input
+                  id={id}
+                  value={url}
+                  inputMode="url"
+                  placeholder="https://shop.example.com/workrelay/stock"
+                  maxLength={2000}
+                  onChange={(e) => setUrl(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (addressChanged) void saveAddress() } }}
+                />
+                <Button type="button" variant="outline" disabled={busy !== null || !addressChanged} onClick={() => void saveAddress()}>
+                  {busy === 'url' ? 'Saving…' : 'Save address'}
+                </Button>
+              </div>
+            )}
+          </Field>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Signing secret.</span>{' '}
+              {shop.stock_push_has_secret ? 'Created. Replacing it switches write-back off until the shop passes a new test.' : 'Not created yet. Your shop uses it to check that a request really came from WorkRelay.'}
+            </p>
+            <Button type="button" variant="outline" disabled={busy !== null} onClick={() => void makeSecret()}>
+              <KeyRound aria-hidden /> {busy === 'secret' ? 'Creating…' : shop.stock_push_has_secret ? 'Replace secret' : 'Create secret'}
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              <span className="font-medium text-foreground">Test.</span>{' '}
+              {testResult ? testResult.text
+                : shop.stock_push_verified_at ? `The shop passed its test ${timeAgo(shop.stock_push_verified_at)}.`
+                : 'WorkRelay sends one signed request with a random code. The shop passes by answering with the same code.'}
+            </p>
+            <Button type="button" variant="outline" disabled={busy !== null || !shop.stock_push_url || !shop.stock_push_has_secret || addressChanged} onClick={() => void sendTest()}>
+              {busy === 'test' ? 'Sending…' : 'Send test'}
+            </Button>
+          </div>
+          {testResult && !testResult.ok && <p role="alert" className="text-xs text-destructive">{testResult.text}</p>}
+        </div>
+      )}
+
+      {error && <p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}
+      <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+        <Link to="/inventory/pushes" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">See what was sent</Link>
+        {' '}and decide any disagreements.
+      </p>
+
+      <Modal open={secret !== null} onClose={() => setSecret(null)} title="Your signing secret">
+        {secret && (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border bg-muted p-3">
+              <div className="flex items-center gap-2">
+                <KeyRound className="size-4 shrink-0 text-muted-foreground" />
+                <code className="break-all font-mono text-xs">{secret}</code>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Copy this now. It is shown only once; WorkRelay keeps the only other copy in its vault, and it cannot be read back. Put it in your shop&apos;s
+              settings and use it to verify the signature of every request (the integration guide shows how). Then send the test.
+            </p>
+            <div className="flex justify-end gap-2">
+              <CopyButton text={secret} label="Copy secret" />
+              <Button type="button" onClick={() => setSecret(null)}>I have saved it</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  )
+}

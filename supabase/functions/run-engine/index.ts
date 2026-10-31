@@ -7,11 +7,15 @@ import { createEngineStore } from './engine-store.ts'
 import { createHttpClient } from './http-client.ts'
 import { createPullClient } from '../_shared/pull-client.ts'
 import { createPullStore } from '../_shared/pull-store.ts'
+import { createPushClient } from '../_shared/push-client.ts'
+import { createPushStore } from '../_shared/stock-push-store.ts'
+import { pushPendingStock } from '../_shared/stock-push.ts'
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
   auth: { persistSession: false },
 })
 const pullDeps = { store: createPullStore(db), http: createPullClient(), log: consoleLogger }
+const pushDeps = { store: createPushStore(db), http: createPushClient(), log: consoleLogger }
 const deps = { store: createEngineStore(db), http: createHttpClient(), log: consoleLogger }
 
 // Called by pg_cron (via pg_net) every few seconds. Each call is one short, bounded tick.
@@ -28,14 +32,19 @@ Deno.serve(async (req) => {
     void db.rpc('purge_old_failures').then(({ error }) => {
       if (error) consoleLogger.error('failure cleanup failed', { message: error.message })
     })
-    const [result, pulls] = await Promise.all([
+    const [result, pulls, pushes] = await Promise.all([
       tick(deps),
       pullDueProducts(pullDeps).catch((err) => {
         consoleLogger.error('product pull failed', { message: err instanceof Error ? err.message : 'unknown' })
         return { pulled: 0, failed: 0 }
       }),
+      // Stock write-back rides on the tick as well. Whether anything may be sent is decided by the database, not here.
+      pushPendingStock(pushDeps).catch((err) => {
+        consoleLogger.error('stock write-back failed', { message: err instanceof Error ? err.message : 'unknown' })
+        return { sent: 0, failed: 0, cancelled: 0 }
+      }),
     ])
-    return json(200, { ...(result as unknown as Record<string, unknown>), product_pulls: pulls })
+    return json(200, { ...(result as unknown as Record<string, unknown>), product_pulls: pulls, stock_pushes: pushes })
   } catch (err) {
     consoleLogger.error('engine tick failed', { message: err instanceof Error ? err.message : 'unknown' })
     return json(500, { error: 'tick_failed' })

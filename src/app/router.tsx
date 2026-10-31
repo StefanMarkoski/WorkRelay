@@ -13,6 +13,7 @@ import { InventoryPage } from '@/pages/inventory-page'
 import { IntegrationsPage } from '@/pages/integrations-page'
 import { ProductDetailPage } from '@/pages/product-detail-page'
 import { SyncHistoryPage } from '@/pages/sync-history-page'
+import { StockPushesPage } from '@/pages/stock-pushes-page'
 import { OrderDetailPage } from '@/pages/order-detail-page'
 import { OrdersPage } from '@/pages/orders-page'
 import { OverviewPage } from '@/pages/overview-page'
@@ -38,6 +39,7 @@ export const router = createHashRouter([
       { path: 'customers/:id', element: <CustomerDetailPage /> },
       { path: 'inventory', element: <InventoryPage /> },
       { path: 'inventory/syncs', element: <SyncHistoryPage /> },
+      { path: 'inventory/pushes', element: <StockPushesPage /> },
       { path: 'inventory/:id', element: <ProductDetailPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'api-calls', element: <Navigate to="/api-calls/inventory" replace /> },

@@ -6,6 +6,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
   const [done, setDone] = useState(false)
   return (
     <Button
+      type="button"
       variant="outline"
       size="sm"
       onClick={async () => {

@@ -20,6 +20,16 @@ export interface Integration {
   currency: string | null
   /** Show an estimated stock next to the shop's reported one: the last report minus the orders since. */
   estimate_stock: boolean
+  /** Stock write-back (0043): where WorkRelay sends the shop its stock numbers. The signing secret is never readable. */
+  stock_push_url: string | null
+  stock_push_enabled: boolean
+  /** The last time the shop passed the signed test for the current address and secret. */
+  stock_push_verified_at: string | null
+  /** A platform admin blocked write-back for this shop. */
+  stock_push_locked: boolean
+  /** Why WorkRelay switched it off by itself, if it did. */
+  stock_push_paused_reason: string | null
+  stock_push_has_secret: boolean
 }
 
 export interface WebhookEvent {
@@ -306,11 +316,56 @@ export interface SyncRun {
   total_count: number
 }
 
-/** A row of sync_run_changes: a product the sync added or whose stock it moved. */
+/** A row of sync_run_changes: a product the sync added, or whose stock moved or price changed (the other side is null). */
 export interface SyncChange {
   sku: string
   name: string
   stock_before: number | null
-  stock_after: number
+  stock_after: number | null
+  price_before: number | null
+  price_after: number | null
+  currency_before: string | null
+  currency_after: string | null
+  total_count: number
+}
+
+/** A row of list_stock_pushes: one request WorkRelay made to a shop's stock address (or a test). */
+export interface StockPushRequest {
+  id: string
+  integration_id: string
+  integration_name: string
+  kind: 'stock' | 'test'
+  item_count: number
+  status: 'sending' | 'ok' | 'failed' | 'cancelled'
+  http_status: number | null
+  error: string | null
+  created_at: string
+  finished_at: string | null
+  total_count: number
+}
+
+/** A row of stock_push_request_items: one SKU in a request. */
+export interface StockPushItem {
+  sku: string
+  name: string
+  stock: number | null
+  status: 'pending' | 'sending' | 'sent' | 'failed' | 'skipped' | 'cancelled'
+  note: string | null
+  total_count: number
+}
+
+/** A row of list_stock_conflicts: the shop's report disagreed with the number WorkRelay had pushed. */
+export interface StockConflict {
+  id: string
+  integration_id: string
+  integration_name: string
+  product_id: string
+  sku: string
+  name: string
+  workrelay_value: number
+  shop_value: number
+  detected_at: string
+  status: 'open' | 'kept_shop' | 'sent_workrelay' | 'agreed'
+  decided_at: string | null
   total_count: number
 }

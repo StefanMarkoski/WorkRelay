@@ -28,7 +28,7 @@ export interface SyncNowResult {
 }
 
 /** The sentence behind a refused or failed call: the function's own readable detail when it sent one. */
-async function refusalText(error: unknown): Promise<string> {
+export async function refusalText(error: unknown): Promise<string> {
   try {
     const body = await (error as { context?: Response }).context?.json()
     if (body?.detail) return String(body.detail)

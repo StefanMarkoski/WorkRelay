@@ -171,3 +171,39 @@ describe('shop integration guide', () => {
     })
   })
 })
+
+describe('stock write-back section of the guide', () => {
+  const section = doc.slice(doc.indexOf('### Write-back: WorkRelay tells your shop'), doc.indexOf('## 11. Testing the connection'))
+  const blocks = [...section.matchAll(/```json\n([\s\S]*?)```/g)].map((m) => JSON.parse(m[1]) as Record<string, any>)
+
+  it('has the two examples it promises, and the stock one has the keys WorkRelay really sends', async () => {
+    expect(blocks.map((b) => b.type)).toEqual(['stock.update', 'stock.test'])
+    const { pushPendingStock } = await import('./stock-push.ts')
+    const sent: string[] = []
+    await pushPendingStock({
+      log,
+      http: { post: async (_u, _h, body) => { sent.push(body); return { status: 200, body: '' } } },
+      store: {
+        claim: async () => [{ requestId: 'r', integrationId: 'i', storeId: 'shop-eu-001', url: 'https://shop.example.com/s', secret: 'wr_sign_x', items: [{ sku: 'A', stock: 1, seq: 1, as_of: '2026-10-31T12:00:00Z' }] }],
+        stillAllowed: async () => true, complete: async () => {}, beginTest: async () => { throw new Error('x') }, finishTest: async () => {},
+      },
+    })
+    const real = JSON.parse(sent[0]) as Record<string, any>
+    expect(Object.keys(blocks[0]).sort()).toEqual(Object.keys(real).sort())
+    expect(Object.keys(blocks[0].items[0]).sort()).toEqual(Object.keys(real.items[0]).sort())
+  })
+
+  it('the Node verification snippet accepts a real signed request and refuses a tampered or old one', async () => {
+    const { createRequire } = await import('node:module')
+    const { prepare } = await import('./stock-push.ts')
+    const snippet = section.match(/```js\n([\s\S]*?)```/)![1]
+    const verify = new Function('require', `${snippet}\nreturn verifyWorkRelay`)(createRequire(import.meta.url)) as (s: string, h: Record<string, string>, b: string) => boolean
+    const secret = `wr_sign_${'a'.repeat(64)}`
+    const p = await prepare(secret, 'req-1', { type: 'stock.update', items: [] }, new Date())
+    expect(verify(secret, p.headers, p.body)).toBe(true)
+    expect(verify(secret, p.headers, p.body + ' ')).toBe(false)
+    expect(verify(`wr_sign_${'b'.repeat(64)}`, p.headers, p.body)).toBe(false)
+    const old = await prepare(secret, 'req-1', { type: 'stock.update', items: [] }, new Date(Date.now() - 6 * 60_000))
+    expect(verify(secret, old.headers, old.body)).toBe(false)
+  })
+})

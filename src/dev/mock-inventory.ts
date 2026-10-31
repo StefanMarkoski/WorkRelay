@@ -22,7 +22,7 @@ export function listProducts(db: Record<string, Row[]>, args: Record<string, any
         .sort((a, b) => String(when(b.o)).localeCompare(String(when(a.o))))
       const fromOrders = lines.find(({ i, o }) => i.unit_price_minor != null && o.currency)
       const since = Date.now() - 30 * 86_400_000
-      const sold = lines.filter(({ o }) => o.status !== 'cancelled' && new Date(when(o)).getTime() >= since).reduce((n, { i }) => n + (i.quantity ?? 0), 0)
+      const sold = lines.filter(({ o }) => o.status !== 'cancelled' && o.fulfillment_status !== 'returned' && new Date(when(o)).getTime() >= since).reduce((n, { i }) => n + (i.quantity ?? 0), 0)
       const effective = p.notify_on_override ?? p.notify_on ?? null
       const hasShopPrice = p.price_minor != null
       return {
@@ -61,7 +61,7 @@ export function stockEstimates(db: Record<string, Row[]>, args: Record<string, a
       let sold = 0
       for (const it of db.order_items ?? []) {
         const o = (db.orders ?? []).find((x) => x.id === it.order_id)
-        if (!o || o.integration_id !== p.integration_id || o.status === 'cancelled' || String(it.sku ?? '').trim() !== p.sku) continue
+        if (!o || o.integration_id !== p.integration_id || o.status === 'cancelled' || o.fulfillment_status === 'returned' || String(it.sku ?? '').trim() !== p.sku) continue
         if (new Date(o.placed_at ?? o.created_at).getTime() > new Date(p.reported_at).getTime()) sold += it.quantity ?? 0
       }
       return { product_id: p.id, estimated: p.stock - sold, sold_since: sold, as_of: p.reported_at }
@@ -86,9 +86,10 @@ export function demoSyncRuns(db: Record<string, Row[]>): Row[] {
 }
 
 const DEMO_CHANGES: Row[] = [
-  { sku: 'BIKE-ROAD-700', name: 'Road bike 700c', stock_before: 12, stock_after: 3 },
-  { sku: 'GC-50', name: 'Gift card 50', stock_before: 9, stock_after: 4 },
-  { sku: 'KEY-STEAM-10', name: 'Steam key 10', stock_before: null, stock_after: 250 },
+  { sku: 'BIKE-ROAD-700', name: 'Road bike 700c', stock_before: 12, stock_after: 3, price_before: null, price_after: null, currency_before: null, currency_after: null },
+  { sku: 'GC-50', name: 'Gift card 50', stock_before: 9, stock_after: 4, price_before: 5000, price_after: 5500, currency_before: 'MKD', currency_after: 'MKD' },
+  { sku: 'KEY-STEAM-10', name: 'Steam key 10', stock_before: null, stock_after: 250, price_before: null, price_after: 1200, currency_before: null, currency_after: 'MKD' },
+  { sku: 'MUG-WHITE', name: 'White mug', stock_before: null, stock_after: null, price_before: 400, price_after: 450, currency_before: 'MKD', currency_after: 'MKD' },
 ]
 
 /** Mirrors list_sync_runs (sorting and paging) and sync_run_changes. */

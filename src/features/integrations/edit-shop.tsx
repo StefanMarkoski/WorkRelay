@@ -10,6 +10,7 @@ import { timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration } from '@/types/db'
 import { functionsBaseUrl, useSignupAutomations } from './queries'
+import { StockWriteBack } from './stock-write-back'
 
 const SAMPLE = `{
   "event_id": "cust_77:created",
@@ -154,12 +155,14 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
             <p className="text-sm font-medium">Estimate stock between syncs</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Optional. Next to the stock your shop reports, WorkRelay shows an estimate: the last reported number minus the pieces ordered since.
-              Your shop stays the source of truth, and every new sync replaces the estimate. Cancelled orders are not counted.
+              Your shop stays the source of truth, and every new sync replaces the estimate. Cancelled and returned orders are not counted.
             </p>
           </div>
           <Switch checked={estimate} onChange={setEstimate} label="Estimate stock between syncs" />
         </div>
       </div>
+
+      <StockWriteBack shop={shop} />
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>

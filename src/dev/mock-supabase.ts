@@ -7,6 +7,7 @@ import { mountDataToggle } from './data-toggle'
 import { customerOrders, deriveCustomers, listCustomers } from './mock-customers'
 import { insightsRpc } from './mock-insights'
 import { failuresOlderThan, listFailures } from './mock-failures'
+import { seedStockPush, stockPushRpc, stockPushTest } from './mock-stock-push'
 import { listProducts, listSyncRuns, productOrders, stockEstimates, syncRunChanges } from './mock-inventory'
 import { buildDataset, readMode } from './mock-datasets'
 
@@ -149,6 +150,7 @@ const SIGNUPS: Row[] = (DB.integrations ?? []).some((i) => i.track_signups)
     ]
   : []
 DB.customers = deriveCustomers(DB.orders ?? [], MODE === 'empty' ? [] : SIGNUPS)
+seedStockPush(DB)
 mountDataToggle(MODE)
 
 class Query {
@@ -229,6 +231,7 @@ export const supabase: any = {
     }
     if (name === 'list_failures') return Promise.resolve({ data: MODE === 'empty' ? [] : listFailures(DB, args), error: null })
     if (name === 'stock_estimates') return Promise.resolve({ data: stockEstimates(DB, args), error: null })
+    { const r = stockPushRpc(DB, name, args); if (r.handled) return Promise.resolve({ data: r.data ?? null, error: r.error ?? null }) }
     if (name === 'set_integration_estimate_stock') {
       for (const i of DB.integrations ?? []) if (i.id === args?.p_id) i.estimate_stock = !!args?.p_enabled
       return Promise.resolve({ data: null, error: null })
@@ -271,6 +274,7 @@ export const supabase: any = {
   },
   functions: {
     invoke: (name: string, opts?: { body?: { integration_id?: string } }) => {
+      if (name === 'stock-push-test') return Promise.resolve({ data: stockPushTest(DB, opts?.body?.integration_id ?? ''), error: null })
       if (name !== 'sync-now') return Promise.resolve({ data: {}, error: null })
       // Dev stand-in for the sync-now function: spends a call from the shop's window and stamps the check.
       const row = (DB.integration_sync ?? []).find((r) => r.integration_id === opts?.body?.integration_id)

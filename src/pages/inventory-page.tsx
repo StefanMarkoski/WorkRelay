@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Boxes, History, Search } from 'lucide-react'
+import { Boxes, History, Search, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +23,7 @@ import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { useStockEstimates } from '@/features/inventory/estimates'
+import { useOpenConflicts } from '@/features/stock-push/queries'
 import type { Product } from '@/types/db'
 
 const PAGE_SIZE = 25
@@ -36,6 +37,7 @@ const SCOPES: { id: Scope; label: string }[] = [
 export function InventoryPage() {
   const { current, canManage } = useWorkspace()
   const integrations = useIntegrations()
+  const conflicts = (useOpenConflicts().data ?? []).length
   const [shopId, setShopId] = useState('') // '' = all shops together
   const [scope, setScope] = useState<Scope>('all')
   const [searchInput, setSearchInput] = useState('')
@@ -80,9 +82,14 @@ export function InventoryPage() {
         title="Inventory"
         description="Your products and how many pieces are left, as reported by each shop. Products also appear here once they show up on an order."
         actions={
-          <Link to="/inventory/syncs" className={buttonVariants({ variant: 'outline' })}>
-            <History aria-hidden /> Sync history
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/inventory/pushes" className={buttonVariants({ variant: 'outline' })}>
+              <Send aria-hidden /> Stock pushes{conflicts > 0 ? <Badge tone="warning">{conflicts} to decide</Badge> : null}
+            </Link>
+            <Link to="/inventory/syncs" className={buttonVariants({ variant: 'outline' })}>
+              <History aria-hidden /> Sync history
+            </Link>
+          </div>
         }
       />
       {hasProducts && (

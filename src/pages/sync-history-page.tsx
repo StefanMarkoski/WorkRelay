@@ -12,7 +12,7 @@ import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/state
 import { useIntegrations } from '@/features/integrations/queries'
 import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
-import { formatDateTime, timeAgo } from '@/lib/format'
+import { formatDateTime, formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { SyncChange, SyncRun } from '@/types/db'
@@ -46,6 +46,13 @@ function SortHead({ id, label, sort, desc, onSort, className }: { id: SortKey; l
   )
 }
 
+/** "10.00 MKD" for a price that appeared, "10.00 MKD → 12.00 MKD" for one that moved, a dash when the sync left the price alone. */
+function priceChange(c: SyncChange): string {
+  if (c.price_after === null) return '—'
+  const after = formatMoney(c.price_after, c.currency_after)
+  return c.price_before === null ? after : `${formatMoney(c.price_before, c.currency_before)} → ${after}`
+}
+
 /** What one sync changed, fetched when the row is opened. */
 function Changes({ run }: { run: SyncRun }) {
   const q = useQuery({
@@ -69,7 +76,7 @@ function Changes({ run }: { run: SyncRun }) {
   if (rows.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        {run.received === 0 ? 'The shop sent an empty list, so nothing could change.' : `All ${run.received.toLocaleString()} product${run.received === 1 ? '' : 's'} already had these numbers: no stock moved and nothing new was added.`}
+        {run.received === 0 ? 'The shop sent an empty list, so nothing could change.' : `All ${run.received.toLocaleString()} product${run.received === 1 ? '' : 's'} already had these numbers: no stock moved, no price changed and nothing new was added.`}
       </p>
     )
   }
@@ -77,13 +84,13 @@ function Changes({ run }: { run: SyncRun }) {
   return (
     <div>
       <p className="mb-2 text-xs text-muted-foreground">
-        {run.changed.toLocaleString()} of {run.received.toLocaleString()} product{run.received === 1 ? '' : 's'} changed: new, or their stock moved.
-        {run.received > run.changed ? ` The other ${(run.received - run.changed).toLocaleString()} had the same stock as before.` : ''}
+        {run.changed.toLocaleString()} of {run.received.toLocaleString()} product{run.received === 1 ? '' : 's'} changed: new, or their stock or price changed.
+        {run.received > run.changed ? ` The other ${(run.received - run.changed).toLocaleString()} had the same stock and price as before.` : ''}
       </p>
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-left text-[13px]">
           <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-            <tr><th className="px-3 py-2 font-medium">Product</th><th className="px-3 py-2 text-right font-medium">Before</th><th className="px-3 py-2 text-right font-medium">After</th></tr>
+            <tr><th className="px-3 py-2 font-medium">Product</th><th className="px-3 py-2 text-right font-medium">Stock before</th><th className="px-3 py-2 text-right font-medium">Stock after</th><th className="px-3 py-2 text-right font-medium">Price</th></tr>
           </thead>
           <tbody>
             {rows.map((c) => (
@@ -92,8 +99,9 @@ function Changes({ run }: { run: SyncRun }) {
                   <span className="font-medium [overflow-wrap:anywhere]">{c.name}</span>
                   <span className="ml-2 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">{c.sku}</span>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{c.stock_before === null ? 'new' : c.stock_before.toLocaleString()}</td>
-                <td className="px-3 py-2 text-right font-medium tabular-nums">{c.stock_after.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{c.stock_after === null ? '—' : c.stock_before === null ? 'new' : c.stock_before.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums">{c.stock_after === null ? '—' : c.stock_after.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{priceChange(c)}</td>
               </tr>
             ))}
           </tbody>

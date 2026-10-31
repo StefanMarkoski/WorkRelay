@@ -123,7 +123,7 @@ export function ProductDetailPage() {
           {p.barcode && <p className="text-muted-foreground">Barcode <span className="ml-2 font-mono text-xs text-foreground">{p.barcode}</span></p>}
           <p className="text-muted-foreground">Last reported by the shop <span className="ml-2 text-foreground">{p.reported_at ? formatDateTime(p.reported_at) : 'Never'}</span></p>
           <p className="pt-1 text-xs text-muted-foreground">
-            Sales leave out cancelled orders. The price is the shop's own when it reports one, otherwise the latest price on an order.
+            Sales leave out cancelled and returned orders. The price is the shop's own when it reports one, otherwise the latest price on an order.
           </p>
         </CardBody>
       </Card>

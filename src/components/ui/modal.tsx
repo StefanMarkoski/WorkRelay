@@ -25,7 +25,8 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      // React lets a nested dialog's close event bubble to this one: only react to our own
+      onClose={(e) => e.target === e.currentTarget && onClose()}
       onClick={(e) => e.target === ref.current && onClose()}
       className="m-auto w-[min(32rem,calc(100vw-2rem))] rounded-lg border bg-popover p-0 text-popover-foreground backdrop:bg-black/60"
     >

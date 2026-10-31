@@ -34,3 +34,7 @@ verify_jwt = false
 # CORS headers and readable refusals. It runs the same pull as the scheduler, on the same call budget.
 [functions.sync-now]
 verify_jwt = false
+
+# The owner's signed test of a shop's stock address. It authenticates the caller itself (getCaller) and only the workspace owner is accepted.
+[functions.stock-push-test]
+verify_jwt = false

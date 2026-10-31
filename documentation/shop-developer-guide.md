@@ -234,7 +234,9 @@ Content-Type: application/json
   off, or limited to some shops. If your shop also pushes automatically on a timer or after each sale, tell the team, so they can leave that shop out of the automation or have WorkRelay switch it off.
   Scheduled calls from WorkRelay and its **Sync now** button never announce.
 - Each push (and each scheduled call) appears in Integrations → Event history as `inventory.push` or `inventory.pull`, with a short summary, for 30 days.
-- Every sync, pushed by the shop or asked for by WorkRelay, also appears in **Inventory → Sync history**: when, which shop, who started it (your `synced_by`), how many products, which ones changed (stock before and after), and the reason when it failed. Kept for 30 days.
+- Every sync, pushed by the shop or asked for by WorkRelay, also appears in **Inventory → Sync history**: when, which shop, who started it (your `synced_by`), how many products, which ones changed (stock before and after, and price before and after), and the reason when it failed. Kept for 30 days.
+
+- **Stock write-back (optional, off by default).** A shop that estimates stock can also receive WorkRelay's number: after an order, a cancellation or a return, WorkRelay sends your shop a signed request with the SKU and the new absolute stock number. The workspace owner switches it on per shop after a signed test, and switching it off in WorkRelay stops everything at once. Your shop must verify the signature. If your next report disagrees with what WorkRelay sent, the owner decides which number stays (**Inventory → Stock pushes**). The request format, a Node and a PHP verification snippet and the retry rules are in the integration guide, under *Write-back*. A cancelled or `returned` order gives its pieces back to the estimate.
 
 Besides the button, you can also push whenever a product's stock changes (after a sale, a restock or an admin edit). Batch changes for a few seconds so a busy shop sends one request, not one per order.
 
