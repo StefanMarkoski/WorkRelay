@@ -160,7 +160,9 @@ describe('low-stock notifications', () => {
       expect(r.ok).toBe(true)
       if (!r.ok) return
       expect(validateDefinition(r.definition).ok).toBe(true)
-      const rendered = renderTemplate((r.definition.steps[0] as any).body, templateView({ product }), { json: true })
+      // the sentence is written by the database; its text, hostile name included, must still come out as valid JSON
+      const line = `Low stock: ${product.name} (SKU ${product.sku}) has ${product.stock} left.`
+      const rendered = renderTemplate((r.definition.steps[0] as any).body, templateView({ product: { ...product, line, source: product.shop } }), { json: true })
       const parsed = JSON.parse(rendered)
       expect(rendered).toContain('Road \\"Pro\\" bike')
       expect(rendered).toContain('BIKE-1')
@@ -182,29 +184,35 @@ describe('low-stock notifications', () => {
     expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'low_stock', integration_ids: [] }).ok).toBe(false)
   })
 
-  describe('source', () => {
+  describe('the prepared line and its source', () => {
     const cfg = { channel: 'discord', url: URL_OK, event: 'low_stock' }
     const render = (config: object, p: object) =>
       JSON.parse(renderTemplate(((buildPresetDefinition('notify', config) as any).definition.steps[0] as any).body, templateView({ product: p }), { json: true })).content as string
+    const line = 'Low stock: Road "Pro" bike (SKU BIKE-1) has 5 left, at or below its alert level of 5.'
 
-    it('ends the message with the shop’s name for a number the shop reported', () => {
-      expect(render(cfg, { ...product, source: 'Game Store' })).toBe('Low stock: Road "Pro" bike (SKU BIKE-1) has 5 left, at or below its alert level of 5. Source: Game Store')
+    it('is the database’s sentence followed by the shop’s name when the shop reported the number', () => {
+      expect(render(cfg, { ...product, line, source: 'Game Store' })).toBe(`${line} Source: Game Store`)
     })
 
     it('says WorkRelay and the shop for an estimate', () => {
-      expect(render(cfg, { ...product, stock: 4, source: 'WorkRelay (estimated for Game Store)' })).toContain('has 4 left, at or below its alert level of 5. Source: WorkRelay (estimated for Game Store)')
+      expect(render(cfg, { ...product, line, source: 'WorkRelay (estimated for Game Store)' })).toContain('Source: WorkRelay (estimated for Game Store)')
     })
 
-    it('gives a generic webhook the source and whether it is an estimate as fields', () => {
+    it('carries a summary the same way, with nothing about one product in it', () => {
+      const summary = 'Low stock: 5 more products in Game Store are already at or below their alert levels (A, B, C, …). See Inventory → Low stock.'
+      expect(render(cfg, { line: summary, source: 'Game Store', kind: 'summary', count: 5 })).toBe(`${summary} Source: Game Store`)
+    })
+
+    it('gives a generic webhook the source, the kind and the count as fields', () => {
       const r = buildPresetDefinition('notify', { ...cfg, channel: 'generic' }) as any
-      const body = JSON.parse(renderTemplate(r.definition.steps[0].body, templateView({ product: { ...product, source: 'WorkRelay (estimated for Game Store)', estimated: true } }), { json: true }))
-      expect(body).toMatchObject({ shop: 'Game Store', source: 'WorkRelay (estimated for Game Store)', estimated: 'true' })
+      const body = JSON.parse(renderTemplate(r.definition.steps[0].body, templateView({ product: { ...product, line, source: 'WorkRelay (estimated for Game Store)', kind: 'estimated', count: null, estimated: true } }), { json: true }))
+      expect(body).toMatchObject({ shop: 'Game Store', source: 'WorkRelay (estimated for Game Store)', kind: 'estimated', estimated: 'true' })
     })
 
-    it('has no per-automation setting any more: the trigger is the same with or without the old key', () => {
+    it('has no per-automation setting: the trigger is the same with or without the old key', () => {
       const t = (config: object) => (buildPresetDefinition('notify', config) as any).definition.trigger
       expect(t(cfg)).toEqual({ type: 'low_stock' })
-      expect(t({ ...cfg, include_estimates: true })).toEqual({ type: 'low_stock' }) // an automation saved with it still loads
+      expect(t({ ...cfg, include_estimates: true })).toEqual({ type: 'low_stock' })
     })
   })
 

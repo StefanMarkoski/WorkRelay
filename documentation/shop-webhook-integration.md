@@ -397,8 +397,10 @@ How WorkRelay uses it:
   report; entering 0 there removes it so the shop's number applies again. Different products can have very different numbers
   (bikes at 5, nails at 5,000). A product with no number never counts as low.
 - **Low-stock alerts.** If the workspace has the automation *a product runs low on stock*, it fires **once** when a product becomes low,
-  not on every report, and fires again only after the stock has gone back above the number. The **first** stock number ever reported for
-  a product never alerts (it only starts tracking), so connecting a shop whose products are already low does not send a burst.
+  not on every report, and fires again only after the stock has gone back above the number. A product that is **already low the first time
+  the shop reports it** alerts too, but with a cap so connecting a shop whose products are mostly low cannot flood a channel: up to **3 alerts per
+  shop per 90 seconds** (the lowest stock first), and every other product in that sync arrives as **one summary message** ("5 more products in
+  Game Store are already at or below their alert levels (A, B, C, …)"). Every one of them is marked low, so none alerts a second time.
   **Estimated stock (optional).** A shop that has *Estimate stock between syncs* switched on also alerts before it reports again, with the same
   automation: nothing more to switch on. The estimate is the last reported stock minus the pieces ordered since. It alerts once when the orders take
   it to the alert level, is re-armed by a cancellation that lifts it back above the level, and is started over by every report from the shop. A

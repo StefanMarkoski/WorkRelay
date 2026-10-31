@@ -285,7 +285,8 @@ export function AutomationsPage() {
                   <p className="-mt-2 text-xs text-muted-foreground">
                     Covers every product. Each one alerts once when its stock reaches its own "Notify on" number (bikes at 5, nails at 5,000),
                     set per product on <Link to="/inventory" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Inventory</Link> or sent by the shop.
-                    Products without a number never alert. A shop that estimates its stock (switch it on when you edit the shop) also alerts when its
+                    Products without a number never alert. A product that is already low the first time a shop reports it alerts too: up to 3
+                    at a time, and the rest arrive as one summary message, so connecting a big shop cannot flood the channel. A shop that estimates its stock (switch it on when you edit the shop) also alerts when its
                     orders take the estimate to that number, without waiting for the shop to report again. Every message ends with its source: the
                     shop's name for a number the shop reported, or "WorkRelay (estimated for …)" for an estimate.
                   </p>

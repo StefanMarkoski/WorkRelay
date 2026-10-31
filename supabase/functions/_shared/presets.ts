@@ -53,8 +53,9 @@ const MESSAGES: Record<NotifyConfig['event'], string> = {
   customer_signed_up: 'New customer signed up: {{customer.display_name}} ({{customer.email}})',
   customer_first_order: 'New customer {{customer.display_name}} ({{customer.email}}) placed their first order: {{order.display_number}}, {{order.total}}',
   products_synced: '{{sync.by}} has synced their products{{sync.where}}',
-  // The source is the shop's name for a number the shop reported, or "WorkRelay (estimated for <shop>)" for the estimate.
-  low_stock: 'Low stock: {{product.name}} (SKU {{product.sku}}) has {{product.stock}} left, at or below its alert level of {{product.threshold}}. Source: {{product.source}}',
+  // The sentence is written by the database (one product, or a summary of several), so one template covers both. The source is the shop's
+  // name for a number the shop reported, or "WorkRelay (estimated for <shop>)" for an estimate.
+  low_stock: '{{product.line}} Source: {{product.source}}',
 }
 
 /** Placeholders sit inside JSON string literals; the engine escapes their values. */
@@ -69,7 +70,7 @@ export function notifyBody(config: NotifyConfig): string {
     return `{"event":"products.synced","by":"{{sync.by}}","user":"{{sync.name}}","role":"{{sync.role}}","shop":"{{sync.shop}}","message":"${text}"}`
   }
   if (config.event === 'low_stock') {
-    return `{"event":"product.low_stock","product":"{{product.name}}","sku":"{{product.sku}}","stock":"{{product.stock}}","notify_on":"{{product.threshold}}","unit":"{{product.unit}}","shop":"{{product.shop}}","source":"{{product.source}}","estimated":"{{product.estimated}}","message":"${text}"}`
+    return `{"event":"product.low_stock","product":"{{product.name}}","sku":"{{product.sku}}","stock":"{{product.stock}}","notify_on":"{{product.threshold}}","unit":"{{product.unit}}","shop":"{{product.shop}}","source":"{{product.source}}","kind":"{{product.kind}}","count":"{{product.count}}","estimated":"{{product.estimated}}","message":"${text}"}`
   }
   if (config.event === 'customer_first_order') {
     return `{"event":"customer.first_order","customer":"{{customer.display_name}}","email":"{{customer.email}}","order_number":"{{order.display_number}}","total":"{{order.total}}","currency":"{{order.currency}}","message":"${text}"}`
