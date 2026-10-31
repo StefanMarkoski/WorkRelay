@@ -21,6 +21,8 @@ export const notifyConfigSchema = z.object({
   integration_ids: z.array(z.uuid()).min(1, 'Pick at least one shop').max(50).optional(),
   /** Older form of the above for the signup event (one shop). Still accepted. */
   integration_id: z.uuid().optional(),
+  /** Low stock only: also alert when the estimated stock crosses the level (shops that estimate stock). */
+  include_estimates: z.boolean().optional(),
 })
 
 export const reviewLargeConfigSchema = z.object({
@@ -53,10 +55,13 @@ const MESSAGES: Record<NotifyConfig['event'], string> = {
   products_synced: '{{sync.by}} has synced their products{{sync.where}}',
   low_stock: 'Low stock: {{product.name}} (SKU {{product.sku}}) has {{product.stock}} left, at or below its alert level of {{product.threshold}}. Shop: {{product.shop}}',
 }
+/** The same message for an automation that also receives estimates: the note is empty for a real number, and says so for an estimate. */
+const LOW_STOCK_WITH_ESTIMATES =
+  'Low stock: {{product.name}} (SKU {{product.sku}}) has {{product.stock}} left{{product.estimate_note}}, at or below its alert level of {{product.threshold}}. Shop: {{product.shop}}'
 
 /** Placeholders sit inside JSON string literals; the engine escapes their values. */
 export function notifyBody(config: NotifyConfig): string {
-  const text = MESSAGES[config.event]
+  const text = config.event === 'low_stock' && config.include_estimates ? LOW_STOCK_WITH_ESTIMATES : MESSAGES[config.event]
   if (config.channel === 'discord') return `{"content":"${text}"}`
   if (config.channel === 'slack') return `{"text":"${text}"}`
   if (config.event === 'customer_signed_up') {
@@ -86,7 +91,7 @@ export function buildNotifyDefinition(config: NotifyConfig): WorkflowDefinition 
   const trigger: WorkflowDefinition['trigger'] =
     config.event === 'customer_signed_up' ? { type: 'customer_signup', ...limit }
     : config.event === 'customer_first_order' ? { type: 'customer_first_order', ...limit }
-    : config.event === 'low_stock' ? { type: 'low_stock', ...limit }
+    : config.event === 'low_stock' ? { type: 'low_stock', ...limit, ...(config.include_estimates ? { include_estimates: true } : {}) }
     : config.event === 'products_synced' ? { type: 'products_synced', ...limit }
     : config.event === 'created' ? { type: 'order_created', ...limit }
     : config.event === 'cancelled' ? { type: 'order_status_changed', to_status: 'cancelled', ...limit }
@@ -131,7 +136,7 @@ export function describePreset(kind: PresetKind, config: Record<string, any>): {
     try { host = new URL(String(config.url)).hostname } catch { /* keep default */ }
     return {
       title: `Notify ${CHANNEL_LABELS[config.channel as NotifyConfig['channel']] ?? 'webhook'} when ${EVENT_LABELS[config.event as NotifyConfig['event']] ?? 'an event happens'}`,
-      summary: `Posts a message to ${host}`,
+      summary: `Posts a message to ${host}${config.event === 'low_stock' && config.include_estimates ? ', also on estimated stock' : ''}`,
     }
   }
   return {

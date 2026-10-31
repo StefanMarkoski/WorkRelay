@@ -182,6 +182,36 @@ describe('low-stock notifications', () => {
     expect(buildPresetDefinition('notify', { channel: 'slack', url: URL_OK, event: 'low_stock', integration_ids: [] }).ok).toBe(false)
   })
 
+  describe('with estimates', () => {
+    const cfg = { channel: 'discord', url: URL_OK, event: 'low_stock', include_estimates: true }
+    const render = (config: object, p: object) =>
+      JSON.parse(renderTemplate(((buildPresetDefinition('notify', config) as any).definition.steps[0] as any).body, templateView({ product: p }), { json: true })).content as string
+
+    it('marks the trigger, and leaves it out when off or when the event is not low stock', () => {
+      const t = (config: object) => (buildPresetDefinition('notify', config) as any).definition.trigger
+      expect(t(cfg)).toEqual({ type: 'low_stock', include_estimates: true })
+      expect(t({ ...cfg, include_estimates: false })).toEqual({ type: 'low_stock' })
+      expect(t({ ...cfg, event: 'created' })).toEqual({ type: 'order_created' })
+      expect(validateDefinition((buildPresetDefinition('notify', cfg) as any).definition).ok).toBe(true)
+    })
+
+    it('says in the message when the number is an estimate, and not when it is the shop’s own', () => {
+      const real = { ...product, estimate_note: '' }
+      const est = { ...product, stock: 4, estimate_note: ' (estimated from the orders since the shop\'s last report)' }
+      expect(render(cfg, real)).toBe('Low stock: Road "Pro" bike (SKU BIKE-1) has 5 left, at or below its alert level of 5. Shop: Game Store')
+      expect(render(cfg, est)).toContain('has 4 left (estimated from the orders since the shop\'s last report), at or below')
+    })
+
+    it('does not change the wording of an automation that does not ask for estimates', () => {
+      expect(render({ ...cfg, include_estimates: undefined }, { ...product, estimate_note: ' (x)' })).not.toContain('(x)')
+    })
+
+    it('says so in the list', () => {
+      expect(describePreset('notify', cfg).summary).toContain('also on estimated stock')
+      expect(describePreset('notify', { ...cfg, include_estimates: false }).summary).not.toContain('estimated')
+    })
+  })
+
   it('says what it does in the list', () => {
     expect(describePreset('notify', { channel: 'slack', event: 'low_stock', url: URL_OK }).title).toBe('Notify Slack when a product runs low on stock')
   })

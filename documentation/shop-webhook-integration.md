@@ -399,6 +399,10 @@ How WorkRelay uses it:
 - **Low-stock alerts.** If the workspace has the automation *a product runs low on stock*, it fires **once** when a product becomes low,
   not on every report, and fires again only after the stock has gone back above the number. The **first** stock number ever reported for
   a product never alerts (it only starts tracking), so connecting a shop whose products are already low does not send a burst.
+  **Estimated stock (optional).** A shop that has *Estimate stock between syncs* switched on can also alert before it reports again: the
+  automation has a switch, *Also alert on estimated stock*. The estimate is the last reported stock minus the pieces ordered since. It alerts once
+  when the orders take it to the alert level, says in the message that the number is an estimate, is re-armed by a cancellation that lifts it back
+  above the level, and is started over by every report from the shop. A product that is already low by the shop's own number is not announced twice.
 - **Event history.** Every push and every scheduled pull appears under **Integrations → Event history** as `inventory.push` or
   `inventory.pull`, with a short summary (how many products, never the products themselves), so you can see that a feed arrived, was
   rejected or failed, and why. These entries are kept for 30 days.

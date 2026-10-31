@@ -23,8 +23,9 @@ export const triggerSchema = z.discriminatedUnion('type', [
   // `integration_id` (one shop) is the older form and still works.
   z.object({ type: z.literal('customer_signup'), integration_id: z.uuid().optional(), integration_ids: shops }),
   z.object({ type: z.literal('customer_first_order'), integration_ids: shops }),
-  // Fires once each time a product reaches its "Notify on" number (see migration 0015).
-  z.object({ type: z.literal('low_stock'), integration_ids: shops }),
+  // Fires once each time a product reaches its "Notify on" number (see migration 0015). With include_estimates it also fires when the
+  // estimated stock (last report minus the orders since) crosses it, for shops that estimate (migration 0033).
+  z.object({ type: z.literal('low_stock'), integration_ids: shops, include_estimates: z.boolean().optional() }),
   // Fires when a shop pushes its products to WorkRelay (see migration 0021). Scheduled pulls and Sync now do not.
   z.object({ type: z.literal('products_synced'), integration_ids: shops }),
   z.object({ type: z.literal('manual') }),

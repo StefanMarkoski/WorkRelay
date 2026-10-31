@@ -105,7 +105,7 @@ export function AutomationsPage() {
     const limit = selection ? { integration_ids: selection } : {}
     const config =
       editing.kind === 'notify'
-        ? { event: c.event, channel: c.channel, url: (c.url ?? '').trim(), ...limit }
+        ? { event: c.event, channel: c.channel, url: (c.url ?? '').trim(), ...limit, ...(c.event === 'low_stock' && c.include_estimates === 'true' ? { include_estimates: true } : {}) }
         : { threshold: Number(c.threshold), reviewer_role: c.reviewer_role, ...limit }
     try {
       await saveAutomation({ organizationId: current.id, id: editing.id, kind: editing.kind, config, enable: true })
@@ -277,7 +277,7 @@ export function AutomationsPage() {
                   <p className="-mt-2 text-xs text-muted-foreground">
                     Fires when a shop sends its products to WorkRelay, for example when someone presses the sync button in the shop's own admin.
                     The message says who did it, when the shop tells us, and a sync sent in several parts is announced once.
-                    Scheduled checks and <span className="font-medium text-foreground">Sync now</span> from WorkRelay do not count. The shop needs quick sync switched on by WorkRelay.
+                    Scheduled checks and <span className="font-medium text-foreground">Sync now</span> from WorkRelay do not count.
                     You decide who is notified, here: the shop cannot turn it off. To stop it for one shop, untick that shop below, or switch the automation off.
                   </p>
                 )}
@@ -287,6 +287,25 @@ export function AutomationsPage() {
                     set per product on <Link to="/inventory" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Inventory</Link> or sent by the shop.
                     Products without a number never alert.
                   </p>
+                )}
+                {editing.config.event === 'low_stock' && (
+                  <div className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium">Also alert on estimated stock</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          For shops that estimate stock (switch it on when you edit the shop): alert as soon as the orders since the shop's last
+                          report take the estimate to its level, without waiting for the shop to report again. The message says it is an estimate,
+                          and a new report from the shop starts it over. Off: only the shop's own numbers alert.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={editing.config.include_estimates === 'true'}
+                        onChange={(next) => setEditing((cur) => (cur ? { ...cur, config: { ...cur.config, include_estimates: next ? 'true' : 'false' } } : cur))}
+                        label="Also alert on estimated stock"
+                      />
+                    </div>
+                  </div>
                 )}
                 {editing.config.event === 'customer_signed_up' && signupShops.length === 0 && (
                   <p role="alert" className="-mt-2 text-xs text-destructive">
