@@ -31,7 +31,8 @@ insert into workflow_versions (id, workflow_id, organization_id, version, defini
   ('a5000000-0000-0000-0000-0000000000d1', 'a4000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 1, '{"trigger":{"type":"order_created"},"steps":[]}');
 update workflows set current_version_id = 'a5000000-0000-0000-0000-0000000000d1', enabled = true;
 insert into orders (id, organization_id, integration_id, external_id, last_event_at) values
-  ('a3000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', '1', now());
+  ('a3000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', '1', now()),
+  ('a3000000-0000-0000-0000-0000000000d2', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', '2', now()); -- a second order: a new order is announced once, so k1 needs its own
 
 do $$
 declare before_n bigint; after_n bigint;
@@ -53,7 +54,7 @@ begin
 
   select count(*) into before_n from net.http_request_queue;
   insert into order_events (organization_id, order_id, source, type, occurred_at, data) values
-    ('a0000000-0000-0000-0000-0000000000d1', 'a3000000-0000-0000-0000-0000000000d1', 'external', 'order.created', now(), '{"event_id":"k1","applied":[]}');
+    ('a0000000-0000-0000-0000-0000000000d1', 'a3000000-0000-0000-0000-0000000000d2', 'external', 'order.created', now(), '{"event_id":"k1","applied":[]}');
   select count(*) into after_n from net.http_request_queue;
   perform pg_temp.check('a newly queued run kicks the engine once', after_n = before_n + 1);
   perform pg_temp.check('the kick targets the run-engine endpoint and carries the secret',
@@ -63,7 +64,7 @@ begin
   -- a duplicate event queues no run, so no kick
   select count(*) into before_n from net.http_request_queue;
   insert into order_events (organization_id, order_id, source, type, occurred_at, data) values
-    ('a0000000-0000-0000-0000-0000000000d1', 'a3000000-0000-0000-0000-0000000000d1', 'external', 'order.created', now(), '{"event_id":"k1","applied":[]}');
+    ('a0000000-0000-0000-0000-0000000000d1', 'a3000000-0000-0000-0000-0000000000d2', 'external', 'order.created', now(), '{"event_id":"k1","applied":[]}');
   select count(*) into after_n from net.http_request_queue;
   perform pg_temp.check('a duplicate event does not kick the engine', after_n = before_n);
 

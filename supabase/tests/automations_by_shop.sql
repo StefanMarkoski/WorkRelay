@@ -53,6 +53,12 @@ insert into order_events (organization_id, order_id, source, type, occurred_at, 
   ('a0000000-0000-0000-0000-0000000000a1', 'a3000000-0000-0000-0000-0000000000a2', 'external', 'order.created', now(), '{"event_id":"o2","applied":["order_number"]}');
 select pg_temp.check('an order from shop 2 starts the all-shops one and the shops-2-and-3 one, not shop 1''s', pg_temp.fired() = '1,3');
 
+-- the same order sent again under a new event id is not a new order
+delete from workflow_runs;
+insert into order_events (organization_id, order_id, source, type, occurred_at, data) values
+  ('a0000000-0000-0000-0000-0000000000a1', 'a3000000-0000-0000-0000-0000000000a2', 'external', 'order.created', now(), '{"event_id":"o2-again","applied":["order_number"]}');
+select pg_temp.check('order.created sent again for the same order starts nothing: a new order is announced once', pg_temp.fired() = '');
+
 delete from workflow_runs;
 insert into order_events (organization_id, order_id, source, type, occurred_at, data) values
   ('a0000000-0000-0000-0000-0000000000a1', 'a3000000-0000-0000-0000-0000000000a2', 'external', 'order.status_changed', now(), '{"event_id":"o2s","applied":["status"],"status_to":"completed"}'),
