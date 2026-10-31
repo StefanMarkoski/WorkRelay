@@ -150,11 +150,14 @@ export function InventoryPage() {
                           <span className="font-medium tabular-nums">{p.stock.toLocaleString()}</span>
                         </span>
                       )}
-                      {(estimates?.get(p.id)?.sold_since ?? 0) > 0 && (
-                        <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums" title={`Estimate: ${p.stock?.toLocaleString()} reported, minus ${estimates.get(p.id)!.sold_since.toLocaleString()} ordered since.`}>
-                          ≈ {estimates.get(p.id)!.estimated.toLocaleString()} estimated
-                        </div>
-                      )}
+                      {(() => {
+                        const est = estimates?.get(p.id)
+                        return est && est.sold_since > 0 ? (
+                          <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums" title={`Estimate: ${p.stock?.toLocaleString()} reported, minus ${est.sold_since.toLocaleString()} ordered since.`}>
+                            ≈ {est.estimated.toLocaleString()} estimated
+                          </div>
+                        ) : null
+                      })()}
                     </TD>
                     <TD className="text-right"><NotifyEdit product={p} canEdit={canManage} /></TD>
                     <TD className="hidden text-right md:table-cell">
