@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CUSTOMER_EVENT_TYPES, customerWebhookSchema, type CustomerEventType } from './customer-contract.ts'
-import { authenticate, describeIssues, readJsonBody, type HandlerDeps } from './ingest.ts'
+import { authenticate, describeIssues, readJsonBody, storablePayload, type HandlerDeps } from './ingest.ts'
 import { json } from './keys.ts'
 
 /**
@@ -31,7 +31,7 @@ export async function handleCustomerWebhook(req: Request, deps: HandlerDeps): Pr
       integrationId: integration.id,
       eventId,
       eventType,
-      rawPayload: body.ok ? body.value : { unparseable: true },
+      rawPayload: storablePayload(body),
     }),
     deps.store.touchIntegration(integration.id).catch(() => undefined), // last-seen is best effort
   ])

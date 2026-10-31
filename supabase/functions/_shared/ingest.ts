@@ -33,6 +33,26 @@ export async function readJsonBody(req: Request): Promise<{ ok: true; value: unk
   }
 }
 
+const MAX_STORED_DEPTH = 20
+
+/**
+ * What to keep of a body in the event history. The column cannot hold a JSON null, and a body nested thousands of levels deep
+ * is not something to hand to the database, so those are kept as a marker instead of crashing the request (a 500 for the shop).
+ * A real payload is a handful of levels deep.
+ */
+export function storablePayload(body: { ok: true; value: unknown } | { ok: false; error: string }): unknown {
+  if (!body.ok) return { unparseable: true }
+  if (body.value === null) return { unparseable: true, reason: 'null' }
+  const stack: Array<[unknown, number]> = [[body.value, 1]]
+  while (stack.length > 0) {
+    const [v, depth] = stack.pop()!
+    if (v === null || typeof v !== 'object') continue
+    if (depth > MAX_STORED_DEPTH) return { unparseable: true, reason: 'too_deeply_nested' }
+    for (const child of Object.values(v)) stack.push([child, depth + 1])
+  }
+  return body.value
+}
+
 export function describeIssues(error: z.ZodError): string {
   // Paths and messages only: never echo submitted values (may contain PII).
   return error.issues
@@ -74,7 +94,7 @@ export async function handleOrderWebhook(req: Request, deps: HandlerDeps): Promi
       integrationId: integration.id,
       eventId,
       eventType,
-      rawPayload: body.ok ? body.value : { unparseable: true },
+      rawPayload: storablePayload(body),
     }),
     prefetchId ? deps.store.getOrder(integration.id, prefetchId).catch(() => undefined) : Promise.resolve(undefined),
     deps.store.touchIntegration(integration.id).catch(() => undefined), // last-seen is best effort

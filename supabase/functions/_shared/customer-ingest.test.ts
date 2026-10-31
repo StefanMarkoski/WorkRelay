@@ -146,6 +146,11 @@ describe('bad input', () => {
     expect((await send(ev({}, { occurred_at: 'yesterday', event_id: 'c3' }))).status).toBe(400)
   })
 
+  it('answers 400, not 500, to JSON null and to absurd nesting', async () => {
+    expect((await send('null')).status).toBe(400)
+    expect((await send('['.repeat(5000) + ']'.repeat(5000))).status).toBe(400)
+  })
+
   it('rejects malformed JSON and a missing event id, and lets a corrected resend through', async () => {
     expect((await send('{nope')).status).toBe(400)
     expect((await send({ event_type: 'customer.created', occurred_at: '2026-10-27T10:00:00Z', customer: { email: 'a@b.co' } })).status).toBe(400)

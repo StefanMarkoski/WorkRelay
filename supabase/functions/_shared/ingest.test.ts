@@ -187,6 +187,14 @@ describe('failures', () => {
     expect(store.events[0]).toMatchObject({ status: 'failed', error: 'malformed_json' })
   })
 
+  it('answers 400, not 500, to a body of JSON null or one nested absurdly deep, and keeps only a marker of it', async () => {
+    expect((await handleOrderWebhook(post('null'), deps())).status).toBe(400)
+    expect(store.events[0].rawPayload).toEqual({ unparseable: true, reason: 'null' })
+    const deep = '['.repeat(5000) + ']'.repeat(5000)
+    expect((await handleOrderWebhook(post(deep), deps())).status).toBe(400)
+    expect(store.events[1].rawPayload).toEqual({ unparseable: true, reason: 'too_deeply_nested' })
+  })
+
   it('rejects wrong types without echoing submitted values', async () => {
     const res = await handleOrderWebhook(post(ev({}, { totals: { total_minor: 'secret-ish 12.50' } })), deps())
     expect(res.status).toBe(400)
