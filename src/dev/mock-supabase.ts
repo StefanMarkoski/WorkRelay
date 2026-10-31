@@ -6,7 +6,7 @@
 import { mountDataToggle } from './data-toggle'
 import { customerOrders, deriveCustomers, listCustomers } from './mock-customers'
 import { insightsRpc } from './mock-insights'
-import { listProducts, productOrders } from './mock-inventory'
+import { listProducts, productOrders, stockEstimates } from './mock-inventory'
 import { buildDataset, readMode } from './mock-datasets'
 
 type Row = Record<string, any>
@@ -70,8 +70,8 @@ const DEMO_DB: Record<string, Row[]> = {
     { id: 'e2', order_id: 'o1', source: 'workrelay', type: 'note.added', occurred_at: ago(0.5), actor_user_id: 'u1', data: { note: 'Called the customer' } },
   ],
   integrations: [
-    { id: SHOP_2, organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'ignis-gaming-store', external_base_url: null, bound_at: ago(90), last_seen_at: ago(10), created_at: ago(120), track_signups: true, signups_enabled_at: ago(60 * 24 * 5), currency: 'USD' },
-    { id: SHOP_1, organization_id: ORG, kind: 'commerce', name: 'Game Store', status: 'connected', key_prefix: 'wr_live_7b84', external_store_id: 'pazarmax', external_base_url: null, bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150), track_signups: false, signups_enabled_at: null, currency: 'MKD' },
+    { id: SHOP_2, organization_id: ORG, kind: 'commerce', name: 'Game Store 2', status: 'connected', key_prefix: 'wr_live_c2e3', external_store_id: 'ignis-gaming-store', external_base_url: null, bound_at: ago(90), last_seen_at: ago(10), created_at: ago(120), track_signups: true, signups_enabled_at: ago(60 * 24 * 5), currency: 'USD', estimate_stock: true },
+    { id: SHOP_1, organization_id: ORG, kind: 'commerce', name: 'Game Store', status: 'connected', key_prefix: 'wr_live_7b84', external_store_id: 'pazarmax', external_base_url: null, bound_at: ago(110), last_seen_at: ago(1), created_at: ago(150), track_signups: false, signups_enabled_at: null, currency: 'MKD', estimate_stock: false },
   ],
   workflows: [
     { id: 'w1', organization_id: ORG, name: 'Notify Discord when a new order arrives', preset: 'notify', preset_config: { event: 'created', channel: 'discord', url: 'https://discord.com/api/webhooks/1/x' }, enabled: true, status: 'published', current_version_id: 'v1', updated_at: ago(27), created_at: ago(30) },
@@ -217,6 +217,11 @@ export const supabase: any = {
     if (name === 'list_customers') return Promise.resolve({ data: listCustomers(DB, args), error: null })
     if (name.startsWith('insights_')) return Promise.resolve({ data: insightsRpc(name, args ?? {}, MODE === 'empty'), error: null })
     if (name === 'list_products') return Promise.resolve({ data: listProducts(DB, args), error: null })
+    if (name === 'stock_estimates') return Promise.resolve({ data: stockEstimates(DB, args), error: null })
+    if (name === 'set_integration_estimate_stock') {
+      for (const i of DB.integrations ?? []) if (i.id === args?.p_id) i.estimate_stock = !!args?.p_enabled
+      return Promise.resolve({ data: null, error: null })
+    }
     if (name === 'product_siblings') {
       const me = (DB.products ?? []).find((x) => x.id === args?.p_product)
       const shop = (id: string) => (DB.integrations ?? []).find((i) => i.id === id)?.name ?? 'Shop'

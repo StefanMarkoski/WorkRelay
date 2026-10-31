@@ -18,6 +18,8 @@ export interface Integration {
   signups_enabled_at: string | null
   /** The one currency this shop sells in. Null only for a shop with no orders yet that nobody has set. */
   currency: string | null
+  /** Show an estimated stock next to the shop's reported one: the last report minus the orders since. */
+  estimate_stock: boolean
 }
 
 export interface WebhookEvent {

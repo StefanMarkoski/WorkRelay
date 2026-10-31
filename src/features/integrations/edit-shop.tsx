@@ -35,6 +35,7 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
   const [name, setName] = useState(shop.name)
   const [signups, setSignups] = useState(shop.track_signups)
   const [currency, setCurrency] = useState(shop.currency ?? '')
+  const [estimate, setEstimate] = useState(shop.estimate_stock)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -76,11 +77,16 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
       const { error: rpcError } = await supabase.rpc('set_integration_signups', { p_id: shop.id, p_enabled: signups })
       if (rpcError) { setBusy(false); return setError(errorMessage(rpcError)) }
     }
+    if (estimate !== shop.estimate_stock) {
+      const { error: rpcError } = await supabase.rpc('set_integration_estimate_stock', { p_id: shop.id, p_enabled: estimate })
+      if (rpcError) { setBusy(false); return setError(errorMessage(rpcError)) }
+    }
     setBusy(false)
     void qc.invalidateQueries({ queryKey: ['integrations', current.id] })
     void qc.invalidateQueries({ queryKey: ['automations'] })
     void qc.invalidateQueries({ queryKey: ['insights'] })
     void qc.invalidateQueries({ queryKey: ['orders'] })
+    void qc.invalidateQueries({ queryKey: ['stock-estimates'] })
     void qc.invalidateQueries({ queryKey: ['signup-automations'] })
     onClose()
   }
@@ -140,6 +146,19 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
             for any other shop that sends signups, and wait if none does. Signups sent while this is off are not replayed.
           </p>
         )}
+      </div>
+
+      <div className="rounded-lg border p-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Estimate stock between syncs</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Optional. Next to the stock your shop reports, WorkRelay shows an estimate: the last reported number minus the pieces ordered since.
+              Your shop stays the source of truth, and every new sync replaces the estimate. Cancelled orders are not counted.
+            </p>
+          </div>
+          <Switch checked={estimate} onChange={setEstimate} label="Estimate stock between syncs" />
+        </div>
       </div>
 
       <div className="flex justify-end gap-2">

@@ -51,3 +51,19 @@ export function productOrders(db: Record<string, Row[]>, args: Record<string, an
     quantity: lines.reduce((n, i) => n + (i.quantity ?? 0), 0), unit_price_minor: lines[0].unit_price_minor ?? null, currency: o.currency, total_count: rows.length,
   }))
 }
+
+/** Mirrors the database's stock_estimates: the last reported stock minus the orders placed after that report. */
+export function stockEstimates(db: Record<string, Row[]>, args: Record<string, any> = {}): Row[] {
+  const { p_ids } = args
+  return (db.products ?? [])
+    .filter((p) => (db.integrations ?? []).some((i) => i.id === p.integration_id && i.estimate_stock) && p.stock != null && p.reported_at && (!p_ids || p_ids.includes(p.id)))
+    .map((p) => {
+      let sold = 0
+      for (const it of db.order_items ?? []) {
+        const o = (db.orders ?? []).find((x) => x.id === it.order_id)
+        if (!o || o.integration_id !== p.integration_id || o.status === 'cancelled' || String(it.sku ?? '').trim() !== p.sku) continue
+        if (new Date(o.placed_at ?? o.created_at).getTime() > new Date(p.reported_at).getTime()) sold += it.quantity ?? 0
+      }
+      return { product_id: p.id, estimated: p.stock - sold, sold_since: sold, as_of: p.reported_at }
+    })
+}

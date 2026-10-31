@@ -19,6 +19,7 @@ import { PRICE_SOURCE_LABEL } from '@/features/inventory/price-source'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, formatDateTime, formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
+import { useStockEstimates } from '@/features/inventory/estimates'
 import type { Product, ProductOrder, ProductSibling, StockEvent } from '@/types/db'
 
 const PAGE_SIZE = 25
@@ -35,6 +36,7 @@ export function ProductDetailPage() {
   const { current, canManage } = useWorkspace()
   const shops = useIntegrations().data ?? []
   const [page, setPage] = useState(0)
+  const estimate = useStockEstimates(current.id, id ? [id] : []).data?.get(id ?? '')
   const [now] = useState(() => Date.now()) // the right edge of the stock chart
 
   const profile = useQuery({
@@ -99,6 +101,11 @@ export function ProductDetailPage() {
         <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
           <Fact label="In stock">
             {p.stock === null ? <span className="text-muted-foreground">Not reported by the shop</span> : <span className="tabular-nums">{p.stock.toLocaleString()}{p.unit ? ` ${p.unit}` : ''}</span>}
+            {estimate && (
+              <div className="mt-1 text-xs font-normal text-muted-foreground tabular-nums">
+                ≈ {estimate.estimated.toLocaleString()} estimated now: {p.stock?.toLocaleString()} reported {timeAgo(estimate.as_of)}, minus {estimate.sold_since.toLocaleString()} ordered since. The next sync replaces it.
+              </div>
+            )}
           </Fact>
           <Fact label="Notify on"><NotifyEdit product={p} canEdit={canManage} /></Fact>
           <Fact label="Price">

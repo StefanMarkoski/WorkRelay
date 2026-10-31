@@ -21,6 +21,7 @@ import { shopLabel } from '@/features/integrations/shop-label'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatMoney, timeAgo } from '@/lib/format'
 import { supabase } from '@/lib/supabase'
+import { useStockEstimates } from '@/features/inventory/estimates'
 import type { Product } from '@/types/db'
 
 const PAGE_SIZE = 25
@@ -68,6 +69,7 @@ export function InventoryPage() {
   })
 
   const shops = integrations.data ?? []
+  const estimates = useStockEstimates(current.id, (query.data?.rows ?? []).map((r) => r.id)).data
   const health = useInventoryHealth(shopId).data
   const hasProducts = !!health && health.low + health.ok + health.no_threshold + health.not_reported > 0
 
@@ -147,6 +149,11 @@ export function InventoryPage() {
                           {p.low && <Badge tone="warning">Low</Badge>}
                           <span className="font-medium tabular-nums">{p.stock.toLocaleString()}</span>
                         </span>
+                      )}
+                      {(estimates?.get(p.id)?.sold_since ?? 0) > 0 && (
+                        <div className="mt-0.5 text-[11px] text-muted-foreground tabular-nums" title={`Estimate: ${p.stock?.toLocaleString()} reported, minus ${estimates.get(p.id)!.sold_since.toLocaleString()} ordered since.`}>
+                          ≈ {estimates.get(p.id)!.estimated.toLocaleString()} estimated
+                        </div>
                       )}
                     </TD>
                     <TD className="text-right"><NotifyEdit product={p} canEdit={canManage} /></TD>
