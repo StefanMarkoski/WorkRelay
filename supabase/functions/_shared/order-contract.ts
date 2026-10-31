@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { eventTimestamp, timestamp } from './timestamp.ts'
 
 /**
  * Inbound order webhook contract. Strict on identity, lenient on content:
@@ -15,7 +16,6 @@ const minor = z.number().int().safe() // integer minor units (cents)
 /** An amount of money is never below zero: a refund is a payment status, not a negative total. */
 const money = minor.min(0)
 const currency = z.string().regex(/^[A-Za-z]{3}$/).transform((v) => v.toUpperCase())
-const timestamp = z.iso.datetime({ offset: true })
 
 export const ORDER_STATUSES = ['pending', 'processing', 'completed', 'cancelled', 'unknown'] as const
 export const PAYMENT_STATUSES = ['unpaid', 'authorized', 'paid', 'partially_refunded', 'refunded', 'failed', 'unknown'] as const
@@ -82,7 +82,7 @@ export const ORDER_EVENT_TYPES = ['order.created', 'order.updated', 'order.statu
 export const orderWebhookSchema = z.object({
   event_id: z.string().min(1).max(200), // required: idempotency
   event_type: z.string().min(1).max(100), // required; unsupported types are recorded as 'ignored'
-  occurred_at: timestamp, // required: ordering
+  occurred_at: eventTimestamp, // required: ordering; within the last 7 days
   order: orderSchema,
 })
 

@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 import { customerWebhookSchema } from './customer-contract.ts'
 import { handleCustomerWebhook } from './customer-ingest.ts'
@@ -12,6 +12,10 @@ import { MemoryStore } from './memory-store.ts'
 import { mapFulfillmentStatus, mapOrderStatus, mapPaymentStatus } from './normalize.ts'
 import { orderWebhookSchema } from './order-contract.ts'
 import { pullDueProducts } from './product-pull.ts'
+
+// Event times must be recent, so the examples (dated October 2026) are checked against a fixed "now".
+vi.useFakeTimers({ toFake: ['Date'] })
+vi.setSystemTime('2026-10-31T12:00:00Z')
 
 const doc = readFileSync(new URL('../../../documentation/shop-webhook-integration.md', import.meta.url), 'utf8')
 const log: Logger = { info() {}, error() {} }

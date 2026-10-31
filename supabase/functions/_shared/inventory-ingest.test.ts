@@ -189,6 +189,8 @@ describe('the payload', () => {
       { products: [{ sku: 'A', notify_on: -1 }] },
       { products: [{ sku: 'A', price_minor: 100 }] }, // price needs a currency
       { products: [{ sku: 'A', updated_at: 'yesterday' }] },
+      { products: [{ sku: 'A', updated_at: '3000-01-01T00:00:00Z' }] }, // far in the future
+      { products: [{ sku: 'A', updated_at: '1970-01-01T00:00:00Z' }] }, // before the year 2000
     ]
     for (const c of cases) {
       const res = await send(c)

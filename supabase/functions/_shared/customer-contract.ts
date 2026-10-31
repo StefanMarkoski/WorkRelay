@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { eventTimestamp, timestamp } from './timestamp.ts'
 
 /**
  * Optional inbound customer webhook (/customer-webhook). Strict on identity, lenient on content:
@@ -8,7 +9,6 @@ import { z } from 'zod'
  */
 
 const optional = <T extends z.ZodType>(schema: T) => schema.nullish()
-const timestamp = z.iso.datetime({ offset: true })
 
 export const CUSTOMER_EVENT_TYPES = ['customer.created', 'customer.updated'] as const
 export type CustomerEventType = (typeof CUSTOMER_EVENT_TYPES)[number]
@@ -24,7 +24,7 @@ export const customerSchema = z.object({
 export const customerWebhookSchema = z.object({
   event_id: z.string().min(1).max(200), // required: idempotency
   event_type: z.enum(CUSTOMER_EVENT_TYPES), // unsupported types are recorded as 'ignored' before this runs
-  occurred_at: timestamp, // required: ordering
+  occurred_at: eventTimestamp, // required: ordering; within the last 7 days
   customer: customerSchema,
 })
 

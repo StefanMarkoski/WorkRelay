@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { existsSync, readFileSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { customerWebhookSchema } from './customer-contract.ts'
 import { handleCustomerWebhook } from './customer-ingest.ts'
 import { handleOrderWebhook } from './ingest.ts'
@@ -10,6 +10,10 @@ import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
 import { orderWebhookSchema } from './order-contract.ts'
 import { pullShop } from './product-pull.ts'
+
+// Event times must be recent, so the examples (dated October 2026) are checked against a fixed "now".
+vi.useFakeTimers({ toFake: ['Date'] })
+vi.setSystemTime('2026-10-31T12:00:00Z')
 
 const root = new URL('../../../', import.meta.url)
 const read = (path: string) => readFileSync(new URL(path, root), 'utf8')
@@ -23,7 +27,7 @@ const signupExamples = jsonBlocks.filter((j) => String(j.event_type ?? '').start
 const feedExamples = jsonBlocks.filter((j) => Array.isArray(j.products))
 
 /** Each `-d '{...}'` in the guide's curl examples, with the endpoint it is sent to. */
-const curlBodies = [...doc.matchAll(/"\$BASE\/(order-webhook|customer-webhook|inventory-webhook)"[^\n]*\\\n\s+-d '(\{.*\})'/g)].map((m) => ({ endpoint: m[1], body: JSON.parse(m[2]) }))
+const curlBodies = [...doc.matchAll(/"\$BASE\/(order-webhook|customer-webhook|inventory-webhook)"[^\n]*\\\n\s+-d '(\{.*\})'/g)].map((m) => ({ endpoint: m[1], body: JSON.parse(m[2].replaceAll(`'"$NOW"'`, '2026-10-31T10:00:00Z')) }))
 
 describe('the developer guide: its examples are real', () => {
   it('has the examples it promises', () => {

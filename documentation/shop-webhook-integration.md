@@ -95,7 +95,7 @@ Any other `event_type` is accepted but **ignored** (HTTP 202) and recorded as ig
 |---|---|---|---|
 | `event_id` | **yes** | string, 1 to 200 | Unique per event. Reuse the same value when retrying the same event |
 | `event_type` | **yes** | string | See the table above |
-| `occurred_at` | **yes** | ISO 8601 date-time with `Z` or offset | When the change happened in the shop (not when you send it) |
+| `occurred_at` | **yes** | ISO 8601 date-time with `Z` or offset | When the change happened in the shop. Within the last 7 days and no more than a day ahead (see the note on times below). The examples carry sample dates: use the current time |
 | `order` | **yes** | object | See below |
 
 ### The `order` object
@@ -106,7 +106,7 @@ Only `external_id` is required. **Everything else is optional**: send what you h
 |---|---|---|
 | `external_id` | string, 1 to 200 | **Required.** The shop's order id |
 | `order_number` | string, up to 100 | Human-facing number, e.g. `#1001` |
-| `placed_at` | ISO 8601 date-time | When the customer placed the order |
+| `placed_at` | ISO 8601 date-time | When the customer placed the order. From 2000-01-01 to one day from now (see the note on times below) |
 | `currency` | 3-letter code | e.g. `EUR`. Optional: if you leave it out, the order takes the currency the shop is set to in WorkRelay (see below) |
 | `customer` | object | `name` (up to 200), `email` (valid email), `phone` (up to 64) |
 | `totals` | object | `subtotal_minor`, `discount_minor`, `shipping_minor`, `tax_minor`, `total_minor`: **integers in minor units, never below zero** |
@@ -126,6 +126,8 @@ WorkRelay counts and reports that shop's money, and WorkRelay **never converts**
   as a currency mismatch, so a misconfigured shop is easy to spot. Fix the shop or the payload and resend; the order is then clean.
 
 **Money is always an integer in minor units**: `49.99 EUR` is `4999`. The minor unit follows the currency: `5000 JPY` is ¥5,000 (yen have no decimals) and `12500 KWD` is 12.500 KWD (three decimals). Decimal strings, floats and negative amounts are rejected: a refund is shown through `payment_status`, not as a negative total.
+
+**Times must be real.** Every time you send must be an ISO 8601 date-time with an offset. `occurred_at` (when the event was sent) must be within the **last 7 days** and no more than **one day ahead**: events are live, and a week leaves room to re-send after an outage. The day ahead allows for a shop clock that runs fast. The other times (`placed_at`, `registered_at`, a product's `updated_at`) say when something really happened, so they may be older: from **2000-01-01** up to one day ahead. To import an old order, send the event now and put the real date in `placed_at`. Anything else is answered with `400` and the field's name, so a typo such as the year 3000 never reaches your order list or charts.
 Unknown extra fields are ignored (the original payload is kept for diagnostics).
 
 ### Examples

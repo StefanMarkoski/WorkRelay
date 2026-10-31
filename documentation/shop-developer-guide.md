@@ -67,6 +67,8 @@ What matters most for the rest of this guide, so please include it **on every or
 }
 ```
 
+**Times.** `occurred_at` is when the event is sent: within the last 7 days and no more than a day ahead, otherwise `400`. That leaves room to re-send after an outage. The real date of an older order goes in `placed_at` (any time from 2000-01-01), so importing history works. The dates in these examples are samples, so use the current time.
+
 ## 4. Customers
 
 ### How a customer is made
@@ -262,13 +264,16 @@ STORE=your-store-id
 curl -s -X POST "$BASE/bind" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d "{\"store_id\":\"$STORE\"}"
 
+# Events must be recent (within the last 7 days), so the examples below stamp themselves with the current time
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
 # 2. An order with a customer: expect {"status":"processed"}, then the person appears under Customers
 curl -s -X POST "$BASE/order-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" -H "Content-Type: application/json" \
-  -d '{"event_id":"test-order-1","event_type":"order.created","occurred_at":"2026-10-27T10:00:00Z","order":{"external_id":"T-1","customer":{"name":"Test Person","email":"test@example.com"},"items":[{"sku":"TEST-1","name":"Test item","quantity":1}]}}'
+  -d '{"event_id":"test-order-1","event_type":"order.created","occurred_at":"'"$NOW"'","order":{"external_id":"T-1","customer":{"name":"Test Person","email":"test@example.com"},"items":[{"sku":"TEST-1","name":"Test item","quantity":1}]}}'
 
 # 3. A signup: {"status":"processed"}, or {"status":"ignored","reason":"signups_disabled"} until the shop owner switches signups on
 curl -s -X POST "$BASE/customer-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" -H "Content-Type: application/json" \
-  -d '{"event_id":"test-signup-1","event_type":"customer.created","occurred_at":"2026-10-27T10:05:00Z","customer":{"email":"new.person@example.com","name":"New Person"}}'
+  -d '{"event_id":"test-signup-1","event_type":"customer.created","occurred_at":"'"$NOW"'","customer":{"email":"new.person@example.com","name":"New Person"}}'
 
 # 4. A stock update: expect {"status":"processed","applied":1}
 curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" -H "Content-Type: application/json" \

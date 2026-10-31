@@ -37,7 +37,9 @@ insert into orders (id, organization_id, integration_id, external_id, customer_e
   ('a3000000-0000-0000-0000-0000000000b3', 'a0000000-0000-0000-0000-0000000000b1', 'a1000000-0000-0000-0000-0000000000b2', '3', 'b@x.com', '2026-10-02 12:00+00', 'USD', 500, 'pending', now()),
   ('a3000000-0000-0000-0000-0000000000b4', 'a0000000-0000-0000-0000-0000000000b1', 'a1000000-0000-0000-0000-0000000000b1', '4', 'a@x.com', '2026-10-03 09:00+00', 'EUR', 3000, 'completed', now()),
   ('a3000000-0000-0000-0000-0000000000b5', 'a0000000-0000-0000-0000-0000000000b1', 'a1000000-0000-0000-0000-0000000000b1', '5', 'c@x.com', '2026-09-01 09:00+00', 'EUR', 700, 'completed', now()),
-  ('a3000000-0000-0000-0000-0000000000b6', 'a0000000-0000-0000-0000-0000000000b2', 'a1000000-0000-0000-0000-0000000000b3', '6', 'z@x.com', '2026-10-02 09:00+00', 'EUR', 9999, 'completed', now());
+  ('a3000000-0000-0000-0000-0000000000b6', 'a0000000-0000-0000-0000-0000000000b2', 'a1000000-0000-0000-0000-0000000000b3', '6', 'z@x.com', '2026-10-02 09:00+00', 'EUR', 9999, 'completed', now()),
+  -- o7 is dated in the year 3000: it must be left out of every total
+  ('a3000000-0000-0000-0000-0000000000b7', 'a0000000-0000-0000-0000-0000000000b1', 'a1000000-0000-0000-0000-0000000000b1', '7', 'future@x.com', '3000-01-01 00:00+00', 'EUR', 123456, 'completed', now());
 insert into order_items (organization_id, order_id, position, sku, name, quantity, unit_price_minor) values
   ('a0000000-0000-0000-0000-0000000000b1', 'a3000000-0000-0000-0000-0000000000b1', 0, 'S1', 'Widget', 2, 500),
   ('a0000000-0000-0000-0000-0000000000b1', 'a3000000-0000-0000-0000-0000000000b2', 0, 'S2', 'Gadget', 100, 20),
@@ -54,6 +56,11 @@ select in_test.check('orders per day, shop and currency (UTC); cancelled counted
   and (select orders = 1 and cancelled = 1 and revenue_minor = 0 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC') where day = '2026-10-02' and currency = 'EUR')
   and (select orders = 1 and revenue_minor = 500 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC') where day = '2026-10-02' and currency = 'USD')
   and (select revenue_minor = 3000 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC') where day = '2026-10-03'));
+select in_test.check('an order dated far in the future is left out of the totals, the statuses, the customers and the hourly counts',
+  (select coalesce(sum(revenue_minor), 0) = 4500 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC'))
+  and (select coalesce(sum(orders), 0) = 4 from insights_order_status('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00'))
+  and (select coalesce(sum(new_customers), 0) = 2 from insights_customers_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC'))
+  and (select coalesce(sum(orders), 0) = 4 from insights_hourly('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC')));
 select in_test.check('currencies stay separate rows and are never added together',
   (select count(distinct currency) = 2 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-01 00:00+00', 'UTC')));
 select in_test.check('days are cut in the caller''s time zone: 23:30 UTC on Oct 1 is already Oct 2 in Auckland',

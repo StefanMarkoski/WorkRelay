@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { timestamp } from './timestamp.ts'
 
 /**
  * Product and stock feed. The same shape is used two ways: a shop pushes it to /inventory-webhook, and WorkRelay
@@ -8,7 +9,6 @@ import { z } from 'zod'
  */
 
 const optional = <T extends z.ZodType>(schema: T) => schema.nullish()
-const timestamp = z.iso.datetime({ offset: true })
 
 export const productSchema = z
   .object({

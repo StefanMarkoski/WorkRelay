@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { handleCustomerWebhook } from './customer-ingest.ts'
 import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
+
+// Event times must be recent, so the examples (dated October 2026) are checked against a fixed "now".
+vi.useFakeTimers({ toFake: ['Date'] })
+vi.setSystemTime('2026-10-31T12:00:00Z')
 
 const KEY = `wr_live_${'d'.repeat(64)}`
 const OTHER_KEY = `wr_live_${'e'.repeat(64)}`
@@ -94,6 +98,19 @@ describe('the opt-in', () => {
 })
 
 describe('signup events', () => {
+  it('refuses an event time older than 7 days or far ahead, and a registered_at before 2000 or far ahead', async () => {
+    for (const body of [
+      ev({}, { occurred_at: '3000-01-01T00:00:00Z' }),
+      ev({}, { occurred_at: '1970-01-01T00:00:00Z' }),
+      ev({}, { occurred_at: new Date(Date.now() - 8 * 24 * 3600_000).toISOString() }),
+      ev({ registered_at: '3000-01-01T00:00:00Z' }),
+      ev({ registered_at: '1999-12-31T23:59:59Z' }),
+    ]) {
+      expect((await send(body)).status).toBe(400)
+    }
+    expect(store.signups).toHaveLength(0)
+  })
+
   it('applies a customer.created with everything normalised', async () => {
     const res = await send(ev({ name: 'Ana Petrova', phone: '+389 70 111', external_id: 'cust_7', registered_at: '2026-10-27T09:00:00+01:00' }))
     expect(res.status).toBe(200)

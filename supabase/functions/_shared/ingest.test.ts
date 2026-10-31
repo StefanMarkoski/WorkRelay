@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { handleBind, handleOrderWebhook } from './ingest.ts'
 import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
+
+// Event times must be recent, so the examples (dated October 2026) are checked against a fixed "now".
+vi.useFakeTimers({ toFake: ['Date'] })
+vi.setSystemTime('2026-10-31T12:00:00Z')
 
 const KEY = `wr_live_${'a'.repeat(64)}`
 const OTHER_KEY = `wr_live_${'b'.repeat(64)}`
@@ -209,6 +213,28 @@ describe('failures', () => {
       expect(JSON.stringify(await res.json()), n).toContain('Too small')
     }
     expect((await handleOrderWebhook(post(ev({ event_id: 'zero' }, { totals: { total_minor: 0, discount_minor: 0 } })), deps())).status).toBe(200)
+  })
+
+  it('refuses an event time older than 7 days or more than a day ahead, and a placed_at before 2000 or far ahead; old orders still import', async () => {
+    const at = (ms: number) => new Date(Date.now() + ms).toISOString()
+    const day = 24 * 3600_000
+    for (const [n, top, order, msg] of [
+      ['event far ahead', { occurred_at: '3000-01-01T00:00:00Z' }, {}, 'within the last 7 days'],
+      ['event just over a day ahead', { occurred_at: at(25 * 3600_000) }, {}, 'within the last 7 days'],
+      ['event 8 days old', { occurred_at: at(-8 * day) }, {}, 'within the last 7 days'],
+      ['event 1970', { occurred_at: '1970-01-01T00:00:00Z' }, {}, 'within the last 7 days'],
+      ['placed far ahead', {}, { placed_at: '3000-01-01T00:00:00Z' }, 'between the year 2000'],
+      ['placed 1999', {}, { placed_at: '1999-12-31T23:59:59Z' }, 'between the year 2000'],
+    ] as const) {
+      const res = await handleOrderWebhook(post(ev({ event_id: `date-${n}`, ...top }, order)), deps())
+      expect(res.status, n).toBe(400)
+      expect(JSON.stringify(await res.json()), n).toContain(msg)
+    }
+    expect(store.orders.size).toBe(0)
+    // a shop whose clock runs a little fast, a retry after a day-long outage, and an order imported from years back are all fine
+    expect((await handleOrderWebhook(post(ev({ event_id: 'fast-clock', occurred_at: at(3600_000) }, {})), deps())).status).toBe(200)
+    expect((await handleOrderWebhook(post(ev({ event_id: 'late-retry', occurred_at: at(-6 * day) }, { external_id: 'LATE' })), deps())).status).toBe(200)
+    expect((await handleOrderWebhook(post(ev({ event_id: 'old-order' }, { external_id: 'OLD', placed_at: '2015-06-01T10:00:00Z' })), deps())).status).toBe(200)
   })
 
   it('rejects wrong types without echoing submitted values', async () => {
