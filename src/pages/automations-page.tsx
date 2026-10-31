@@ -105,7 +105,7 @@ export function AutomationsPage() {
     const limit = selection ? { integration_ids: selection } : {}
     const config =
       editing.kind === 'notify'
-        ? { event: c.event, channel: c.channel, url: (c.url ?? '').trim(), ...limit, ...(c.event === 'low_stock' && c.include_estimates === 'true' ? { include_estimates: true } : {}) }
+        ? { event: c.event, channel: c.channel, url: (c.url ?? '').trim(), ...limit }
         : { threshold: Number(c.threshold), reviewer_role: c.reviewer_role, ...limit }
     try {
       await saveAutomation({ organizationId: current.id, id: editing.id, kind: editing.kind, config, enable: true })
@@ -285,27 +285,10 @@ export function AutomationsPage() {
                   <p className="-mt-2 text-xs text-muted-foreground">
                     Covers every product. Each one alerts once when its stock reaches its own "Notify on" number (bikes at 5, nails at 5,000),
                     set per product on <Link to="/inventory" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Inventory</Link> or sent by the shop.
-                    Products without a number never alert.
+                    Products without a number never alert. A shop that estimates its stock (switch it on when you edit the shop) also alerts when its
+                    orders take the estimate to that number, without waiting for the shop to report again. Every message ends with its source: the
+                    shop's name for a number the shop reported, or "WorkRelay (estimated for …)" for an estimate.
                   </p>
-                )}
-                {editing.config.event === 'low_stock' && (
-                  <div className="rounded-lg border p-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium">Also alert on estimated stock</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          For shops that estimate stock (switch it on when you edit the shop): alert as soon as the orders since the shop's last
-                          report take the estimate to its level, without waiting for the shop to report again. The message says it is an estimate,
-                          and a new report from the shop starts it over. Off: only the shop's own numbers alert.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={editing.config.include_estimates === 'true'}
-                        onChange={(next) => setEditing((cur) => (cur ? { ...cur, config: { ...cur.config, include_estimates: next ? 'true' : 'false' } } : cur))}
-                        label="Also alert on estimated stock"
-                      />
-                    </div>
-                  </div>
                 )}
                 {editing.config.event === 'customer_signed_up' && signupShops.length === 0 && (
                   <p role="alert" className="-mt-2 text-xs text-destructive">

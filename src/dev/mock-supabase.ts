@@ -111,7 +111,7 @@ function mockPresetKey(preset: string | null, cfg: Row | null): string | null {
   const ids: string[] = Array.isArray(cfg.integration_ids) && cfg.integration_ids.length ? cfg.integration_ids : cfg.integration_id ? [cfg.integration_id] : []
   const shops = ids.length ? [...new Set(ids.map((i) => String(i).toLowerCase()))].sort().join(',') : '*'
   return preset === 'notify'
-    ? ['notify', cfg.event, cfg.channel, String(cfg.url ?? '').trim().replace(/\/+$/, ''), shops].join('|') + (cfg.event === 'low_stock' && cfg.include_estimates === true ? '|estimates' : '')
+    ? ['notify', cfg.event, cfg.channel, String(cfg.url ?? '').trim().replace(/\/+$/, ''), shops].join('|')
     : ['review_large', Number(cfg.threshold), cfg.reviewer_role, shops].join('|')
 }
 /** The message the database gives for a duplicate, or null when there is none. */
