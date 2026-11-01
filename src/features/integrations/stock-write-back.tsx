@@ -75,6 +75,7 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
     setTestResult(r.status === 'ok' ? { ok: true, text: 'The shop answered correctly. Write-back can be switched on.' } : { ok: false, text: r.error ?? 'The shop did not answer correctly.' })
     void qc.invalidateQueries({ queryKey: ['stock-pushes'] })
   })
+  const setAuthority = (on: boolean) => run('switch', async () => { await rpc('set_stock_authority', { p_integration: shop.id, p_on: on }); void qc.invalidateQueries({ queryKey: ['stock-pushes'] }); void qc.invalidateQueries({ queryKey: ['stock-push-status'] }) })
   const setEnabled = (on: boolean) => run('switch', async () => { await rpc('set_stock_push_enabled', { p_integration: shop.id, p_enabled: on }); void qc.invalidateQueries({ queryKey: ['stock-pushes'] }) })
 
   return (
@@ -163,6 +164,18 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
             </Button>
           </div>
           {testResult && !testResult.ok && <p role="alert" className="text-xs text-destructive">{testResult.text}</p>}
+
+          <div className="flex items-start justify-between gap-4 border-t pt-3">
+            <div>
+              <p className="text-sm font-medium">WorkRelay keeps the stock</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                For a shop that does not count its own stock. The shop&apos;s number is still read and shown in Sync history, but it never replaces WorkRelay&apos;s,
+                and a difference is not a disagreement. Orders and returns move WorkRelay&apos;s count, you set it by hand on the product (a delivery, a
+                correction), and every change is sent to the shop. Leave it off if your shop counts its own stock: then a difference is held and you decide.
+              </p>
+            </div>
+            <Switch checked={shop.stock_authority} onChange={(on) => void setAuthority(on)} label="WorkRelay keeps the stock" disabled={busy !== null} />
+          </div>
         </div>
       )}
 

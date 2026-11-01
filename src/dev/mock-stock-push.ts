@@ -7,7 +7,7 @@ export function seedStockPush(db: Record<string, Row[]>) {
   const [a, b] = db.integrations ?? []
   if (!a) return
   for (const i of db.integrations ?? []) {
-    Object.assign(i, { stock_push_url: null, stock_push_has_url: false, stock_push_enabled: false, stock_push_verified_at: null, stock_push_locked: false, stock_push_paused_reason: null, stock_push_has_secret: false })
+    Object.assign(i, { stock_push_url: null, stock_push_has_url: false, stock_push_enabled: false, stock_push_verified_at: null, stock_push_locked: false, stock_push_paused_reason: null, stock_push_has_secret: false, stock_authority: false })
   }
   Object.assign(a, { estimate_stock: true, stock_push_url: 'https://shop.example.com/workrelay/stock', stock_push_has_url: true, stock_push_enabled: true, stock_push_verified_at: ago(60 * 5), stock_push_has_secret: true })
   if (b) Object.assign(b, { estimate_stock: true })
@@ -69,6 +69,19 @@ export function stockPushRpc(db: Record<string, Row[]>, name: string, args: Reco
   if (name === 'rotate_stock_push_secret') {
     Object.assign(shop(args.p_integration) ?? {}, { stock_push_has_secret: true, stock_push_enabled: false, stock_push_verified_at: null })
     return { handled: true, data: 'wr_sign_' + 'a1b2c3d4'.repeat(8) }
+  }
+  if (name === 'set_stock_authority') {
+    Object.assign(shop(args.p_integration) ?? {}, { stock_authority: !!args.p_on })
+    return { handled: true, data: null }
+  }
+  if (name === 'set_product_stock') {
+    const p = (db.products ?? []).find((x) => x.id === args.p_product)
+    if (!p) return { handled: true, error: { message: 'forbidden' } }
+    const n = Number(args.p_stock)
+    if (!Number.isInteger(n) || n < 0) return { handled: true, error: { message: 'Enter a whole number from 0 up.' } }
+    ;(db.stock_events ??= []).push({ id: 'm' + Date.now(), product_id: p.id, stock_before: p.stock, stock_after: n, source: 'manual', occurred_at: new Date().toISOString() })
+    p.stock = n
+    return { handled: true, data: null }
   }
   if (name === 'set_stock_push_enabled') {
     const i = shop(args.p_integration)

@@ -23,6 +23,8 @@ export interface Integration {
   /** Stock write-back (0043): where WorkRelay sends the shop its stock numbers. The signing secret is never readable. */
   /** Whether an address is saved. The address itself is the owner's: read it with get_stock_push_url. */
   stock_push_has_url: boolean
+  /** WorkRelay keeps this shop's stock (0049): the shop's own number is read and shown, never taken over WorkRelay's. */
+  stock_authority: boolean
   stock_push_enabled: boolean
   /** The last time the shop passed the signed test for the current address and secret. */
   stock_push_verified_at: string | null
@@ -250,7 +252,7 @@ export interface StockEvent {
   id: string
   stock_before: number | null
   stock_after: number
-  source: 'push' | 'pull'
+  source: 'push' | 'pull' | 'manual'
   occurred_at: string
 }
 

@@ -530,6 +530,11 @@ SKU, and when (`null` if it never did). If your shop's own number has moved sinc
 restock or a manual correction, **do not apply the number**: leave your stock as it is, and WorkRelay will see the difference on its next read and ask the
 owner.
 
+If the workspace owner has switched on **WorkRelay keeps the stock** for your shop (for a shop that does not count its own stock), the rule is the
+other way round: WorkRelay's number is the one that stands, so **apply `stock` every time**. `reported_stock` is then only what your shop said when
+WorkRelay last read it, and a difference from it is not a problem. Your shop's own number is still read, and is shown to the owner in Sync history, but
+it never replaces WorkRelay's.
+
 **Verify every request before you act on it.** Anyone who finds the address can send a request; only WorkRelay can sign one. Check the signature with
 a constant-time comparison, reject a timestamp more than 5 minutes from your clock, and ignore a `request_id` you have already seen.
 

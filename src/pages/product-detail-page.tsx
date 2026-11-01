@@ -15,6 +15,7 @@ import { Pagination } from '@/components/common/pagination'
 import { ErrorState, TableSkeleton } from '@/components/common/states'
 import { StatusBadge } from '@/components/common/status-badge'
 import { NotifyEdit } from '@/features/inventory/notify-edit'
+import { SetStock } from '@/features/inventory/set-stock'
 import { PRICE_SOURCE_LABEL } from '@/features/inventory/price-source'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDate, formatDateTime, formatMoney, timeAgo } from '@/lib/format'
@@ -101,9 +102,10 @@ export function ProductDetailPage() {
         <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
           <Fact label="In stock">
             {p.stock === null ? <span className="text-muted-foreground">Not reported by the shop</span> : <span className="tabular-nums">{p.stock.toLocaleString()}{p.unit ? ` ${p.unit}` : ''}</span>}
+            {canManage && shops.find((s) => s.id === p.integration_id)?.stock_authority && <div className="mt-1.5"><SetStock product={p} /></div>}
             {estimate && (
               <div className="mt-1 text-xs font-normal text-muted-foreground tabular-nums">
-                ≈ {estimate.estimated.toLocaleString()} estimated now: {p.stock?.toLocaleString()} reported {timeAgo(estimate.as_of)}, minus {estimate.sold_since.toLocaleString()} ordered since. The next sync replaces it.
+                ≈ {estimate.estimated.toLocaleString()} estimated now: {p.stock?.toLocaleString()} {shops.find((s) => s.id === p.integration_id)?.stock_authority ? 'set' : 'reported'} {timeAgo(estimate.as_of)}, minus {estimate.sold_since.toLocaleString()} ordered since. {shops.find((s) => s.id === p.integration_id)?.stock_authority ? 'WorkRelay keeps this count.' : 'The next sync replaces it.'}
               </div>
             )}
           </Fact>
@@ -203,7 +205,7 @@ export function ProductDetailPage() {
                       <TD className="whitespace-nowrap text-muted-foreground" title={formatDateTime(e.occurred_at)}>{timeAgo(e.occurred_at)}</TD>
                       <TD className="text-right tabular-nums text-muted-foreground">{e.stock_before === null ? '—' : e.stock_before.toLocaleString()}</TD>
                       <TD className="text-right font-medium tabular-nums">{e.stock_after.toLocaleString()}</TD>
-                      <TD className="hidden text-muted-foreground sm:table-cell">{e.source === 'push' ? 'Pushed by the shop' : 'Scheduled check'}</TD>
+                      <TD className="hidden text-muted-foreground sm:table-cell">{e.source === 'push' ? 'Pushed by the shop' : e.source === 'manual' ? 'Set in WorkRelay' : 'Scheduled check'}</TD>
                     </TR>
                   ))}
                 </tbody>
