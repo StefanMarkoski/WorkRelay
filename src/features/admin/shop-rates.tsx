@@ -53,7 +53,47 @@ export function ShopRates({ tenants }: { tenants: Tenant[] }) {
             </tbody>
           </Table>
         ))}
+      {orgId !== '' && shops.data && shops.data.length > 0 && (
+        <div className="space-y-2 border-t p-4">
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Reads around stock pushes: before WorkRelay sends a shop its stock numbers it reads the shop&apos;s own numbers, and once more after. This is how many
+            of those reads each shop may have per hour (1 to 600, 60 by default). It is separate from the calls per days above. When it is reached, the numbers
+            wait for the next hour and the owner sees why.
+          </p>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {shops.data.map((s) => <ReadLimitCell key={`${s.id}:${s.reads_limit}`} shop={s} orgId={orgId} />)}
+          </div>
+        </div>
+      )}
     </Card>
+  )
+}
+
+/** The hourly limit for the reads around stock pushes, changed by a platform admin with its own button. */
+function ReadLimitCell({ shop, orgId }: { shop: TenantShop; orgId: string }) {
+  const qc = useQueryClient()
+  const [value, setValue] = useState(shop.reads_limit.toString())
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const n = Number(value)
+  const valid = Number.isInteger(n) && n >= 1 && n <= 600
+  async function save() {
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_set_stock_push_read_limit', { p_integration: shop.id, p_limit: n })
+    setBusy(false)
+    if (rpcError) return setError(errorMessage(rpcError))
+    void qc.invalidateQueries({ queryKey: ['admin-tenant-shops', orgId] })
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium [overflow-wrap:anywhere]">{shop.name}</span>
+      <Input aria-label={`Reads per hour for ${shop.name}`} inputMode="numeric" className="h-8 w-20 tabular-nums" value={value} onChange={(e) => setValue(e.target.value)} />
+      <span className="text-xs text-muted-foreground">per hour</span>
+      {value !== shop.reads_limit.toString() && <Button type="button" size="sm" disabled={busy || !valid} onClick={() => void save()}>{busy ? 'Saving…' : 'Save'}</Button>}
+      {!valid && <span role="alert" className="text-xs text-destructive">1 to 600</span>}
+      {error && <span role="alert" className="text-xs text-destructive">{error}</span>}
+    </div>
   )
 }
 

@@ -23,6 +23,19 @@ begin
   execute 'set constraints all immediate';
   execute 'set constraints all deferred';
 end $$;
+-- the engine reads the shop's numbers before every push: stand in for that read, then claim
+create function wb_test.claim() returns table (request_id uuid, integration_id uuid, store_id text, url text, secret text, items jsonb)
+language plpgsql as $$
+begin
+  update integrations set stock_push_pulled_at = clock_timestamp() where stock_push_enabled;
+  update stock_push_items set read_at = clock_timestamp() where status = 'pending';
+  return query select * from claim_stock_pushes();
+end $$;
+create function wb_test.settle() returns void language plpgsql as $$
+begin
+  update stock_suspects set first_seen = now() - interval '5 minutes' where true;
+  perform settle_stock_suspects();
+end $$;
 grant execute on all functions in schema wb_test to authenticated;
 
 -- people: org A has an owner, an admin and a member; org B has its own owner; one platform admin
@@ -42,6 +55,9 @@ insert into platform_admins (user_id) values ('00000000-0000-0000-0000-000000000
 insert into integrations (id, organization_id, name, status, key_prefix, key_hash, external_store_id, created_by, estimate_stock) values
   ('a1000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'Shop A', 'connected', 'wr_live_d001', extensions.digest('k1', 'sha256'), 's1', '00000000-0000-0000-0000-0000000000d1', true),
   ('a1000000-0000-0000-0000-0000000000d2', 'a0000000-0000-0000-0000-0000000000d1', 'No estimates', 'connected', 'wr_live_d002', extensions.digest('k2', 'sha256'), 's2', '00000000-0000-0000-0000-0000000000d1', false);
+insert into integration_sync (integration_id, organization_id, source_url) values
+  ('a1000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'https://shop.example.com/feed'),
+  ('a1000000-0000-0000-0000-0000000000d2', 'a0000000-0000-0000-0000-0000000000d1', 'https://shop2.example.com/feed');
 insert into products (id, organization_id, integration_id, sku, name, stock, reported_at) values
   ('a2000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'P1', 'Pen', 10, '2026-10-30 10:00+00'),
   ('a2000000-0000-0000-0000-0000000000d2', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'P2', 'Cap', 5, '2026-10-30 10:00+00');
@@ -199,11 +215,11 @@ select wb_test.flush();
 select wb_test.check('a shop that has write-back off queues nothing', (select count(*) = 0 from stock_push_items where sku = 'Q1'));
 
 -- ---------------------------------------------------------------- claiming and sending
-create temp table wb_claim1 as select * from claim_stock_pushes();
+create temp table wb_claim1 as select * from wb_test.claim();
 select wb_test.check('the engine claims one request for the shop, with the number and a sequence',
   (select count(*) = 1 and bool_and(url = 'https://third.example.com/stock' and jsonb_array_length(items) = 1 and (items->0->>'stock')::int = 7 and items->0->>'sku' = 'P1') from wb_claim1));
 select wb_test.check('the claimed SKUs are marked as being sent', (select count(*) = 1 from stock_push_items where status = 'sending' and sku = 'P1'));
-select wb_test.check('only one request is out per shop: nothing more is claimed meanwhile', (select count(*) = 0 from claim_stock_pushes()));
+select wb_test.check('only one request is out per shop: nothing more is claimed meanwhile', (select count(*) = 0 from wb_test.claim()));
 select wb_test.check('the check just before sending says yes while everything holds', stock_push_still_allowed((select request_id from wb_claim1)));
 
 -- switching off while a request is waiting to leave: the last check refuses
@@ -217,7 +233,7 @@ select wb_test.check('the last check before sending now says no, and cancels the
   (select not ok from wb_allowed)
   and (select status = 'cancelled' from stock_push_requests where id = (select request_id from wb_claim1))
   and (select count(*) = 0 from stock_push_items where status in ('pending', 'sending')));
-select wb_test.check('nothing is claimed for a shop that is off', (select count(*) = 0 from claim_stock_pushes()));
+select wb_test.check('nothing is claimed for a shop that is off', (select count(*) = 0 from wb_test.claim()));
 select complete_stock_push((select request_id from wb_claim1), true, 200, null);
 select wb_test.check('a stale answer for a cancelled request changes nothing', (select count(*) = 0 from stock_push_items where status = 'sent')
   and (select status = 'cancelled' from stock_push_requests where id = (select request_id from wb_claim1)));
@@ -228,7 +244,7 @@ select set_stock_push_enabled('a1000000-0000-0000-0000-0000000000d1', true);
 reset role;
 update orders set fulfillment_status = 'unfulfilled' where id = 'a3000000-0000-0000-0000-0000000000d2';
 select wb_test.flush();
-create temp table wb_claim2 as select * from claim_stock_pushes();
+create temp table wb_claim2 as select * from wb_test.claim();
 select wb_test.check('a new change is claimed again once it is on', (select count(*) = 1 from wb_claim2));
 select complete_stock_push((select request_id from wb_claim2), true, 200, null);
 select wb_test.check('a success marks the SKUs sent and remembers what was told to the shop',
@@ -238,31 +254,34 @@ select wb_test.check('a success marks the SKUs sent and remembers what was told 
 -- ---------------------------------------------------------------- failures: retries, then the circuit breaker
 update orders set fulfillment_status = 'returned' where id = 'a3000000-0000-0000-0000-0000000000d2';
 select wb_test.flush();
-create temp table wb_claim3 as select * from claim_stock_pushes();
+create temp table wb_claim3 as select * from wb_test.claim();
 select complete_stock_push((select request_id from wb_claim3), false, 500, 'The shop answered with HTTP 500.');
 select wb_test.check('a failed request returns its numbers to the queue for a later try, noting why',
   (select count(*) = 1 and bool_and(attempts = 1 and note like '%HTTP 500%' and due_at > now()) from stock_push_items where status = 'pending' and sku = 'P1'));
-select wb_test.check('the retry is not claimed before it is due', (select count(*) = 0 from claim_stock_pushes()));
+select wb_test.check('the retry is not claimed before it is due', (select count(*) = 0 from wb_test.claim()));
 update stock_push_items set due_at = now() where status = 'pending';
-create temp table wb_claim4 as select * from claim_stock_pushes();
+create temp table wb_claim4 as select * from wb_test.claim();
 select wb_test.check('once due it is claimed again, on a new request', (select count(*) = 1 and bool_and(request_id <> (select request_id from wb_claim3)) from wb_claim4));
 select complete_stock_push((select request_id from wb_claim4), false, 500, 'The shop answered with HTTP 500.');
 update stock_push_items set due_at = now() where status = 'pending';
 update stock_push_requests set created_at = now() - interval '5 minutes' where integration_id = 'a1000000-0000-0000-0000-0000000000d1'; -- out of the rate-limit minute
-create temp table wb_claim5 as select * from claim_stock_pushes();
+create temp table wb_claim5 as select * from wb_test.claim();
 select complete_stock_push((select request_id from wb_claim5), false, 500, 'The shop answered with HTTP 500.');
 select wb_test.check('after the third try the number is given up on and marked failed',
   (select count(*) = 1 from stock_push_items where status = 'failed' and sku = 'P1' and attempts = 3));
 select wb_test.check('three failed requests so far: still on', (select stock_push_enabled and stock_push_failures = 3 from integrations where id = 'a1000000-0000-0000-0000-0000000000d1'));
 -- two more failed requests in a row
-update orders set status = 'cancelled' where id = 'a3000000-0000-0000-0000-0000000000d1';
+insert into orders (id, organization_id, integration_id, external_id, placed_at, status, last_event_at) values
+  ('a3000000-0000-0000-0000-0000000000e9', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'O9', '2026-10-30 12:30+00', 'pending', now());
+insert into order_items (organization_id, order_id, position, sku, name, quantity) values
+  ('a0000000-0000-0000-0000-0000000000d1', 'a3000000-0000-0000-0000-0000000000e9', 0, 'P1', 'x', 1);
 select wb_test.flush();
 update stock_push_requests set created_at = now() - interval '5 minutes' where integration_id = 'a1000000-0000-0000-0000-0000000000d1';
-create temp table wb_claim6 as select * from claim_stock_pushes();
+create temp table wb_claim6 as select * from wb_test.claim();
 select complete_stock_push((select request_id from wb_claim6), false, null, 'The request timed out.');
 update stock_push_items set due_at = now() where status = 'pending';
 update stock_push_requests set created_at = now() - interval '5 minutes' where integration_id = 'a1000000-0000-0000-0000-0000000000d1';
-create temp table wb_claim7 as select * from claim_stock_pushes();
+create temp table wb_claim7 as select * from wb_test.claim();
 select complete_stock_push((select request_id from wb_claim7), false, null, 'The request timed out.');
 select wb_test.check('five failed requests in a row switch write-back off by itself, with the reason, and drop what is waiting',
   (select not stock_push_enabled and stock_push_paused_reason like 'Switched off after 5 failed%timed out%' from integrations where id = 'a1000000-0000-0000-0000-0000000000d1')
@@ -276,22 +295,22 @@ update stock_push_requests set created_at = now() - interval '5 minutes' where i
 insert into products (organization_id, integration_id, sku, name, stock, reported_at)
 select 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'B' || g, 'Bulk ' || g, 100, '2026-10-30 10:00+00' from generate_series(1, 150) g;
 insert into stock_push_items (organization_id, integration_id, product_id, sku, stock, reason)
-select p.organization_id, p.integration_id, p.id, p.sku, 99, 'order' from products p where p.sku like 'B%';
-create temp table wb_claim8 as select * from claim_stock_pushes();
+select p.organization_id, p.integration_id, p.id, p.sku, 99, 'conflict' from products p where p.sku like 'B%'; -- chosen numbers are sent as chosen
+create temp table wb_claim8 as select * from wb_test.claim();
 select wb_test.check('a request carries at most 100 SKUs', (select jsonb_array_length(items) = 100 from wb_claim8));
 select complete_stock_push((select request_id from wb_claim8), true, 200, null);
 insert into stock_push_requests (organization_id, integration_id, kind, url, secret_version, status, finished_at)
 select 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'stock', 'https://third.example.com/stock',
        (select stock_push_secret_version from integrations where id = 'a1000000-0000-0000-0000-0000000000d1'), 'ok', now()
 from generate_series(1, 20);
-create temp table wb_claim9 as select * from claim_stock_pushes();
+create temp table wb_claim9 as select * from wb_test.claim();
 select wb_test.check('more than 20 requests in a minute: nothing more is claimed until the minute is over', (select count(*) = 0 from wb_claim9));
 update stock_push_requests set created_at = now() - interval '5 minutes' where integration_id = 'a1000000-0000-0000-0000-0000000000d1';
-create temp table wb_claim10 as select * from claim_stock_pushes();
+create temp table wb_claim10 as select * from wb_test.claim();
 select wb_test.check('and the 50 left over go out in the next request', (select count(*) = 1 and bool_and(jsonb_array_length(items) = 50) from wb_claim10));
 -- a request nobody reported back on
 update stock_push_requests set created_at = now() - interval '3 minutes' where status = 'sending';
-create temp table wb_claim11 as select * from claim_stock_pushes();
+create temp table wb_claim11 as select * from wb_test.claim();
 select wb_test.check('a request with no recorded answer is counted as failed and its numbers are tried again later',
   (select count(*) = 0 from wb_claim11) and (select count(*) = 50 from stock_push_items where status = 'pending' and attempts = 1 and due_at > now())
   and (select count(*) = 1 from stock_push_requests where status = 'failed' and error like 'No answer%'));
@@ -300,10 +319,11 @@ select wb_test.check('a request with no recorded answer is counted as failed and
 delete from stock_push_items where status = 'pending';
 update products set last_pushed_stock = 5, last_pushed_at = now() where id = 'a2000000-0000-0000-0000-0000000000d1';
 update products set stock = 10, reported_at = '2026-10-30 10:00+00' where id = 'a2000000-0000-0000-0000-0000000000d1';
--- the order list gives WorkRelay's number: cancel O1 and return O2 -> the estimate is 10; the push told the shop 5 earlier. Now the shop reports 8.
+-- WorkRelay told the shop 5 and the shop acknowledged it, so that is the number WorkRelay believes the shop holds (not the estimate, 10). Now the shop reports 8.
 select run_product_sync('a1000000-0000-0000-0000-0000000000d1', '[{"sku":"P1","stock":8}]', 'push', '2026-10-31 09:00+00', 'shop');
+select wb_test.settle();
 select wb_test.check('a report that disagrees with what WorkRelay pushed opens a conflict with both numbers',
-  (select count(*) = 1 and bool_and(sku = 'P1' and shop_value = 8 and workrelay_value = 10 and status = 'open') from stock_conflicts));
+  (select count(*) = 1 and bool_and(sku = 'P1' and shop_value = 8 and workrelay_value = 5 and status = 'open') from stock_conflicts));
 select wb_test.check('and the push has been judged: it is forgotten', (select last_pushed_at is null from products where id = 'a2000000-0000-0000-0000-0000000000d1'));
 
 select wb_test.as_user('00000000-0000-0000-0000-0000000000d2');
@@ -319,7 +339,7 @@ select wb_test.as_user('00000000-0000-0000-0000-0000000000d1');
 select resolve_stock_conflict((select id from stock_conflicts where status = 'open'), 'workrelay');
 select wb_test.check('the owner picks WorkRelay: its number goes into the queue as a conflict push',
   (select status = 'sent_workrelay' from stock_conflicts)
-  and (select count(*) = 1 and bool_and(stock = 10 and reason = 'conflict' and sku = 'P1') from stock_push_items where status = 'pending'));
+  and (select count(*) = 1 and bool_and(stock = 5 and reason = 'conflict' and sku = 'P1') from stock_push_items where status = 'pending'));
 select wb_test.check('a conflict cannot be decided twice',
   wb_test.err($$select resolve_stock_conflict((select id from stock_conflicts limit 1), 'shop')$$) like 'This conflict was already decided%');
 
@@ -328,6 +348,7 @@ reset role;
 delete from stock_push_items where status = 'pending';
 update products set last_pushed_stock = 8, last_pushed_at = now() where id = 'a2000000-0000-0000-0000-0000000000d1';
 select run_product_sync('a1000000-0000-0000-0000-0000000000d1', '[{"sku":"P1","stock":4}]', 'push', '2026-10-31 10:00+00', 'shop');
+select wb_test.settle();
 select wb_test.check('a second disagreement opens a new conflict', (select count(*) = 1 from stock_conflicts where status = 'open'));
 select wb_test.as_user('00000000-0000-0000-0000-0000000000d1');
 select resolve_stock_conflict((select id from stock_conflicts where status = 'open'), 'shop');
@@ -336,9 +357,11 @@ select wb_test.check('keeping the shop''s number sends nothing', (select count(*
 reset role;
 update products set last_pushed_stock = 4, last_pushed_at = now() where id = 'a2000000-0000-0000-0000-0000000000d1';
 select run_product_sync('a1000000-0000-0000-0000-0000000000d1', '[{"sku":"P1","stock":9}]', 'push', '2026-10-31 11:00+00', 'shop');
+select wb_test.settle();
 select wb_test.check('a third disagreement (shop says 9, WorkRelay had 4) opens a conflict', (select count(*) = 1 and bool_and(shop_value = 9 and workrelay_value = 4) from stock_conflicts where status = 'open'));
 update products set last_pushed_stock = 9, last_pushed_at = now() where id = 'a2000000-0000-0000-0000-0000000000d1';
 select run_product_sync('a1000000-0000-0000-0000-0000000000d1', '[{"sku":"P1","stock":9}]', 'push', '2026-10-31 12:00+00', 'shop');
+select wb_test.settle();
 select wb_test.check('a report that agrees with WorkRelay''s number closes the open conflict by itself',
   (select count(*) = 0 from stock_conflicts where status = 'open') and (select count(*) = 1 from stock_conflicts where status = 'agreed'));
 
@@ -364,13 +387,13 @@ reset role;
 insert into stock_push_requests (id, organization_id, integration_id, kind, url, secret_version, item_count, status)
 values ('a3000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'stock', 'https://shop.example.com/x', 1, 2, 'ok');
 insert into stock_push_items (organization_id, integration_id, product_id, sku, stock, reason, status, request_id) values
-  ('a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'a2000000-0000-0000-0000-0000000000d1', 'P1', 10, 'conflict', 'sent', 'a3000000-0000-0000-0000-0000000000d1'),
+  ('a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'a2000000-0000-0000-0000-0000000000d1', 'P1', 5, 'conflict', 'sent', 'a3000000-0000-0000-0000-0000000000d1'),
   ('a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'a2000000-0000-0000-0000-0000000000d1', 'P1', 7, 'order', 'sent', 'a3000000-0000-0000-0000-0000000000d1');
 select wb_test.as_user('00000000-0000-0000-0000-0000000000d3');
 select wb_test.check('a member can open a request and see each number, why it was sent, and the two numbers of a conflict decision',
   (select count(*) = 2 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1'))
   and (select count(*) = 1 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1')
-       where reason = 'conflict' and stock = 10 and conflict_shop = 8 and conflict_workrelay = 10)
+       where reason = 'conflict' and stock = 5 and conflict_shop = 8 and conflict_workrelay = 5)
   and (select count(*) = 1 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1')
        where reason = 'order' and stock = 7 and conflict_shop is null and conflict_workrelay is null));
 select wb_test.as_user('00000000-0000-0000-0000-0000000000d4');

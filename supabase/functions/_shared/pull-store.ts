@@ -24,6 +24,10 @@ export function createPullStore(db: SupabaseClient): PullStore {
       if (error) throw new Error(error.message)
       return typeof data === 'number' ? data : 0
     },
+    async markFeedFilter(integrationId, supported) {
+      const { error } = await db.rpc('set_feed_filter', { p_integration: integrationId, p_supported: supported })
+      if (error) throw new Error(error.message)
+    },
     async record(integrationId, message, count, trigger) {
       const { error } = await db.rpc('record_product_sync', { p_integration: integrationId, p_error: message, p_count: count ?? null })
       if (error) throw new Error(error.message)

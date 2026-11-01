@@ -28,3 +28,7 @@ dist-ssr
 
 # Private planning notes: never push (the repository is public)
 /private/
+
+# Local assistant and design tooling: never push
+/.claude/
+/.impeccable/

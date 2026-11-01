@@ -483,9 +483,23 @@ Off by default, and switched on per shop by the **workspace owner**. When it is 
 estimate for a product, WorkRelay sends your shop the new number for that product. It needs *Estimate stock between syncs* switched on, because the
 estimate is the number that is sent.
 
-- **What is sent:** the SKU and the new absolute stock number, with a sequence number and a time. Never a difference, so a repeat changes nothing.
-  Never a name, an email, a price or anything about the customer. An estimate below zero is not sent.
-- **Set up in WorkRelay** (Integrations → Edit shop): the shop's public **https stock address** (the standard port 443, no login in the address), a **signing secret** (`wr_sign_…`, shown once), then
+- **What is sent:** the SKU and the new absolute stock number, with a sequence number, a time, and the number WorkRelay last read from your shop for
+  that SKU (and when). Never a difference, so a repeat changes nothing. Never a name, an email, a price or anything about the customer. An estimate
+  below zero is not sent.
+- **WorkRelay reads your shop first, like `git pull` before `git push`.** Write-back needs the shop's **product feed address** (section 10, "Pull"):
+  before WorkRelay sends a number it reads your shop's own numbers from that address, quietly (no notification, no "synced" announcement; it
+  shows in Sync history as a read before sending), and reads them once more after a push to check your shop took the numbers. If your shop cannot
+  be read, nothing is sent. If your own number differs from what WorkRelay believes your shop holds (for example you restocked), WorkRelay does
+  not overwrite it: it opens a conflict and the owner decides (see below).
+- **The read can be narrow.** WorkRelay may add `?skus=SKU1,SKU2,...` (comma-separated, URL-encoded, at most 100 SKUs) to your product feed address and
+  read it for just those products. **Support is optional:** if your feed answers with only those SKUs, WorkRelay notices and keeps asking that way
+  (it is cheaper for both of you); if your feed ignores the parameter and answers with everything, WorkRelay notices that too and reads the whole feed
+  (it asks again once a week in case you add it). Either answer is correct. A number is only sent for a SKU that was in an answer WorkRelay got, so a
+  SKU your feed does not list is not sent to.
+- **Reads have a budget.** Reads before and after sending have their own hourly limit per shop (60 by default; only WorkRelay's platform admin can change
+  it), separate from how often WorkRelay reads your feed on a schedule. When it is reached, numbers wait for the next hour.
+- **Set up in WorkRelay** (Integrations → Edit shop): the product feed address, the shop's public **https stock address** (the standard port 443, no
+  login in the address, and no secret in it either: the signature is the secret), a **signing secret** (`wr_sign_…`, shown once), then
   **Send test**, then the switch. Changing the address or the secret switches write-back off until the shop passes a new test.
 - **Turning it off in WorkRelay stops everything**, even if your shop is ready to receive: nothing queued is sent afterwards, and the check is made
   again just before each request leaves. Any member of the workspace can switch it off.
@@ -505,11 +519,16 @@ WorkRelay sends `POST <your stock address>` with `Content-Type: application/json
   "sent_at": "2026-10-31T12:00:00.000Z",
   "store_id": "shop-eu-001",
   "items": [
-    { "sku": "TEE-BLK-M", "stock": 7, "seq": 412, "as_of": "2026-10-31T11:59:58.120Z" },
-    { "sku": "MUG-WHITE", "stock": 11, "seq": 413, "as_of": "2026-10-31T11:59:58.120Z" }
+    { "sku": "TEE-BLK-M", "stock": 7, "seq": 412, "as_of": "2026-10-31T11:59:58.120Z", "reported_stock": 9, "reported_at": "2026-10-31T11:59:41.000Z" },
+    { "sku": "MUG-WHITE", "stock": 11, "seq": 413, "as_of": "2026-10-31T11:59:58.120Z", "reported_stock": 11, "reported_at": "2026-10-31T11:59:41.000Z" }
   ]
 }
 ```
+
+`stock` is the number WorkRelay wants your shop to hold. `reported_stock` and `reported_at` are the number WorkRelay last read from your shop for that
+SKU, and when (`null` if it never did). If your shop's own number has moved since `reported_at` by something WorkRelay cannot know about, such as a
+restock or a manual correction, **do not apply the number**: leave your stock as it is, and WorkRelay will see the difference on its next read and ask the
+owner.
 
 **Verify every request before you act on it.** Anyone who finds the address can send a request; only WorkRelay can sign one. Check the signature with
 a constant-time comparison, reject a timestamp more than 5 minutes from your clock, and ignore a `request_id` you have already seen.
@@ -539,7 +558,9 @@ function verifyWorkRelay(string $secret, array $headers, string $rawBody): bool 
 ```
 
 - **The test.** *Send test* posts a signed `stock.test` request with a random `challenge`. Your endpoint passes by verifying the signature and
-  answering `200` with JSON `{"challenge": "<the same value>"}`. An endpoint that accepts anything cannot pass, which is the point.
+  answering `200` with JSON `{"challenge": "<the same value>"}`. It then sends a second `stock.test` request with a **wrong signature**, which your
+  endpoint must refuse with `401` or `403`. An endpoint that accepts anything, or that echoes the challenge without checking the signature,
+  cannot pass: otherwise anyone who finds the address could set your shop's stock.
 
 ```json
 {
@@ -552,12 +573,19 @@ function verifyWorkRelay(string $secret, array $headers, string $rawBody): bool 
 ```
 
 - **Answering.** Any `2xx` means accepted. Anything else, a timeout (10 seconds) or a redirect (never followed) is a failure: each SKU is tried again
-  1 minute and then 5 minutes later, then given up on. **5 failed requests in a row switch write-back off by itself**, and the reason is shown
-  next to the switch. Answer quickly and do the work after answering.
+  1 minute and then 5 minutes later, then given up on. **5 failed requests in a row switch write-back off by itself** (a failed read of your feed
+  counts too), and the reason is shown next to the switch. Answer quickly and do the work after answering. A request carries up to 100 SKUs and
+  the answer covers all of them, so **answer `2xx` and ignore a SKU you do not know**. If you answer a request with several SKUs with a `4xx`
+  (other than `408` or `429`), WorkRelay does not give up on all of them: it sends the numbers again **one at a time**, so only a SKU you refuse
+  on its own is given up on (it is not retried, and counts as a failed request).
 - **Order and repeats.** A request carries up to 100 SKUs, at most 20 requests a minute, and one at a time per shop. Apply a number only if its `seq`
   is higher than the one you last applied for that SKU; a lower one is an older number that arrived late.
-- **When your next report disagrees.** If a later sync reports a different number than the one WorkRelay sent, nothing is overwritten. WorkRelay
-  records both numbers and the difference, and the owner chooses: keep the shop's number, or send WorkRelay's again.
+- **When the numbers disagree.** If the numbers WorkRelay reads from your shop differ from what WorkRelay believes your shop holds (what it last
+  sent, less what sold since), nothing is overwritten and nothing more is sent for that product. WorkRelay first waits about 90 seconds and judges the
+  difference again, because an order your shop has already counted may still be on its way to WorkRelay (send order events promptly); only a
+  difference that is still there then is shown to the owner. WorkRelay records both numbers and the
+  difference, and the owner chooses: keep the shop's number, or send WorkRelay's. The disagreement and the decision stay in Sync history, which shows
+  both directions: what your shop reported to WorkRelay, and what WorkRelay sent to your shop.
 - **Your own safeguards.** Allow-list WorkRelay's requests by signature, not by IP address. Keep the signing secret out of your repository. If it leaks,
   press *Replace secret* in WorkRelay: the old one stops working at once.
 

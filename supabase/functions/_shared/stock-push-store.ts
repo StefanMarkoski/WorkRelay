@@ -1,9 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { DueSync } from './product-pull.ts'
 import type { ClaimedPush, PushItem, PushStore, TestClaim } from './stock-push.ts'
 
 /** Service-role implementation of the write-back persistence. Every decision is made by the database functions. */
 export function createPushStore(db: SupabaseClient): PushStore {
   return {
+    async claimPulls() {
+      const { data, error } = await db.rpc('claim_pre_push_pulls')
+      if (error) throw new Error(error.message)
+      return (data ?? []).map(
+        (r: { integration_id: string; source_url: string; auth_header: string | null; phase: 'before_push' | 'after_push'; skus: string[] | null; use_filter: boolean; filter_state: boolean | null }): DueSync => ({
+          integrationId: r.integration_id, sourceUrl: r.source_url, authHeader: r.auth_header, trigger: r.phase,
+          skus: r.skus ?? [], useFilter: r.use_filter, filterState: r.filter_state,
+        }),
+      )
+    },
+    async failPull(integrationId, message) {
+      const { error } = await db.rpc('fail_pre_push_pull', { p_integration: integrationId, p_error: message })
+      if (error) throw new Error(error.message)
+    },
     async claim() {
       const { data, error } = await db.rpc('claim_stock_pushes')
       if (error) throw new Error(error.message)

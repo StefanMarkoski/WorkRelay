@@ -23,11 +23,15 @@ export function createPushClient(): PushHttp {
       const reader = res.body?.getReader()
       const chunks: Uint8Array[] = []
       let received = 0
-      while (reader && received < MAX_RESPONSE_BYTES) {
-        const { done, value } = await reader.read()
-        if (done || !value) break
-        chunks.push(value)
-        received += value.length
+      try {
+        while (reader && received < MAX_RESPONSE_BYTES) {
+          const { done, value } = await reader.read()
+          if (done || !value) break
+          chunks.push(value)
+          received += value.length
+        }
+      } catch {
+        // The status already arrived: a body that stalls or breaks afterwards is not a failed request. It only means less of the answer.
       }
       await reader?.cancel().catch(() => {})
       const merged = new Uint8Array(Math.min(received, MAX_RESPONSE_BYTES))

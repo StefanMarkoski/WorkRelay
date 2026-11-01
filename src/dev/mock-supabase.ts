@@ -8,7 +8,7 @@ import { customerOrders, deriveCustomers, listCustomers } from './mock-customers
 import { insightsRpc } from './mock-insights'
 import { failuresOlderThan, listFailures } from './mock-failures'
 import { seedStockPush, stockPushRpc, stockPushTest } from './mock-stock-push'
-import { listProducts, listSyncRuns, productOrders, stockEstimates, syncRunChanges } from './mock-inventory'
+import { listProducts, listSyncRuns, productOrders, stockEstimates, syncRunChanges, syncRunConflicts } from './mock-inventory'
 import { buildDataset, readMode } from './mock-datasets'
 
 type Row = Record<string, any>
@@ -133,8 +133,8 @@ const DEMO_RPC: Record<string, unknown> = {
   ],
   admin_list_tenants: [{ id: ORG, name: 'Game Shop', created_at: ago(9000), owner_emails: ['owner@example.com'], members: 2, integrations: 2, workflows: 6, orders: 7, currencies: ['MKD', 'USD'], shops_without_currency: 0 }],
   admin_list_tenant_shops: [
-    { id: SHOP_1, name: 'Game Store', status: 'connected', currency: 'MKD', push_enabled: true, calls: 15, days: 1, last_sync_at: ago(46), last_error: null },
-    { id: SHOP_2, name: 'Game Store 2', status: 'connected', currency: 'USD', push_enabled: false, calls: null, days: null, last_sync_at: null, last_error: null },
+    { id: SHOP_1, name: 'Game Store', status: 'connected', currency: 'MKD', push_enabled: true, calls: 15, days: 1, last_sync_at: ago(46), last_error: null, reads_limit: 60 },
+    { id: SHOP_2, name: 'Game Store 2', status: 'connected', currency: 'USD', push_enabled: false, calls: null, days: null, last_sync_at: null, last_error: null, reads_limit: 60 },
   ],
 }
 
@@ -223,6 +223,7 @@ export const supabase: any = {
     if (name === 'list_products') return Promise.resolve({ data: listProducts(DB, args), error: null })
     if (name === 'list_sync_runs') return Promise.resolve({ data: MODE === 'empty' ? [] : listSyncRuns(DB, args), error: null })
     if (name === 'sync_run_changes') return Promise.resolve({ data: syncRunChanges(args), error: null })
+    if (name === 'sync_run_conflicts') return Promise.resolve({ data: syncRunConflicts(args), error: null })
     if (name === 'failures_older_than') return Promise.resolve({ data: failuresOlderThan(DB, args), error: null })
     if (name === 'set_failure_retention') {
       if (!(args && args.p_days >= 1 && args.p_days <= 365)) return Promise.resolve({ data: null, error: { message: 'Keep failures for between 1 and 365 days.' } })
@@ -249,6 +250,10 @@ export const supabase: any = {
     if (name === 'delete_automation') {
       const w = (DB.workflows ?? []).find((x) => x.id === args?.p_id)
       if (w) Object.assign(w, { deleted_at: w.deleted_at ?? new Date().toISOString(), enabled: false, preset_key: null })
+      return Promise.resolve({ data: null, error: null })
+    }
+    if (name === 'admin_set_stock_push_read_limit') {
+      for (const s of (RPC.admin_list_tenant_shops as Row[]) ?? []) if (s.id === args?.p_integration) s.reads_limit = Number(args?.p_limit)
       return Promise.resolve({ data: null, error: null })
     }
     if (name === 'admin_set_push_enabled') {

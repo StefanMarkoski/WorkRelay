@@ -184,8 +184,8 @@ describe('stock write-back section of the guide', () => {
       log,
       http: { post: async (_u, _h, body) => { sent.push(body); return { status: 200, body: '' } } },
       store: {
-        claim: async () => [{ requestId: 'r', integrationId: 'i', storeId: 'shop-eu-001', url: 'https://shop.example.com/s', secret: 'wr_sign_x', items: [{ sku: 'A', stock: 1, seq: 1, as_of: '2026-10-31T12:00:00Z' }] }],
-        stillAllowed: async () => true, complete: async () => {}, beginTest: async () => { throw new Error('x') }, finishTest: async () => {},
+        claim: async () => [{ requestId: 'r', integrationId: 'i', storeId: 'shop-eu-001', url: 'https://shop.example.com/s', secret: 'wr_sign_x', items: [{ sku: 'A', stock: 1, seq: 1, as_of: '2026-10-31T12:00:00Z', reported_stock: 9, reported_at: '2026-10-31T11:00:00Z' }] }],
+        claimPulls: async () => [], failPull: async () => {}, stillAllowed: async () => true, complete: async () => {}, beginTest: async () => { throw new Error('x') }, finishTest: async () => {},
       },
     })
     const real = JSON.parse(sent[0]) as Record<string, any>

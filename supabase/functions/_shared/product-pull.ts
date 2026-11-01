@@ -10,19 +10,29 @@ import type { Logger } from './log.ts'
  * on its way is never overwritten by it.
  */
 
+/** Who started a pull: the schedule, a person pressing Sync now, or write-back reading the shop before and after it sends. */
+export type PullTrigger = 'scheduled' | 'manual' | 'before_push' | 'after_push'
+
 export interface DueSync {
   integrationId: string
   sourceUrl: string
   authHeader: string | null
   /** Who started this pull: the schedule (the default) or a person pressing Sync now. Kept in the sync history. */
-  trigger?: 'scheduled' | 'manual'
+  trigger?: PullTrigger
+  /** Write-back's reads: only these SKUs matter, so the shop is asked for just these (?skus=A,B) when it supports that. */
+  skus?: string[]
+  useFilter?: boolean
+  /** What WorkRelay knows about the shop: true = it honours ?skus=, false = it ignored it, null/absent = never tried. */
+  filterState?: boolean | null
 }
 
 export interface PullStore {
   claimDue(limit: number): Promise<DueSync[]>
-  apply(a: { integrationId: string; items: Record<string, unknown>[]; at: string; trigger?: 'scheduled' | 'manual' }): Promise<number>
+  apply(a: { integrationId: string; items: Record<string, unknown>[]; at: string; trigger?: PullTrigger }): Promise<number>
   /** Saves the outcome and shows it in Event history. `count` is how many products the answer held. */
-  record(integrationId: string, error: string | null, count?: number, trigger?: 'scheduled' | 'manual'): Promise<void>
+  record(integrationId: string, error: string | null, count?: number, trigger?: PullTrigger): Promise<void>
+  /** Remembers whether the shop honoured ?skus= (the answer held only what was asked) or ignored it (it sent more). */
+  markFeedFilter?(integrationId: string, supported: boolean): Promise<void>
 }
 
 export interface PullHttp {
@@ -61,7 +71,14 @@ export async function pullShop(shop: DueSync, deps: PullDeps): Promise<PullOutco
   try {
     const headers: Record<string, string> = { accept: 'application/json' }
     if (shop.authHeader) headers.authorization = shop.authHeader
-    const res = await deps.http.get(shop.sourceUrl, headers)
+    const filtered = !!(shop.useFilter && shop.skus && shop.skus.length > 0)
+    let url = shop.sourceUrl
+    if (filtered) {
+      const u = new URL(shop.sourceUrl)
+      u.searchParams.set('skus', shop.skus!.join(','))
+      url = u.toString()
+    }
+    const res = await deps.http.get(url, headers)
     if (res.status < 200 || res.status >= 300) return await fail(`The shop answered with HTTP ${res.status}`)
 
     let value: unknown
@@ -74,6 +91,13 @@ export async function pullShop(shop: DueSync, deps: PullDeps): Promise<PullOutco
     const parsed = inventoryEnvelope(PULL_MAX_PRODUCTS).safeParse(Array.isArray(value) ? { products: value } : value)
     if (!parsed.success) return await fail(`Unexpected response: ${describeIssues(parsed.error)}`.slice(0, 500))
 
+    if (filtered && parsed.data.products.length > 0) {
+      // Did the shop send only what was asked? Then it honours the filter. If it sent more it ignored it, and the whole feed was
+      // read anyway, which is just as good for the comparison. Either way the answer is remembered, so the next read knows.
+      const asked = new Set(shop.skus)
+      const honoured = parsed.data.products.every((p) => asked.has(p.sku))
+      if (!(honoured && shop.filterState === true)) await deps.store.markFeedFilter?.(shop.integrationId, honoured).catch(() => undefined)
+    }
     const applied = await deps.store.apply({ integrationId: shop.integrationId, items: toDatabaseItems(parsed.data.products), at: sentAt, trigger: shop.trigger })
     await deps.store.record(shop.integrationId, null, applied)
     return { ok: true, products: applied }

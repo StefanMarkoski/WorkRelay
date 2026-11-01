@@ -9,19 +9,50 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
-import { conflictDiff, useDecidedConflicts, useOpenConflicts } from '@/features/stock-push/queries'
+import { conflictDiff, useDecidedConflicts, useOpenConflicts, useStockPushStatus } from '@/features/stock-push/queries'
+import { RequestItems } from '@/features/stock-push/request-items'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import type { StockConflict, StockPushItem, StockPushRequest } from '@/types/db'
+import type { StockConflict, StockPushRequest } from '@/types/db'
 
 const PAGE_SIZE = 25
 
 const REQUEST_TONE: Record<StockPushRequest['status'], BadgeTone> = { ok: 'success', failed: 'danger', cancelled: 'neutral', sending: 'info' }
 const REQUEST_LABEL: Record<StockPushRequest['status'], string> = { ok: 'Delivered', failed: 'Failed', cancelled: 'Not sent', sending: 'Sending' }
-const ITEM_LABEL: Record<StockPushItem['status'], string> = {
-  pending: 'Waiting', sending: 'Sending', sent: 'Sent', failed: 'Gave up', skipped: 'Skipped', cancelled: 'Not sent',
+/** What is waiting to go to a shop and why it has not gone yet: the read of the shop's own numbers first, a difference being double-checked, or the hourly limit. */
+function Waiting() {
+  const status = useStockPushStatus()
+  const rows = (status.data ?? []).filter((s) => s.enabled && (s.waiting > 0 || s.checking > 0))
+  if (rows.length === 0) return null
+  return (
+    <Card className="mb-6">
+      <div className="border-b px-4 py-3">
+        <h2 className="text-sm font-medium">Waiting to be sent</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">WorkRelay reads a shop&apos;s own numbers before it sends its own, so a number waits for that read.</p>
+      </div>
+      <ul className="divide-y">
+        {rows.map((s) => {
+          const limited = s.reads_used >= s.reads_limit && s.resets_at !== null
+          return (
+            <li key={s.integration_id} className="px-4 py-3 text-sm">
+              <span className="font-medium [overflow-wrap:anywhere]">{s.integration_name}</span>
+              <span className="text-muted-foreground">
+                {s.waiting > 0 ? ` · ${s.waiting.toLocaleString()} number${s.waiting === 1 ? '' : 's'} waiting` : ''}
+                {s.checking > 0 ? ` · ${s.checking.toLocaleString()} difference${s.checking === 1 ? '' : 's'} being double-checked in case an order is still on its way (about 90 seconds)` : ''}
+              </span>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {limited
+                  ? `The limit for reading this shop is reached (${s.reads_used.toLocaleString()} of ${s.reads_limit.toLocaleString()} this hour). Numbers wait until ${formatDateTime(s.resets_at!)}.`
+                  : `Reads of this shop this hour: ${s.reads_used.toLocaleString()} of ${s.reads_limit.toLocaleString()}.`}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </Card>
+  )
 }
 
 /** Which number a settled conflict kept, in words. */
@@ -146,55 +177,6 @@ function Decided() {
   )
 }
 
-/** The SKUs of one request, fetched when the row is opened. */
-function Items({ request }: { request: StockPushRequest }) {
-  const q = useQuery({
-    queryKey: ['stock-pushes', 'items', request.id],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('stock_push_request_items', { p_request: request.id, p_limit: 100 })
-      if (error) throw error
-      return (data ?? []) as StockPushItem[]
-    },
-  })
-  if (request.kind === 'test') {
-    return <p className="text-sm text-muted-foreground">A signed test. It carries a random code and no stock numbers.{request.error ? ` ${request.error}` : ''}</p>
-  }
-  if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>
-  if (q.error) return <p className="text-sm text-muted-foreground">Could not load the numbers. Close this row and open it again.</p>
-  const rows = q.data ?? []
-  const more = (rows[0]?.total_count ?? 0) - rows.length
-  return (
-    <div>
-      {request.error && <p className="mb-2 text-sm">{request.error}</p>}
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full text-left text-[13px]">
-          <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-            <tr><th className="px-3 py-2 font-medium">Product</th><th className="px-3 py-2 text-right font-medium">Number sent</th><th className="px-3 py-2 font-medium">Why</th><th className="px-3 py-2 font-medium">Result</th></tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.sku} className="border-b last:border-0">
-                <td className="px-3 py-2">
-                  <span className="font-medium [overflow-wrap:anywhere]">{r.name}</span>
-                  <span className="ml-2 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">{r.sku}</span>
-                </td>
-                <td className="px-3 py-2 text-right font-medium tabular-nums">{r.stock === null ? '—' : r.stock.toLocaleString()}</td>
-                <td className="px-3 py-2 text-muted-foreground">
-                  {r.reason === 'conflict'
-                    ? `Conflict: WorkRelay's number kept${r.conflict_shop !== null && r.conflict_workrelay !== null ? ` (the shop said ${r.conflict_shop.toLocaleString()}, WorkRelay had ${r.conflict_workrelay.toLocaleString()})` : ''}`
-                    : 'Estimate changed'}
-                </td>
-                <td className="px-3 py-2 text-muted-foreground">{ITEM_LABEL[r.status]}{r.note ? ` · ${r.note}` : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {more > 0 && <p className="mt-2 text-xs text-muted-foreground">Plus {more.toLocaleString()} more.</p>}
-    </div>
-  )
-}
-
 export function StockPushesPage() {
   const { current } = useWorkspace()
   const [page, setPage] = useState(0)
@@ -221,6 +203,7 @@ export function StockPushesPage() {
         title="Stock pushes"
         description="Every request WorkRelay sent to a shop with its stock numbers, newest first, and any disagreement between WorkRelay and a shop waiting for the owner. Switch it on per shop under Integrations → Edit. Kept for 30 days."
       />
+      <Waiting />
       <Conflicts />
       <Decided />
       <Card>
@@ -279,7 +262,7 @@ export function StockPushesPage() {
                       {isOpen && (
                         <tr className="border-b bg-muted/30 last:border-0">
                           <td />
-                          <td colSpan={5} className="px-3 py-4 sm:px-4"><Items request={r} /></td>
+                          <td colSpan={5} className="px-3 py-4 sm:px-4"><RequestItems id={r.id} kind={r.kind} error={r.error} /></td>
                         </tr>
                       )}
                     </Fragment>

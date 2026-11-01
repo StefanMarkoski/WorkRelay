@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { KeyRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -24,15 +24,28 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
   const { current, isOwner } = useWorkspace()
   const qc = useQueryClient()
   const shop = useIntegrations().data?.find((s) => s.id === initial.id) ?? initial
-  const [url, setUrl] = useState(shop.stock_push_url ?? '')
+  // the address is the owner's alone: members only know whether one is saved
+  const savedUrl = useQuery({
+    queryKey: ['stock-push-url', shop.id, shop.stock_push_has_url],
+    enabled: isOwner && shop.stock_push_has_url,
+    queryFn: async () => {
+      const { data, error: err } = await supabase.rpc('get_stock_push_url', { p_integration: shop.id })
+      if (err) throw err
+      return (data as string | null) ?? ''
+    },
+  })
+  const saved = shop.stock_push_has_url ? savedUrl.data ?? '' : ''
+  const [edited, setEdited] = useState<string | null>(null)
+  const url = edited ?? saved
+  const setUrl = (v: string) => setEdited(v)
   const [busy, setBusy] = useState<'url' | 'secret' | 'test' | 'switch' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [secret, setSecret] = useState<string | null>(null)
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['integrations', current.id] })
-  const addressChanged = url.trim() !== (shop.stock_push_url ?? '')
-  const ready = shop.estimate_stock && !!shop.stock_push_url && shop.stock_push_has_secret && !!shop.stock_push_verified_at && !shop.stock_push_locked
+  const addressChanged = url.trim() !== saved
+  const ready = shop.estimate_stock && shop.stock_push_has_url && shop.stock_push_has_secret && !!shop.stock_push_verified_at && !shop.stock_push_locked
 
   async function run(kind: NonNullable<typeof busy>, fn: () => Promise<void>) {
     setBusy(kind)
@@ -52,7 +65,7 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
     return data
   }
 
-  const saveAddress = () => run('url', async () => { await rpc('set_stock_push_url', { p_integration: shop.id, p_url: url }); setTestResult(null) })
+  const saveAddress = () => run('url', async () => { await rpc('set_stock_push_url', { p_integration: shop.id, p_url: url }); setEdited(null); void qc.invalidateQueries({ queryKey: ['stock-push-url', shop.id] }); setTestResult(null) })
   const makeSecret = () => run('secret', async () => { setSecret((await rpc('rotate_stock_push_secret', { p_integration: shop.id })) as string); setTestResult(null) })
   const sendTest = () => run('test', async () => {
     setTestResult(null)
@@ -75,7 +88,9 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
           <p className="mt-0.5 text-xs text-muted-foreground">
             Optional, and off until the workspace owner switches it on. When an order, a cancellation or a return changes WorkRelay&apos;s estimate for a
             product, WorkRelay sends your shop the new number for that product: the SKU and the number, nothing else, signed with a secret only your
-            shop and WorkRelay know. If the shop&apos;s next report disagrees, the owner decides which number stays.
+            shop and WorkRelay know. Like git, it reads the shop&apos;s own numbers first (quietly, from the product feed address on the{' '}
+            <Link to="/api-calls/inventory" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">API Calls</Link> page)
+            and again after sending. If they disagree with what WorkRelay believed, nothing is overwritten and the owner decides which number stays.
           </p>
         </div>
         <Switch
@@ -143,7 +158,7 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
                 : shop.stock_push_verified_at ? `The shop passed its test ${timeAgo(shop.stock_push_verified_at)}.`
                 : 'WorkRelay sends one signed request with a random code. The shop passes by answering with the same code.'}
             </p>
-            <Button type="button" variant="outline" disabled={busy !== null || !shop.stock_push_url || !shop.stock_push_has_secret || addressChanged} onClick={() => void sendTest()}>
+            <Button type="button" variant="outline" disabled={busy !== null || !shop.stock_push_has_url || !shop.stock_push_has_secret || addressChanged} onClick={() => void sendTest()}>
               {busy === 'test' ? 'Sending…' : 'Send test'}
             </Button>
           </div>
@@ -154,7 +169,7 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
       {error && <p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}
       <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
         <Link to="/inventory/pushes" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">See what was sent</Link>
-        {' '}and decide any disagreements.
+        {' '}and decide any disagreements. Both directions are in <Link to="/inventory/syncs" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Sync history</Link>.
       </p>
 
       <Modal open={secret !== null} onClose={() => setSecret(null)} title="Your signing secret">

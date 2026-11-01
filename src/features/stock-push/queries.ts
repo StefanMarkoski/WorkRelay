@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { supabase } from '@/lib/supabase'
-import type { StockConflict } from '@/types/db'
+import type { StockConflict, StockPushStatus } from '@/types/db'
 
 /** Conflicts waiting for the owner. The count also rides on the Inventory page's button. */
 export function useOpenConflicts() {
@@ -44,3 +44,17 @@ export const CONFLICT_STATUS_LABEL = {
   sent_workrelay: 'Sent WorkRelay\'s number',
   agreed: 'Agreed on the next report',
 } as const
+
+/** What is waiting to go to each shop and why it has not gone yet. */
+export function useStockPushStatus() {
+  const { current } = useWorkspace()
+  return useQuery({
+    queryKey: ['stock-pushes', 'status', current.id],
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('stock_push_status', { p_org: current.id })
+      if (error) throw error
+      return (data ?? []) as StockPushStatus[]
+    },
+  })
+}

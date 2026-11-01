@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { tick } from '../_shared/engine.ts'
 import { json } from '../_shared/keys.ts'
 import { consoleLogger } from '../_shared/log.ts'
-import { pullDueProducts } from '../_shared/product-pull.ts'
+import { pullDueProducts, pullShop } from '../_shared/product-pull.ts'
 import { createEngineStore } from './engine-store.ts'
 import { createHttpClient } from './http-client.ts'
 import { createPullClient } from '../_shared/pull-client.ts'
@@ -15,7 +15,7 @@ const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
   auth: { persistSession: false },
 })
 const pullDeps = { store: createPullStore(db), http: createPullClient(), log: consoleLogger }
-const pushDeps = { store: createPushStore(db), http: createPushClient(), log: consoleLogger }
+const pushDeps = { store: createPushStore(db), http: createPushClient(), log: consoleLogger, pull: (shop: Parameters<typeof pullShop>[0]) => pullShop(shop, pullDeps) }
 const deps = { store: createEngineStore(db), http: createHttpClient(), log: consoleLogger }
 
 // Called by pg_cron (via pg_net) every few seconds. Each call is one short, bounded tick.
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       // Stock write-back rides on the tick as well. Whether anything may be sent is decided by the database, not here.
       pushPendingStock(pushDeps).catch((err) => {
         consoleLogger.error('stock write-back failed', { message: err instanceof Error ? err.message : 'unknown' })
-        return { sent: 0, failed: 0, cancelled: 0 }
+        return { pulled: 0, pull_failed: 0, sent: 0, failed: 0, cancelled: 0 }
       }),
     ])
     return json(200, { ...(result as unknown as Record<string, unknown>), product_pulls: pulls, stock_pushes: pushes })

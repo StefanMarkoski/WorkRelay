@@ -21,7 +21,8 @@ export interface Integration {
   /** Show an estimated stock next to the shop's reported one: the last report minus the orders since. */
   estimate_stock: boolean
   /** Stock write-back (0043): where WorkRelay sends the shop its stock numbers. The signing secret is never readable. */
-  stock_push_url: string | null
+  /** Whether an address is saved. The address itself is the owner's: read it with get_stock_push_url. */
+  stock_push_has_url: boolean
   stock_push_enabled: boolean
   /** The last time the shop passed the signed test for the current address and secret. */
   stock_push_verified_at: string | null
@@ -286,6 +287,8 @@ export interface TenantShop {
   days: number | null
   last_sync_at: string | null
   last_error: string | null
+  /** Reads of the shop around stock pushes allowed per hour. Set by a platform admin only. */
+  reads_limit: number
 }
 
 /** A row of product_siblings: the same SKU in another shop of the workspace. */
@@ -304,16 +307,32 @@ export interface SyncRun {
   id: string
   integration_id: string
   integration_name: string
-  source: 'push' | 'pull'
-  trigger: 'shop' | 'scheduled' | 'manual'
+  /** 'push': the shop pushed. 'pull': WorkRelay read the shop. 'send': WorkRelay sent the shop its stock numbers. */
+  source: 'push' | 'pull' | 'send'
+  /** Who started a read: the schedule, Sync now, or write-back reading the shop before and after it sends. Null for a send. */
+  trigger: 'shop' | 'scheduled' | 'manual' | 'before_push' | 'after_push' | null
   by_name: string | null
   by_role: string | null
+  /** Products in the read or push, or numbers in a send. */
   received: number
+  /** Products that changed, or numbers the shop accepted. */
   changed: number
-  status: 'ok' | 'failed'
+  /** Disagreements a read opened, or numbers a send carried because the owner decided for WorkRelay. */
+  issues: number
+  status: 'ok' | 'failed' | 'cancelled'
   error: string | null
   created_at: string
   total_count: number
+}
+
+/** A row of sync_run_conflicts: a disagreement one read of the shop opened, and what was decided about it. */
+export interface SyncRunConflict {
+  sku: string
+  name: string
+  workrelay_value: number
+  shop_value: number
+  status: 'open' | 'kept_shop' | 'sent_workrelay' | 'agreed'
+  decided_at: string | null
 }
 
 /** A row of sync_run_changes: a product the sync added, or whose stock moved or price changed (the other side is null). */
@@ -373,4 +392,18 @@ export interface StockConflict {
   status: 'open' | 'kept_shop' | 'sent_workrelay' | 'agreed'
   decided_at: string | null
   total_count: number
+}
+
+/** A row of stock_push_status: what waits to be sent to a shop, and why it has not gone yet. */
+export interface StockPushStatus {
+  integration_id: string
+  integration_name: string
+  enabled: boolean
+  waiting: number
+  /** Differences being double-checked in case an order is still on its way. */
+  checking: number
+  reads_used: number
+  reads_limit: number
+  resets_at: string | null
+  oldest: string | null
 }

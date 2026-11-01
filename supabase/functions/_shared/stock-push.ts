@@ -3,6 +3,7 @@ import type { Caller } from './auth.ts'
 import { HttpError } from './engine.ts'
 import { describeIssues } from './ingest.ts'
 import { json } from './keys.ts'
+import type { DueSync, PullOutcome } from './product-pull.ts'
 import type { Logger } from './log.ts'
 
 /**
@@ -21,6 +22,9 @@ export interface PushItem {
   stock: number
   seq: number
   as_of: string
+  /** What WorkRelay last read from the shop for this SKU, and when: lets the shop see if its own number has moved since. */
+  reported_stock: number | null
+  reported_at: string | null
 }
 
 export interface ClaimedPush {
@@ -41,6 +45,9 @@ export interface TestClaim {
 }
 
 export interface PushStore {
+  /** The shops to read before (or after) sending: the database decides which, and how often. */
+  claimPulls(): Promise<DueSync[]>
+  failPull(integrationId: string, message: string): Promise<void>
   claim(): Promise<ClaimedPush[]>
   stillAllowed(requestId: string): Promise<boolean>
   complete(requestId: string, ok: boolean, httpStatus: number | null, error: string | null): Promise<void>
@@ -59,6 +66,8 @@ export interface PushDeps {
   http: PushHttp
   log: Logger
   now?: () => Date
+  /** Reads the shop's own numbers (the same operation as the scheduled pull, but quiet: no announcement). */
+  pull?: (shop: DueSync) => Promise<PullOutcome>
 }
 
 export async function signStockPush(secret: string, timestamp: string, requestId: string, rawBody: string): Promise<string> {
@@ -109,10 +118,30 @@ async function send(deps: PushDeps, url: string, prepared: Prepared): Promise<Ou
   }
 }
 
-/** The engine's part: send what the database says may be sent, report each outcome. */
-export async function pushPendingStock(deps: PushDeps): Promise<{ sent: number; failed: number; cancelled: number }> {
+/**
+ * The engine's part, like git: read the shop's own numbers first (and once more after a push, to check it took them), then send what
+ * the database says may be sent, and report each outcome. A shop that cannot be read is not sent anything.
+ */
+export async function pushPendingStock(deps: PushDeps): Promise<{ pulled: number; pull_failed: number; sent: number; failed: number; cancelled: number }> {
+  const totals = { pulled: 0, pull_failed: 0, sent: 0, failed: 0, cancelled: 0 }
+  if (deps.pull) {
+    const pull = deps.pull
+    const toRead = await deps.store.claimPulls()
+    await Promise.all(
+      toRead.map(async (shop) => {
+        const out = await pull(shop).catch((err): PullOutcome => ({ ok: false, error: err instanceof Error ? err.message : 'The request failed' }))
+        if (out.ok) {
+          totals.pulled++
+          return
+        }
+        totals.pull_failed++
+        await deps.store.failPull(shop.integrationId, out.error).catch((err) => {
+          deps.log.error('stock pull failure not recorded', { integration_id: shop.integrationId, message: err instanceof Error ? err.message : 'unknown' })
+        })
+      }),
+    )
+  }
   const claimed = await deps.store.claim()
-  const totals = { sent: 0, failed: 0, cancelled: 0 }
   await Promise.all(
     claimed.map(async (c) => {
       try {
@@ -144,6 +173,21 @@ export async function pushPendingStock(deps: PushDeps): Promise<{ sent: number; 
 // ------------------------------------------------------------------------------------------------ the owner's test
 
 const bodySchema = z.object({ integration_id: z.uuid() })
+
+/**
+ * The control: the same kind of request with a wrong signature. A shop that checks signatures refuses it (401 or 403); a shop that only
+ * echoes the challenge would accept it, and then anyone who learns the address could set the shop's stock. Nothing real is in the body.
+ */
+async function forgedRequestIsRefused(deps: TestDeps, t: TestClaim, now: Date): Promise<string | null> {
+  const requestId = crypto.randomUUID()
+  const prepared = await prepare(t.secret, requestId, { type: 'stock.test', request_id: requestId, sent_at: now.toISOString(), store_id: t.storeId, challenge: `forged-${requestId}` }, now)
+  prepared.headers['x-workrelay-signature'] = `v1=${'0'.repeat(64)}`
+  const out = await send(deps, t.url, prepared)
+  if (!out.ok && (out.status === 401 || out.status === 403)) return null
+  if (out.ok) return 'The shop accepted a request with a wrong signature. Check the X-WorkRelay-Signature of every request and answer 401 or 403 when it does not match.'
+  if (out.status !== null) return `The shop answered a request with a wrong signature with HTTP ${out.status}. It must refuse it with 401 or 403.`
+  return `A request with a wrong signature could not be checked: ${out.error}`
+}
 
 /** What each refusal means, in words an owner can act on. The app shows these. */
 export const TEST_REFUSALS: Record<string, string> = {
@@ -197,6 +241,7 @@ export async function handleStockPushTest(req: Request, deps: TestDeps): Promise
     }
     if (echoed !== t.challenge) error = 'The shop answered, but did not send the challenge back. Answer a stock.test request with {"challenge": "<the same value>"}.'
   }
+  if (out.ok && error === null) error = await forgedRequestIsRefused(deps, t, now)
   await deps.store.finishTest(t.requestId, error === null, out.status, error)
   return json(200, error === null ? { status: 'ok' } : { status: 'failed', error })
 }

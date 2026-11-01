@@ -74,14 +74,19 @@ export function demoSyncRuns(db: Record<string, Row[]>): Row[] {
   const a = shops[0], b = shops[1] ?? shops[0]
   if (!a) return []
   const ago = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
-  const base = { organization_id: a.organization_id, error: null }
+  const base = { organization_id: a.organization_id, error: null, issues: 0 }
   return [
     { id: 'sr1', integration_id: a.id, source: 'push', trigger: 'shop', by_name: 'Marko', by_role: 'Admin', received: 120, changed: 14, status: 'ok', created_at: ago(12), ...base },
     { id: 'sr2', integration_id: b.id, source: 'pull', trigger: 'scheduled', by_name: null, by_role: null, received: 40, changed: 3, status: 'ok', created_at: ago(35), ...base },
     { id: 'sr3', integration_id: a.id, source: 'pull', trigger: 'manual', by_name: null, by_role: null, received: 118, changed: 0, status: 'ok', created_at: ago(95), ...base },
-    { id: 'sr4', integration_id: b.id, source: 'pull', trigger: 'scheduled', by_name: null, by_role: null, received: 0, changed: 0, status: 'failed', created_at: ago(180), organization_id: a.organization_id, error: 'The shop answered with HTTP 500' },
-    { id: 'sr5', integration_id: a.id, source: 'push', trigger: 'shop', by_name: null, by_role: null, received: 0, changed: 0, status: 'failed', created_at: ago(300), organization_id: a.organization_id, error: 'products.0.stock: expected number, received string' },
+    { id: 'sr4', integration_id: b.id, source: 'pull', trigger: 'scheduled', by_name: null, by_role: null, received: 0, changed: 0, status: 'failed', created_at: ago(180), organization_id: a.organization_id, error: 'The shop answered with HTTP 500', issues: 0 },
+    { id: 'sr5', integration_id: a.id, source: 'push', trigger: 'shop', by_name: null, by_role: null, received: 0, changed: 0, status: 'failed', created_at: ago(300), organization_id: a.organization_id, error: 'products.0.stock: expected number, received string', issues: 0 },
     { id: 'sr6', integration_id: a.id, source: 'push', trigger: 'shop', by_name: 'Ana', by_role: null, received: 2, changed: 2, status: 'ok', created_at: ago(1500), ...base },
+    // write-back: WorkRelay reads the shop quietly before it sends, sends, then reads once more to check
+    { id: 'sr7', integration_id: a.id, source: 'pull', trigger: 'before_push', by_name: null, by_role: null, received: 118, changed: 2, status: 'ok', created_at: ago(5), ...base, issues: 2 },
+    { id: 'r1', integration_id: a.id, source: 'send', trigger: null, by_name: null, by_role: null, received: 2, changed: 2, status: 'ok', created_at: ago(4), ...base, issues: 1 },
+    { id: 'sr8', integration_id: a.id, source: 'pull', trigger: 'after_push', by_name: null, by_role: null, received: 118, changed: 1, status: 'ok', created_at: ago(3), ...base },
+    { id: 'r2', integration_id: a.id, source: 'send', trigger: null, by_name: null, by_role: null, received: 1, changed: 0, status: 'failed', created_at: ago(40), organization_id: a.organization_id, error: 'The shop answered with HTTP 500.', issues: 0 },
   ]
 }
 
@@ -106,4 +111,13 @@ export function listSyncRuns(db: Record<string, Row[]>, args: Record<string, any
   return rows.slice(p_offset, p_offset + p_limit).map((r) => ({ ...r, integration_name: name(r.integration_id), total_count: rows.length }))
 }
 export const syncRunChanges = (args: Record<string, any> = {}): Row[] =>
-  (['sr1', 'sr2', 'sr6'].includes(args.p_run) ? DEMO_CHANGES : []).map((c) => ({ ...c, total_count: args.p_run === 'sr1' ? 14 : DEMO_CHANGES.length }))
+  (['sr1', 'sr2', 'sr6', 'sr7'].includes(args.p_run) ? DEMO_CHANGES : []).map((c) => ({ ...c, total_count: args.p_run === 'sr1' ? 14 : DEMO_CHANGES.length }))
+
+/** Mirrors sync_run_conflicts: the disagreements one read opened and what was decided. */
+export const syncRunConflicts = (args: Record<string, any> = {}): Row[] =>
+  args.p_run === 'sr7'
+    ? [
+        { sku: 'CAP-NVY', name: 'Navy cap', workrelay_value: 39, shop_value: 33, status: 'sent_workrelay', decided_at: new Date(Date.now() - 2 * 60_000).toISOString() },
+        { sku: 'SOCKS-3', name: 'Socks 3-pack', workrelay_value: 4, shop_value: 9, status: 'open', decided_at: null },
+      ]
+    : []

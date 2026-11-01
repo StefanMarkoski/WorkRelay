@@ -7,9 +7,9 @@ export function seedStockPush(db: Record<string, Row[]>) {
   const [a, b] = db.integrations ?? []
   if (!a) return
   for (const i of db.integrations ?? []) {
-    Object.assign(i, { stock_push_url: null, stock_push_enabled: false, stock_push_verified_at: null, stock_push_locked: false, stock_push_paused_reason: null, stock_push_has_secret: false })
+    Object.assign(i, { stock_push_url: null, stock_push_has_url: false, stock_push_enabled: false, stock_push_verified_at: null, stock_push_locked: false, stock_push_paused_reason: null, stock_push_has_secret: false })
   }
-  Object.assign(a, { estimate_stock: true, stock_push_url: 'https://shop.example.com/workrelay/stock', stock_push_enabled: true, stock_push_verified_at: ago(60 * 5), stock_push_has_secret: true })
+  Object.assign(a, { estimate_stock: true, stock_push_url: 'https://shop.example.com/workrelay/stock', stock_push_has_url: true, stock_push_enabled: true, stock_push_verified_at: ago(60 * 5), stock_push_has_secret: true })
   if (b) Object.assign(b, { estimate_stock: true })
   db.stock_conflicts = [
     { id: 'c1', integration_id: a.id, integration_name: a.name, product_id: 'p1', sku: 'TEE-BLK-M', name: 'Black tee (M)', workrelay_value: 10, shop_value: 8, detected_at: ago(35), status: 'open', decided_at: null },
@@ -54,11 +54,16 @@ export function stockPushRpc(db: Record<string, Row[]>, name: string, args: Reco
     const rows = ITEMS[args.p_request] ?? []
     return { handled: true, data: rows.map((r) => ({ ...r, total_count: rows.length })) }
   }
+  if (name === 'stock_push_status') {
+    const a = (db.integrations ?? [])[0]
+    return { handled: true, data: a ? [{ integration_id: a.id, integration_name: a.name, enabled: true, waiting: 3, checking: 1, reads_used: 12, reads_limit: 60, resets_at: new Date(Date.now() + 38 * 60_000).toISOString(), oldest: new Date(Date.now() - 2 * 60_000).toISOString() }] : [] }
+  }
+  if (name === 'get_stock_push_url') return { handled: true, data: shop(args.p_integration)?.stock_push_url ?? null }
   if (name === 'set_stock_push_url') {
     const i = shop(args.p_integration)
     const u = String(args.p_url ?? '').trim()
     if (u && !/^https:\/\/[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:443)?(\/\S*)?$/.test(u)) return { handled: true, error: { message: 'Use a full https address on the standard port, for example https://shop.example.com/workrelay/stock. No login in the address.' } }
-    Object.assign(i ?? {}, { stock_push_url: u || null, stock_push_enabled: false, stock_push_verified_at: null, stock_push_paused_reason: null })
+    Object.assign(i ?? {}, { stock_push_url: u || null, stock_push_has_url: !!u, stock_push_enabled: false, stock_push_verified_at: null, stock_push_paused_reason: null })
     return { handled: true, data: null }
   }
   if (name === 'rotate_stock_push_secret') {

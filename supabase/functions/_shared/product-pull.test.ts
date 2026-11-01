@@ -6,8 +6,9 @@ const log: Logger = { info() {}, error() {} }
 const SENT_AT = new Date('2026-10-30T12:00:00Z')
 
 function setup(due: DueSync[], reply: (url: string, headers: Record<string, string>) => Promise<{ status: number; body: string }>) {
-  const applied: { integrationId: string; items: Record<string, unknown>[]; at: string; trigger?: 'scheduled' | 'manual' }[] = []
+  const applied: { integrationId: string; items: Record<string, unknown>[]; at: string; trigger?: 'scheduled' | 'manual' | 'before_push' | 'after_push' }[] = []
   const records: [string, string | null, number | undefined][] = []
+  const marks: [string, boolean][] = []
   const store: PullStore = {
     async claimDue() {
       return due
@@ -19,10 +20,13 @@ function setup(due: DueSync[], reply: (url: string, headers: Record<string, stri
     async record(id, error, count) {
       records.push([id, error, count])
     },
+    async markFeedFilter(id, supported) {
+      marks.push([id, supported])
+    },
   }
   const http: PullHttp = { get: reply }
   const run = () => pullDueProducts({ store, http, log, now: () => SENT_AT })
-  return { applied, records, run }
+  return { applied, records, marks, run }
 }
 const shop = (over: Partial<DueSync> = {}): DueSync => ({ integrationId: 'i1', sourceUrl: 'https://shop.test/stock', authHeader: null, ...over })
 const ok = (value: unknown) => async () => ({ status: 200, body: JSON.stringify(value) })
@@ -109,5 +113,60 @@ describe('nothing due', () => {
   it('does nothing', async () => {
     const t = setup([], ok({}))
     expect(await t.run()).toEqual({ pulled: 0, failed: 0 })
+  })
+})
+
+describe('a read for write-back asks only for the SKUs that matter', () => {
+  const asking = (over: Partial<DueSync> = {}) => shop({ trigger: 'before_push', skus: ['A-1', 'B 2'], useFilter: true, filterState: null, ...over })
+
+  it('adds ?skus=, comma-separated and encoded, to the shop\'s own address (keeping what is already in it)', async () => {
+    const seen: string[] = []
+    const t = setup([asking({ sourceUrl: 'https://shop.test/stock?lang=en' })], async (url) => { seen.push(url); return { status: 200, body: '{"products":[{"sku":"A-1","stock":1}]}' } })
+    await t.run()
+    const u = new URL(seen[0])
+    expect(u.searchParams.get('skus')).toBe('A-1,B 2')
+    expect(u.searchParams.get('lang')).toBe('en')
+    expect(seen[0]).not.toContain(' ')
+  })
+
+  it('learns that a shop honours the filter when the answer holds only what was asked, and says so once', async () => {
+    const t = setup([asking()], ok({ products: [{ sku: 'A-1', stock: 1 }] }))
+    await t.run()
+    expect(t.marks).toEqual([['i1', true]])
+    const again = setup([asking({ filterState: true })], ok({ products: [{ sku: 'B 2', stock: 1 }] }))
+    await again.run()
+    expect(again.marks).toEqual([]) // already known: no call
+  })
+
+  it('learns that a shop ignored it when the answer held more, and still applies the whole answer', async () => {
+    const t = setup([asking()], ok({ products: [{ sku: 'A-1', stock: 1 }, { sku: 'OTHER', stock: 5 }] }))
+    await t.run()
+    expect(t.marks).toEqual([['i1', false]])
+    expect(t.applied[0].items.map((i) => i.sku)).toEqual(['A-1', 'OTHER'])
+  })
+
+  it('a shop known to honour it that suddenly sends everything is marked as ignoring it', async () => {
+    const t = setup([asking({ filterState: true })], ok({ products: [{ sku: 'A-1', stock: 1 }, { sku: 'OTHER', stock: 5 }] }))
+    await t.run()
+    expect(t.marks).toEqual([['i1', false]])
+  })
+
+  it('an ignored filter tried again after a week is noted again, so it is not tried at every read', async () => {
+    const t = setup([asking({ filterState: false })], ok({ products: [{ sku: 'A-1', stock: 1 }, { sku: 'OTHER', stock: 5 }] }))
+    await t.run()
+    expect(t.marks).toEqual([['i1', false]])
+  })
+
+  it('an empty answer proves nothing about the filter', async () => {
+    const t = setup([asking()], ok({ products: [] }))
+    await t.run()
+    expect(t.marks).toEqual([])
+  })
+
+  it('does not filter when the database says not to, or when there is nothing to ask for, or for a scheduled read', async () => {
+    const seen: string[] = []
+    const reply = async (url: string) => { seen.push(url); return { status: 200, body: '{"products":[]}' } }
+    await setup([asking({ useFilter: false }), asking({ skus: [] }), shop()], reply).run()
+    expect(seen).toEqual(['https://shop.test/stock', 'https://shop.test/stock', 'https://shop.test/stock'])
   })
 })
