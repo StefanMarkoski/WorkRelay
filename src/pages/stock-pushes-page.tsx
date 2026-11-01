@@ -24,7 +24,8 @@ const REQUEST_LABEL: Record<StockPushRequest['status'], string> = { ok: 'Deliver
 /** What is waiting to go to a shop and why it has not gone yet: the read of the shop's own numbers first, a difference being double-checked, or the hourly limit. */
 function Waiting() {
   const status = useStockPushStatus()
-  const rows = (status.data ?? []).filter((s) => s.enabled && (s.waiting > 0 || s.checking > 0))
+  // a shop with write-back off still shows what it keeps: the numbers the owner chose are not dropped when it goes off
+  const rows = (status.data ?? []).filter((s) => s.waiting > 0 || (s.enabled && s.checking > 0))
   if (rows.length === 0) return null
   return (
     <Card className="mb-6">
@@ -43,7 +44,9 @@ function Waiting() {
                 {s.checking > 0 ? ` · ${s.checking.toLocaleString()} difference${s.checking === 1 ? '' : 's'} being double-checked in case an order is still on its way (about 90 seconds)` : ''}
               </span>
               <div className="mt-0.5 text-xs text-muted-foreground">
-                {limited
+                {!s.enabled
+                  ? 'Write-back is off for this shop. The numbers you chose are kept and go out when it is switched on and the shop has been read; a kept decision lapses after 7 days.'
+                  : limited
                   ? `The limit for reading this shop is reached (${s.reads_used.toLocaleString()} of ${s.reads_limit.toLocaleString()} this hour). Numbers wait until ${formatDateTime(s.resets_at!)}.`
                   : `Reads of this shop this hour: ${s.reads_used.toLocaleString()} of ${s.reads_limit.toLocaleString()}.`}
               </div>

@@ -502,7 +502,8 @@ estimate is the number that is sent.
   login in the address, and no secret in it either: the signature is the secret), a **signing secret** (`wr_sign_…`, shown once), then
   **Send test**, then the switch. Changing the address or the secret switches write-back off until the shop passes a new test.
 - **Turning it off in WorkRelay stops everything**, even if your shop is ready to receive: nothing queued is sent afterwards, and the check is made
-  again just before each request leaves. Any member of the workspace can switch it off.
+  again just before each request leaves. Any member of the workspace can switch it off. The one exception is a number the owner chose in a conflict ("send WorkRelay's"): it is kept and goes out, after the shop has been read, once write-back
+  is switched on again, and lapses after 7 days. Numbers WorkRelay calculated itself are dropped.
 
 WorkRelay sends `POST <your stock address>` with `Content-Type: application/json` and these headers:
 
