@@ -14,6 +14,8 @@ export function seedStockPush(db: Record<string, Row[]>) {
   db.stock_conflicts = [
     { id: 'c1', integration_id: a.id, integration_name: a.name, product_id: 'p1', sku: 'TEE-BLK-M', name: 'Black tee (M)', workrelay_value: 10, shop_value: 8, detected_at: ago(35), status: 'open', decided_at: null },
     { id: 'c2', integration_id: a.id, integration_name: a.name, product_id: 'p2', sku: 'MUG-WHITE', name: 'White mug', workrelay_value: 3, shop_value: 12, detected_at: ago(90), status: 'open', decided_at: null },
+    { id: 'c3', integration_id: a.id, integration_name: a.name, product_id: 'p3', sku: 'SOCKS-3', name: 'Socks 3-pack', workrelay_value: 4, shop_value: 9, detected_at: ago(300), status: 'kept_shop', decided_at: ago(280) },
+    { id: 'c4', integration_id: a.id, integration_name: a.name, product_id: 'p4', sku: 'CAP-NVY', name: 'Navy cap', workrelay_value: 39, shop_value: 33, detected_at: ago(200), status: 'sent_workrelay', decided_at: ago(190) },
   ]
   db.stock_push_requests = [
     { id: 'r1', integration_id: a.id, integration_name: a.name, kind: 'stock', item_count: 2, status: 'ok', http_status: 200, error: null, created_at: ago(4), finished_at: ago(4) },
@@ -23,8 +25,11 @@ export function seedStockPush(db: Record<string, Row[]>) {
 }
 
 const ITEMS: Record<string, Row[]> = {
-  r1: [{ sku: 'TEE-BLK-M', name: 'Black tee (M)', stock: 7, status: 'sent', note: null }, { sku: 'MUG-WHITE', name: 'White mug', stock: 11, status: 'sent', note: null }],
-  r2: [{ sku: 'SOCKS-3', name: 'Socks 3-pack', stock: 4, status: 'pending', note: 'The shop answered with HTTP 500.' }],
+  r1: [
+    { sku: 'TEE-BLK-M', name: 'Black tee (M)', stock: 7, status: 'sent', note: null, reason: 'order', conflict_shop: null, conflict_workrelay: null },
+    { sku: 'CAP-NVY', name: 'Navy cap', stock: 39, status: 'sent', note: null, reason: 'conflict', conflict_shop: 33, conflict_workrelay: 39 },
+  ],
+  r2: [{ sku: 'SOCKS-3', name: 'Socks 3-pack', stock: 4, status: 'pending', note: 'The shop answered with HTTP 500.', reason: 'order', conflict_shop: null, conflict_workrelay: null }],
 }
 
 export function stockPushRpc(db: Record<string, Row[]>, name: string, args: Record<string, any> = {}): { handled: boolean; data?: unknown; error?: { message: string } } {

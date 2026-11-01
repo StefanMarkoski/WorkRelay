@@ -17,6 +17,20 @@ export function useOpenConflicts() {
   })
 }
 
+/** Conflicts that are settled, newest first: which number was kept, and what both sides said. */
+export function useDecidedConflicts() {
+  const { current } = useWorkspace()
+  return useQuery({
+    queryKey: ['stock-conflicts', current.id, 'decided'],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_stock_conflicts', { p_org: current.id, p_status: 'decided', p_limit: 25, p_offset: 0 })
+      if (error) throw error
+      return (data ?? []) as StockConflict[]
+    },
+  })
+}
+
 /** "The shop says 8, WorkRelay says 10": the sentence and the signed difference of a conflict. */
 export function conflictDiff(c: Pick<StockConflict, 'workrelay_value' | 'shop_value'>): { diff: number; text: string } {
   const diff = c.workrelay_value - c.shop_value

@@ -9,12 +9,12 @@ import { Table, TD, TH, THead, TR } from '@/components/ui/table'
 import { PageHeader } from '@/components/common/page-header'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
-import { conflictDiff, useOpenConflicts } from '@/features/stock-push/queries'
+import { conflictDiff, useDecidedConflicts, useOpenConflicts } from '@/features/stock-push/queries'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import type { StockPushItem, StockPushRequest } from '@/types/db'
+import type { StockConflict, StockPushItem, StockPushRequest } from '@/types/db'
 
 const PAGE_SIZE = 25
 
@@ -22,6 +22,13 @@ const REQUEST_TONE: Record<StockPushRequest['status'], BadgeTone> = { ok: 'succe
 const REQUEST_LABEL: Record<StockPushRequest['status'], string> = { ok: 'Delivered', failed: 'Failed', cancelled: 'Not sent', sending: 'Sending' }
 const ITEM_LABEL: Record<StockPushItem['status'], string> = {
   pending: 'Waiting', sending: 'Sending', sent: 'Sent', failed: 'Gave up', skipped: 'Skipped', cancelled: 'Not sent',
+}
+
+/** Which number a settled conflict kept, in words. */
+const KEPT: Record<Exclude<StockConflict['status'], 'open'>, { label: string; tone: BadgeTone }> = {
+  sent_workrelay: { label: 'WorkRelay\'s number', tone: 'info' },
+  kept_shop: { label: 'The shop\'s number', tone: 'neutral' },
+  agreed: { label: 'Matched on the next report', tone: 'success' },
 }
 
 /** The disagreements the owner has to settle: both numbers, the difference, and one button for each side. */
@@ -95,6 +102,50 @@ function Conflicts() {
   )
 }
 
+/** Settled conflicts: both numbers and the one that was kept. */
+function Decided() {
+  const decided = useDecidedConflicts()
+  const rows = decided.data ?? []
+  if (decided.isLoading || rows.length === 0) return null
+  return (
+    <Card className="mb-6">
+      <div className="border-b px-4 py-3">
+        <h2 className="text-sm font-medium">Decided</h2>
+        <p className="mt-0.5 text-xs text-muted-foreground">Disagreements already settled, newest first, and which number was kept.</p>
+      </div>
+      <Table>
+        <THead>
+          <tr>
+            <TH>Product</TH>
+            <TH className="text-right">WorkRelay said</TH>
+            <TH className="text-right">The shop said</TH>
+            <TH>Kept</TH>
+            <TH className="hidden sm:table-cell">When</TH>
+          </tr>
+        </THead>
+        <tbody>
+          {rows.map((c) => {
+            const kept = KEPT[c.status as keyof typeof KEPT]
+            return (
+              <TR key={c.id}>
+                <TD className="min-w-40">
+                  <span className="font-medium [overflow-wrap:anywhere]">{c.name}</span>
+                  <span className="ml-2 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">{c.sku}</span>
+                  <div className="text-[11px] text-muted-foreground">{c.integration_name}</div>
+                </TD>
+                <TD className="text-right tabular-nums">{c.workrelay_value.toLocaleString()}</TD>
+                <TD className="text-right tabular-nums">{c.shop_value.toLocaleString()}</TD>
+                <TD><Badge tone={kept.tone}>{kept.label}</Badge></TD>
+                <TD className="hidden whitespace-nowrap sm:table-cell" title={c.decided_at ? formatDateTime(c.decided_at) : undefined}>{c.decided_at ? timeAgo(c.decided_at) : '—'}</TD>
+              </TR>
+            )
+          })}
+        </tbody>
+      </Table>
+    </Card>
+  )
+}
+
 /** The SKUs of one request, fetched when the row is opened. */
 function Items({ request }: { request: StockPushRequest }) {
   const q = useQuery({
@@ -118,7 +169,7 @@ function Items({ request }: { request: StockPushRequest }) {
       <div className="overflow-x-auto rounded-md border">
         <table className="w-full text-left text-[13px]">
           <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-            <tr><th className="px-3 py-2 font-medium">Product</th><th className="px-3 py-2 text-right font-medium">Number sent</th><th className="px-3 py-2 font-medium">Result</th></tr>
+            <tr><th className="px-3 py-2 font-medium">Product</th><th className="px-3 py-2 text-right font-medium">Number sent</th><th className="px-3 py-2 font-medium">Why</th><th className="px-3 py-2 font-medium">Result</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -128,6 +179,11 @@ function Items({ request }: { request: StockPushRequest }) {
                   <span className="ml-2 font-mono text-[11px] text-muted-foreground [overflow-wrap:anywhere]">{r.sku}</span>
                 </td>
                 <td className="px-3 py-2 text-right font-medium tabular-nums">{r.stock === null ? '—' : r.stock.toLocaleString()}</td>
+                <td className="px-3 py-2 text-muted-foreground">
+                  {r.reason === 'conflict'
+                    ? `Conflict: WorkRelay's number kept${r.conflict_shop !== null && r.conflict_workrelay !== null ? ` (the shop said ${r.conflict_shop.toLocaleString()}, WorkRelay had ${r.conflict_workrelay.toLocaleString()})` : ''}`
+                    : 'Estimate changed'}
+                </td>
                 <td className="px-3 py-2 text-muted-foreground">{ITEM_LABEL[r.status]}{r.note ? ` · ${r.note}` : ''}</td>
               </tr>
             ))}
@@ -166,6 +222,7 @@ export function StockPushesPage() {
         description="Every request WorkRelay sent to a shop with its stock numbers, newest first, and any disagreement between WorkRelay and a shop waiting for the owner. Switch it on per shop under Integrations → Edit. Kept for 30 days."
       />
       <Conflicts />
+      <Decided />
       <Card>
         {query.isLoading ? (
           <TableSkeleton rows={6} />

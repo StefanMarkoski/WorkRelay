@@ -359,6 +359,23 @@ select revoke_integration('a1000000-0000-0000-0000-0000000000d1');
 select wb_test.check('revoking the connection switches write-back off',
   (select not stock_push_enabled and status = 'revoked' from integrations where id = 'a1000000-0000-0000-0000-0000000000d1'));
 
+-- ---------------------------------------------------------------- reading one request, as a member (column grants apply)
+reset role;
+insert into stock_push_requests (id, organization_id, integration_id, kind, url, secret_version, item_count, status)
+values ('a3000000-0000-0000-0000-0000000000d1', 'a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'stock', 'https://shop.example.com/x', 1, 2, 'ok');
+insert into stock_push_items (organization_id, integration_id, product_id, sku, stock, reason, status, request_id) values
+  ('a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'a2000000-0000-0000-0000-0000000000d1', 'P1', 10, 'conflict', 'sent', 'a3000000-0000-0000-0000-0000000000d1'),
+  ('a0000000-0000-0000-0000-0000000000d1', 'a1000000-0000-0000-0000-0000000000d1', 'a2000000-0000-0000-0000-0000000000d1', 'P1', 7, 'order', 'sent', 'a3000000-0000-0000-0000-0000000000d1');
+select wb_test.as_user('00000000-0000-0000-0000-0000000000d3');
+select wb_test.check('a member can open a request and see each number, why it was sent, and the two numbers of a conflict decision',
+  (select count(*) = 2 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1'))
+  and (select count(*) = 1 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1')
+       where reason = 'conflict' and stock = 10 and conflict_shop = 8 and conflict_workrelay = 10)
+  and (select count(*) = 1 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1')
+       where reason = 'order' and stock = 7 and conflict_shop is null and conflict_workrelay is null));
+select wb_test.as_user('00000000-0000-0000-0000-0000000000d4');
+select wb_test.check('another workspace cannot open it', (select count(*) = 0 from stock_push_request_items('a3000000-0000-0000-0000-0000000000d1')));
+
 -- ---------------------------------------------------------------- nothing leaks between workspaces
 select wb_test.as_user('00000000-0000-0000-0000-0000000000d4');
 select wb_test.check('another workspace sees no requests, no numbers, no conflicts of this one',

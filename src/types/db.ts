@@ -351,6 +351,11 @@ export interface StockPushItem {
   stock: number | null
   status: 'pending' | 'sending' | 'sent' | 'failed' | 'skipped' | 'cancelled'
   note: string | null
+  /** Why this number was sent: the estimate moved ('order'), or the owner chose WorkRelay's number in a conflict. */
+  reason: 'order' | 'conflict'
+  /** For a conflict decision: the two numbers that disagreed. Null otherwise. */
+  conflict_shop: number | null
+  conflict_workrelay: number | null
   total_count: number
 }
 
