@@ -4,7 +4,7 @@ import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
 
 const KEY = `wr_live_${'f'.repeat(64)}`
-const SECRET = `wr_export_${'a'.repeat(64)}`
+const SECRET = `wr_sign_${'a'.repeat(64)}`
 const NOW = new Date('2026-11-02T12:00:00Z')
 const TS = String(Math.floor(NOW.getTime() / 1000))
 const log: Logger = { info() {}, error() {} }
@@ -136,7 +136,7 @@ describe('the signature', () => {
   })
 
   it('refuses a signature made with another secret, and records the refusal', async () => {
-    const res = await call(await signed('orders', { secret: `wr_export_${'b'.repeat(64)}` }))
+    const res = await call(await signed('orders', { secret: `wr_sign_${'b'.repeat(64)}` }))
     expect(res.status).toBe(401)
     expect((await res.json()).error).toBe('invalid_signature')
     expect(exports.calls).toEqual([{ id: 'call_1', status: 'refused', reason: 'The signature did not match.', rows: 0 }])

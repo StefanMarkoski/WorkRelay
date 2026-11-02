@@ -302,7 +302,7 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Shops �
 
 ## 8. Reading your data back (export)
 
-Optional, read-only, and off until the **workspace owner** switches it on for the shop (Shops → the shop → Export tab → *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Shops → the shop → Export tab). It needs the shop's one **signing secret** first (Shops → the shop → General → *Create secret*), the same secret that signs stock write-back. It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
 
 ```
 GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
@@ -316,13 +316,13 @@ Every call needs all of these, or it gets nothing:
 | The store id | `X-Store-Id: your-store-id` |
 | A fresh timestamp (unix seconds, within 5 minutes of now) | `X-WR-Timestamp` |
 | A new id for this call (8 to 100 letters, digits, `-` or `_`; never reused) | `X-WR-Request-Id` |
-| The signature, made with the **export secret** the owner created | `X-WR-Signature: v1=<hex>` |
+| The signature, made with the shop's **signing secret** (`wr_sign_…`) | `X-WR-Signature: v1=<hex>` |
 
-The export secret is a second secret, separate from the shop key, shown once when the owner creates it. A leaked shop key alone cannot read anything. Replacing or removing the secret stops every old caller immediately.
+The signing secret is a second secret, separate from the shop key, shown once when the owner creates it. A shop has one signing secret for everything: the same one signs the stock numbers WorkRelay sends and the export requests you send. A leaked shop key alone cannot read anything. Replacing the secret stops every old caller immediately, and switching export off stops it at once.
 
 ### Signing a request
 
-The signature is HMAC-SHA256 (hex), keyed with the export secret, over the text `timestamp.requestId.GET.resource.query`, where `resource` is `orders`, `customers` or `products`, and `query` is the query string with its parts sorted by name, each name and value percent-encoded (`encodeURIComponent`), joined with `&` (empty when there is none).
+The signature is HMAC-SHA256 (hex), keyed with the signing secret, over the text `timestamp.requestId.GET.resource.query`, where `resource` is `orders`, `customers` or `products`, and `query` is the query string with its parts sorted by name, each name and value percent-encoded (`encodeURIComponent`), joined with `&` (empty when there is none).
 
 ```js
 const { createHmac, randomUUID } = require('node:crypto')
@@ -363,7 +363,7 @@ Add `?limit=` (1 to 200, default 100). The answer is `{ "resource", "items", "ha
 
 ### Limits and refusals
 
-120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner on the shop's Export tab, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner on the shop's Export tab, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the signing secret out of web pages and repositories, and store what you fetch like any customer data.
 
 ## 9. When something is not showing up
 

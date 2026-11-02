@@ -1,10 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound } from 'lucide-react'
 import { useState } from 'react'
-import { CopyButton } from '@/components/common/copy-button'
+import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Modal } from '@/components/ui/modal'
+import { Switch } from '@/components/ui/switch'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
@@ -22,21 +20,19 @@ interface ExportCall {
 
 /**
  * Export for one shop: the shop reads its own orders, customers and products back, read-only. It is off until the workspace owner
- * creates an export secret, and clearing the secret switches it off at once. Every rule is enforced by the database and the export
- * function; this panel only lets the owner switch it on or off and shows the recent calls.
+ * switches it on, and it signs with the shop's one signing secret (General tab). Every rule is enforced by the database and the export
+ * function; this panel only holds the switch and shows the recent calls.
  */
 export function ExportAccess({ shop: initial }: { shop: Integration }) {
   const { current, isOwner, canManage } = useWorkspace()
   const qc = useQueryClient()
   const shop = useIntegrations().data?.find((s) => s.id === initial.id) ?? initial
-  const [busy, setBusy] = useState<'secret' | 'off' | null>(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [secret, setSecret] = useState<string | null>(null)
-  const canSee = canManage
 
   const calls = useQuery({
-    queryKey: ['export-calls', shop.id, shop.export_has_secret],
-    enabled: canSee,
+    queryKey: ['export-calls', shop.id, shop.export_enabled],
+    enabled: canManage,
     queryFn: async () => {
       const { data, error: err } = await supabase
         .from('export_calls')
@@ -49,64 +45,55 @@ export function ExportAccess({ shop: initial }: { shop: Integration }) {
     },
   })
 
-  async function run(kind: NonNullable<typeof busy>, fn: () => Promise<void>) {
-    setBusy(kind)
+  async function setOn(on: boolean) {
+    setBusy(true)
     setError(null)
-    try {
-      await fn()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : errorMessage(e))
-    } finally {
-      setBusy(null)
-      void qc.invalidateQueries({ queryKey: ['integrations', current.id] })
-      void qc.invalidateQueries({ queryKey: ['export-calls', shop.id] })
-    }
+    const { error: err } = await supabase.rpc('set_export_enabled', { p_integration: shop.id, p_on: on })
+    setBusy(false)
+    if (err) setError(errorMessage(err))
+    void qc.invalidateQueries({ queryKey: ['integrations', current.id] })
+    void qc.invalidateQueries({ queryKey: ['export-calls', shop.id] })
   }
-  const call = async (name: string) => {
-    const { data, error: err } = await supabase.rpc(name, { p_integration: shop.id })
-    if (err) throw new Error(errorMessage(err))
-    return data
-  }
-  const makeSecret = () => run('secret', async () => setSecret((await call('rotate_export_secret')) as string))
-  const switchOff = () => run('off', async () => { await call('clear_export_secret') })
 
   return (
     <div className="rounded-lg border p-3">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm font-medium">
-            Let this shop read its data back{' '}
-            {shop.export_has_secret ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}
+            Let this shop read its data back {shop.export_enabled ? <Badge tone="success">On</Badge> : <Badge>Off</Badge>}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Optional, read-only, and off until the workspace owner creates an export secret. With it, your shop (or a script you run) can fetch this
-            shop&apos;s orders, customers and products, a page at a time. A call needs three things at once: this shop&apos;s key, a request signed with
-            the export secret, and a number of calls left this hour (120). Anyone with only the shop key gets nothing. Replacing or removing the secret
-            stops every old caller at once.
+            Optional, read-only, and off until the workspace owner switches it on. Then your shop (or a script you run) can fetch this shop&apos;s
+            orders, customers and products, a page at a time. A call needs three things at once: this shop&apos;s key, a request signed with the
+            shop&apos;s signing secret, and a number of calls left this hour (120). Anyone with only the shop key gets nothing. Replacing the
+            signing secret stops every old caller at once.
           </p>
         </div>
-        {isOwner && (
-          <div className="flex shrink-0 gap-2">
-            <Button type="button" variant="outline" disabled={busy !== null || shop.status !== 'connected'} onClick={() => void makeSecret()}>
-              <KeyRound aria-hidden /> {busy === 'secret' ? 'Creating…' : shop.export_has_secret ? 'Replace secret' : 'Create secret'}
-            </Button>
-            {shop.export_has_secret && (
-              <Button type="button" variant="outline" disabled={busy !== null} onClick={() => void switchOff()}>
-                {busy === 'off' ? 'Switching off…' : 'Switch off'}
-              </Button>
-            )}
-          </div>
-        )}
+        <Switch
+          checked={shop.export_enabled}
+          onChange={(on) => void setOn(on)}
+          label="Let this shop read its data back"
+          disabled={busy || !isOwner || shop.status !== 'connected' || (!shop.export_enabled && !shop.stock_push_has_secret)}
+        />
       </div>
 
-      {shop.export_has_secret && (
+      {!shop.stock_push_has_secret && (
+        <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+          This shop has no signing secret yet.{' '}
+          <Link to={`/shops/${shop.id}/edit/general`} className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Create it on the General tab</Link>, then switch export on.
+        </p>
+      )}
+      {!isOwner && <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">Only the workspace owner can switch export on or off.</p>}
+      {error && <p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}
+
+      {shop.export_enabled && (
         <div className="mt-3 space-y-2 border-t pt-3">
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-foreground">Address.</span>{' '}
             <code className="break-all font-mono">{functionsBaseUrl()}/export/orders</code> (also <code className="font-mono">customers</code> and{' '}
             <code className="font-mono">products</code>). {shop.export_last_used_at ? `Last used ${timeAgo(shop.export_last_used_at)}.` : 'Not used yet.'}
           </p>
-          {canSee && (calls.data?.length ?? 0) > 0 && (
+          {canManage && (calls.data?.length ?? 0) > 0 && (
             <ul className="divide-y rounded-md border text-xs">
               {calls.data!.map((c) => (
                 <li key={c.id} className="flex items-center justify-between gap-3 px-2.5 py-1.5">
@@ -126,29 +113,6 @@ export function ExportAccess({ shop: initial }: { shop: Integration }) {
           )}
         </div>
       )}
-      {!isOwner && <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">Only the workspace owner can switch export on or off.</p>}
-      {error && <p role="alert" className="mt-3 text-xs text-destructive">{error}</p>}
-
-      <Modal open={secret !== null} onClose={() => setSecret(null)} title="Your export secret">
-        {secret && (
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border bg-muted p-3">
-              <div className="flex items-center gap-2">
-                <KeyRound className="size-4 shrink-0 text-muted-foreground" />
-                <code className="break-all font-mono text-xs">{secret}</code>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Copy this now. It is shown only once; WorkRelay keeps the only other copy in its vault, and it cannot be read back. Keep it out of your shop&apos;s
-              pages and out of any repository: it is what lets a caller sign requests. The integration guide shows how to sign one.
-            </p>
-            <div className="flex justify-end gap-2">
-              <CopyButton text={secret} label="Copy secret" />
-              <Button type="button" onClick={() => setSecret(null)}>I have saved it</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

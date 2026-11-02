@@ -1,8 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Ban, RotateCw } from 'lucide-react'
+import { Ban, KeyRound, RotateCw } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { CurrencySelect } from '@/components/common/currency-select'
 import { StatusBadge } from '@/components/common/status-badge'
+import { CopyButton } from '@/components/common/copy-button'
 import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -21,8 +22,9 @@ export function GeneralTab({ shop }: { shop: Integration }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
-  const [confirm, setConfirm] = useState<'rotate' | 'revoke' | null>(null)
+  const [confirm, setConfirm] = useState<'rotate' | 'revoke' | 'signing' | null>(null)
   const [secret, setSecret] = useState<string | null>(null)
+  const [signing, setSigning] = useState<string | null>(null)
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['integrations', current.id] })
     void qc.invalidateQueries({ queryKey: ['insights'] })
@@ -50,11 +52,25 @@ export function GeneralTab({ shop }: { shop: Integration }) {
     refresh()
   }
 
+  async function runCreate() {
+    setBusy(true)
+    const { data, error: rpcError } = await supabase.rpc('rotate_stock_push_secret', { p_integration: shop.id })
+    setBusy(false)
+    if (rpcError) return setError(errorMessage(rpcError))
+    setSigning(data as string)
+    refresh()
+  }
+
   async function runConfirmed() {
     if (!confirm) return
     setBusy(true)
     setError(null)
-    if (confirm === 'revoke') {
+    if (confirm === 'signing') {
+      const { data, error: rpcError } = await supabase.rpc('rotate_stock_push_secret', { p_integration: shop.id })
+      setBusy(false)
+      if (rpcError) return setError(errorMessage(rpcError))
+      setSigning(data as string)
+    } else if (confirm === 'revoke') {
       const { error: rpcError } = await supabase.rpc('revoke_integration', { p_id: shop.id })
       setBusy(false)
       if (rpcError) return setError(errorMessage(rpcError))
@@ -112,21 +128,60 @@ export function GeneralTab({ shop }: { shop: Integration }) {
         )}
       </section>
 
-      <Modal open={confirm !== null} onClose={() => setConfirm(null)} title={confirm === 'revoke' ? 'Revoke this connection?' : 'Rotate the secret key?'}>
+      <section aria-labelledby="signing-title" className="max-w-3xl border-t pt-6">
+        <h2 id="signing-title" className="font-display text-lg font-semibold tracking-[-0.01em]">Signing secret</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          One secret for everything WorkRelay signs or checks for this shop: the stock numbers it sends your shop, and the requests your shop signs to read
+          its data back. It is shown once when you create it. The shop key above says who is calling; this one proves the call is really yours.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm">{shop.stock_push_has_secret ? 'Created.' : 'Not created yet.'}</p>
+          {canManage && shop.status === 'connected' && (
+            <Button variant="outline" onClick={() => { setError(null); shop.stock_push_has_secret ? setConfirm('signing') : void runCreate() }} disabled={busy}>
+              <KeyRound aria-hidden /> {shop.stock_push_has_secret ? 'Replace secret' : 'Create secret'}
+            </Button>
+          )}
+        </div>
+      </section>
+
+      <Modal open={confirm !== null} onClose={() => setConfirm(null)} title={confirm === 'revoke' ? 'Revoke this connection?' : confirm === 'signing' ? 'Replace the signing secret?' : 'Rotate the secret key?'}>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            {confirm === 'revoke'
+            {confirm === 'signing'
+              ? 'The old secret stops working immediately. Stock write-back switches off until the shop passes a new signed test, and anything that reads this shop\'s data back must start signing with the new secret.'
+              : confirm === 'revoke'
               ? `"${shop.name}" will stop being accepted immediately. This cannot be undone; create a new connection to reconnect.`
               : `The current key for "${shop.name}" stops working immediately. The store keeps its binding, but you must paste the new key into the commerce app.`}
           </p>
           {error && confirm && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setConfirm(null)}>Cancel</Button>
-            <Button variant={confirm === 'revoke' ? 'destructive' : 'default'} disabled={busy} onClick={runConfirmed}>{confirm === 'revoke' ? 'Revoke' : 'Rotate key'}</Button>
+            <Button variant={confirm === 'revoke' ? 'destructive' : 'default'} disabled={busy} onClick={runConfirmed}>{confirm === 'revoke' ? 'Revoke' : confirm === 'signing' ? 'Replace secret' : 'Rotate key'}</Button>
           </div>
         </div>
       </Modal>
       <KeyRevealModal secret={secret} onClose={() => setSecret(null)} />
+      <Modal open={signing !== null} onClose={() => setSigning(null)} title="Your signing secret">
+        {signing && (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border bg-muted p-3">
+              <div className="flex items-center gap-2">
+                <KeyRound className="size-4 shrink-0 text-muted-foreground" />
+                <code className="break-all font-mono text-xs">{signing}</code>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Copy this now. It is shown only once; WorkRelay keeps the only other copy in its vault, and it cannot be read back. Keep it out of your
+              shop&apos;s pages and out of any repository. Your shop uses it to check the stock numbers WorkRelay sends and to sign its export requests (the
+              integration guide shows how).
+            </p>
+            <div className="flex justify-end gap-2">
+              <CopyButton text={signing} label="Copy secret" />
+              <Button type="button" onClick={() => setSigning(null)}>I have saved it</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

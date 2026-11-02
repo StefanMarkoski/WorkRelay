@@ -1,12 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CopyButton } from '@/components/common/copy-button'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/input'
-import { Modal } from '@/components/ui/modal'
 import { Switch } from '@/components/ui/switch'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { timeAgo } from '@/lib/format'
@@ -17,7 +14,7 @@ import { refusalText } from './sync'
 
 /**
  * Stock write-back for one shop: WorkRelay sends the shop its stock number after an order, a cancellation or a return changes the
- * estimate. Every rule is enforced by the database; this panel only walks the owner through it in order: address, secret, signed test,
+ * estimate. Every rule is enforced by the database; this panel only walks the owner through it in order: address, signed test,
  * switch. Only the workspace owner can set it up or switch it on. Any member can switch it off.
  */
 export function StockWriteBack({ shop: initial }: { shop: Integration }) {
@@ -38,10 +35,9 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
   const [edited, setEdited] = useState<string | null>(null)
   const url = edited ?? saved
   const setUrl = (v: string) => setEdited(v)
-  const [busy, setBusy] = useState<'url' | 'secret' | 'test' | 'switch' | null>(null)
+  const [busy, setBusy] = useState<'url' | 'test' | 'switch' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null)
-  const [secret, setSecret] = useState<string | null>(null)
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['integrations', current.id] })
   const addressChanged = url.trim() !== saved
@@ -66,7 +62,6 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
   }
 
   const saveAddress = () => run('url', async () => { await rpc('set_stock_push_url', { p_integration: shop.id, p_url: url }); setEdited(null); void qc.invalidateQueries({ queryKey: ['stock-push-url', shop.id] }); setTestResult(null) })
-  const makeSecret = () => run('secret', async () => { setSecret((await rpc('rotate_stock_push_secret', { p_integration: shop.id })) as string); setTestResult(null) })
   const sendTest = () => run('test', async () => {
     setTestResult(null)
     const { data, error: err } = await supabase.functions.invoke('stock-push-test', { body: { integration_id: shop.id } })
@@ -141,15 +136,14 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
             )}
           </Field>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Signing secret.</span>{' '}
-              {shop.stock_push_has_secret ? 'Created. Replacing it switches write-back off until the shop passes a new test.' : 'Not created yet. Your shop uses it to check that a request really came from WorkRelay.'}
-            </p>
-            <Button type="button" variant="outline" disabled={busy !== null} onClick={() => void makeSecret()}>
-              <KeyRound aria-hidden /> {busy === 'secret' ? 'Creating…' : shop.stock_push_has_secret ? 'Replace secret' : 'Create secret'}
-            </Button>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Signing secret.</span>{' '}
+            {shop.stock_push_has_secret ? (
+              <>The shop&apos;s one signing secret is used. Replacing it (on the <Link to={`/shops/${shop.id}/edit/general`} className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">General tab</Link>) switches write-back off until the shop passes a new test.</>
+            ) : (
+              <>Not created yet. <Link to={`/shops/${shop.id}/edit/general`} className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Create the shop&apos;s signing secret on the General tab</Link>; your shop uses it to check that a request really came from WorkRelay.</>
+            )}
+          </p>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground" aria-live="polite">
@@ -184,26 +178,6 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
         {' '}and decide any disagreements. Both directions are in <Link to="/inventory/syncs" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Sync history</Link>.
       </p>
 
-      <Modal open={secret !== null} onClose={() => setSecret(null)} title="Your signing secret">
-        {secret && (
-          <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border bg-muted p-3">
-              <div className="flex items-center gap-2">
-                <KeyRound className="size-4 shrink-0 text-muted-foreground" />
-                <code className="break-all font-mono text-xs">{secret}</code>
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Copy this now. It is shown only once; WorkRelay keeps the only other copy in its vault, and it cannot be read back. Put it in your shop&apos;s
-              settings and use it to verify the signature of every request (the integration guide shows how). Then send the test.
-            </p>
-            <div className="flex justify-end gap-2">
-              <CopyButton text={secret} label="Copy secret" />
-              <Button type="button" onClick={() => setSecret(null)}>I have saved it</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

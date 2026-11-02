@@ -499,7 +499,7 @@ estimate is the number that is sent.
 - **Reads have a budget.** Reads before and after sending have their own hourly limit per shop (60 by default; only WorkRelay's platform admin can change
   it), separate from how often WorkRelay reads your feed on a schedule. When it is reached, numbers wait for the next hour.
 - **Set up in WorkRelay** (Shops → the shop → Inventory): the product feed address, the shop's public **https stock address** (the standard port 443, no
-  login in the address, and no secret in it either: the signature is the secret), a **signing secret** (`wr_sign_…`, shown once), then
+  login in the address, and no secret in it either: the signature is the secret), the shop's **signing secret** (`wr_sign_…`, shown once, created on the shop's General tab and also used by the export API), then
   **Send test**, then the switch. Changing the address or the secret switches write-back off until the shop passes a new test.
 - **Turning it off in WorkRelay stops everything**, even if your shop is ready to receive: nothing queued is sent afterwards, and the check is made
   again just before each request leaves. Any member of the workspace can switch it off. The one exception is a number the owner chose in a conflict ("send WorkRelay's"): it is kept and goes out, after the shop has been read, once write-back
@@ -645,4 +645,4 @@ In WorkRelay, check **Shops → Event history** (every delivery with status, att
 
 ## 9. Reading data back (export)
 
-A shop can read its own orders, customers and products back through `GET /export/{orders|customers|products}`: read-only, signed with a separate export secret the workspace owner creates, 120 calls an hour, paged by cursor. How to sign a request, the paging and the status codes are in section 8 of the [developer's guide](./shop-developer-guide.md).
+A shop can read its own orders, customers and products back through `GET /export/{orders|customers|products}`: read-only, signed with the shop's one signing secret (the same one as write-back) and switched on by the workspace owner, 120 calls an hour, paged by cursor. How to sign a request, the paging and the status codes are in section 8 of the [developer's guide](./shop-developer-guide.md).

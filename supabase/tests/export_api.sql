@@ -1,4 +1,4 @@
--- Export API (0052): off until the owner creates a secret, owner-only switch, a secret nobody else can read, one use per request id,
+-- Export API (0052, one signing secret since 0054): off until the owner creates a secret, owner-only switch, a secret nobody else can read, one use per request id,
 -- an hourly cap, an audit trail, and pages that hold only this shop's orders, customers and products without gaps or repeats.
 begin;
 
@@ -49,29 +49,34 @@ insert into order_items (organization_id, order_id, position, sku, name, quantit
   ('a0000000-0000-0000-0000-0000000000e1', 'a3000000-0000-0000-0000-0000000000e1', 1, 'P1', 'Pen', 2, 500),
   ('a0000000-0000-0000-0000-0000000000e1', 'a3000000-0000-0000-0000-0000000000e1', 2, 'P2', 'Cap', 1, 0);
 -- ---------------------------------------------------------------- off by default
-select ex_test.check('export is off for every shop by default', (select not bool_or(export_has_secret) from integrations));
+select ex_test.check('export is off for every shop by default', (select not bool_or(export_enabled) from integrations));
 select ex_test.check('a call is refused while there is no secret',
   (select reason from export_begin('a1000000-0000-0000-0000-0000000000e1', 'req-00000001', 'orders')) = 'export_off');
 
 -- ---------------------------------------------------------------- who may switch it on
 select ex_test.as_user('00000000-0000-0000-0000-0000000000e2'); -- admin
-select ex_test.check('an admin cannot create the export secret',
-  ex_test.err($$select rotate_export_secret('a1000000-0000-0000-0000-0000000000e1')$$) = 'forbidden');
+select ex_test.check('an admin cannot switch export on',
+  ex_test.err($$select set_export_enabled('a1000000-0000-0000-0000-0000000000e1', true)$$) = 'forbidden');
 select ex_test.as_user('00000000-0000-0000-0000-0000000000e4'); -- owner of another workspace
-select ex_test.check('the owner of another workspace can neither create nor clear it',
-  ex_test.err($$select rotate_export_secret('a1000000-0000-0000-0000-0000000000e1')$$) = 'forbidden'
-  and ex_test.err($$select clear_export_secret('a1000000-0000-0000-0000-0000000000e1')$$) = 'forbidden');
+select ex_test.check('the owner of another workspace can neither switch it on nor off',
+  ex_test.err($$select set_export_enabled('a1000000-0000-0000-0000-0000000000e1', true)$$) = 'forbidden'
+  and ex_test.err($$select set_export_enabled('a1000000-0000-0000-0000-0000000000e1', false)$$) = 'forbidden');
 reset role;
 
 select ex_test.as_user('00000000-0000-0000-0000-0000000000e1'); -- owner
 create temp table ex_secret (s text);
 grant all on ex_secret to authenticated;
-insert into ex_secret select rotate_export_secret('a1000000-0000-0000-0000-0000000000e1');
-select ex_test.check('the owner gets a secret once, and it looks like one', (select s ~ '^wr_export_[0-9a-f]{64}$' from ex_secret));
-select ex_test.check('a browser sees that a secret exists but never which one',
-  (select export_has_secret from integrations where id = 'a1000000-0000-0000-0000-0000000000e1')
-  and ex_test.err($$select export_secret_id from integrations$$) like 'permission denied%'
-  and ex_test.err($$update integrations set export_secret_id = gen_random_uuid() where id = 'a1000000-0000-0000-0000-0000000000e1'$$) like 'permission denied%');
+select ex_test.check('export cannot be switched on before the shop has a signing secret',
+  ex_test.err($$select set_export_enabled('a1000000-0000-0000-0000-0000000000e1', true)$$) like 'Create the shop%signing secret first%');
+insert into ex_secret select rotate_stock_push_secret('a1000000-0000-0000-0000-0000000000e1');
+select ex_test.check('the one signing secret is shown once and looks like one', (select s ~ '^wr_sign_[0-9a-f]{64}$' from ex_secret));
+select ex_test.check('having the secret does not switch export on',
+  (select not export_enabled from integrations where id = 'a1000000-0000-0000-0000-0000000000e1'));
+select set_export_enabled('a1000000-0000-0000-0000-0000000000e1', true);
+select ex_test.check('the owner switches export on, and a browser never sees which secret it is',
+  (select export_enabled and stock_push_has_secret from integrations where id = 'a1000000-0000-0000-0000-0000000000e1')
+  and ex_test.err($$select stock_push_secret_id from integrations$$) like 'permission denied%'
+  and ex_test.err($$update integrations set export_enabled = false where id = 'a1000000-0000-0000-0000-0000000000e1'$$) like 'permission denied%');
 select ex_test.check('a browser cannot call the export functions or write the history',
   ex_test.err($$select * from export_begin('a1000000-0000-0000-0000-0000000000e1', 'req-00000002', 'orders')$$) like 'permission denied%'
   and ex_test.err($$select export_page('a1000000-0000-0000-0000-0000000000e1', 'orders', null, null, null, 10)$$) like 'permission denied%'
@@ -166,12 +171,13 @@ delete from export_calls where request_id like 'refused-%';
 
 -- ---------------------------------------------------------------- switching off
 select ex_test.as_user('00000000-0000-0000-0000-0000000000e1');
-select clear_export_secret('a1000000-0000-0000-0000-0000000000e1');
+select set_export_enabled('a1000000-0000-0000-0000-0000000000e1', false);
 reset role;
-select ex_test.check('clearing the secret switches export off at once and removes the secret from Vault',
-  (select not export_has_secret from integrations where id = 'a1000000-0000-0000-0000-0000000000e1')
-  and (select reason from export_begin('a1000000-0000-0000-0000-0000000000e1', 'req-ffffffff', 'orders')) = 'export_off'
-  and (select count(*) = 0 from vault.secrets where name = 'export:a1000000-0000-0000-0000-0000000000e1'));
+select ex_test.check('switching export off stops it at once and leaves the signing secret for write-back',
+  (select not export_enabled and stock_push_has_secret from integrations where id = 'a1000000-0000-0000-0000-0000000000e1')
+  and (select reason from export_begin('a1000000-0000-0000-0000-0000000000e1', 'req-ffffffff', 'orders')) = 'export_off');
+select ex_test.check('another shop with no secret is refused as off even if switched on by hand',
+  (select reason from export_begin('a1000000-0000-0000-0000-0000000000e2', 'req-hhhhhhhh', 'orders')) = 'export_off');
 
 do $$ begin raise notice 'EXPORT API CHECKS PASSED'; end $$;
 rollback;

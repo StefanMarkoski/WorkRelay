@@ -45,7 +45,7 @@ export function canonicalQuery(params: URLSearchParams): string {
     .join('&')
 }
 
-/** HMAC-SHA256 (hex) over "timestamp.requestId.GET.resource.canonicalQuery", keyed with the export secret. */
+/** HMAC-SHA256 (hex) over "timestamp.requestId.GET.resource.canonicalQuery", keyed with the shop's signing secret. */
 export async function signExport(secret: string, timestamp: string, requestId: string, resource: string, query: string): Promise<string> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
   return hex(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${requestId}.GET.${resource}.${query}`)))
