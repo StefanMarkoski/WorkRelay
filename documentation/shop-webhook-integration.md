@@ -642,3 +642,7 @@ In WorkRelay, check **Integrations → Event history** (every delivery with stat
 | Order shows "Incomplete data" | No currency, total, items or customer contact was sent (informational) |
 | Status shows `unknown` | The shop's status word is not in the table in section 6 |
 | Order did not update | The event was older than data already stored, or the `event_id` was a duplicate. Check the timeline and Event history |
+
+## 9. Reading data back (export)
+
+A shop can read its own orders, customers and products back through `GET /export/{orders|customers|products}`: read-only, signed with a separate export secret the workspace owner creates, 120 calls an hour, paged by cursor. How to sign a request, the paging and the status codes are in section 8 of the [developer's guide](./shop-developer-guide.md).

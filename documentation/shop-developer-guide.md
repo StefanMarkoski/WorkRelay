@@ -300,7 +300,72 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 - [ ] (Inventory) if WorkRelay should also call you: WorkRelay set the schedule for this shop
 - [ ] A test order, a test signup and a test stock update each show up in WorkRelay
 
-## 8. When something is not showing up
+## 8. Reading your data back (export)
+
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Edit shop, *Let this shop read its data back*, *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+
+```
+GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
+```
+
+Every call needs all of these, or it gets nothing:
+
+| What | Where |
+|---|---|
+| The shop's key | `Authorization: Bearer wr_live_...` |
+| The store id | `X-Store-Id: your-store-id` |
+| A fresh timestamp (unix seconds, within 5 minutes of now) | `X-WR-Timestamp` |
+| A new id for this call (8 to 100 letters, digits, `-` or `_`; never reused) | `X-WR-Request-Id` |
+| The signature, made with the **export secret** the owner created | `X-WR-Signature: v1=<hex>` |
+
+The export secret is a second secret, separate from the shop key, shown once when the owner creates it. A leaked shop key alone cannot read anything. Replacing or removing the secret stops every old caller immediately.
+
+### Signing a request
+
+The signature is HMAC-SHA256 (hex), keyed with the export secret, over the text `timestamp.requestId.GET.resource.query`, where `resource` is `orders`, `customers` or `products`, and `query` is the query string with its parts sorted by name, each name and value percent-encoded (`encodeURIComponent`), joined with `&` (empty when there is none).
+
+```js
+const { createHmac, randomUUID } = require('node:crypto')
+
+function sign(secret, timestamp, requestId, resource, params) {
+  const query = [...params].sort(([a, x], [b, y]) => (a === b ? (x < y ? -1 : x > y ? 1 : 0) : a < b ? -1 : 1))
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')
+  return createHmac('sha256', secret).update(`${timestamp}.${requestId}.GET.${resource}.${query}`).digest('hex')
+}
+
+async function readPage(base, key, storeId, secret, resource, params = {}) {
+  const query = new URLSearchParams(params)
+  const timestamp = String(Math.floor(Date.now() / 1000))
+  const requestId = randomUUID()
+  const res = await fetch(`${base}/export/${resource}?${query}`, {
+    headers: {
+      authorization: `Bearer ${key}`,
+      'x-store-id': storeId,
+      'x-wr-timestamp': timestamp,
+      'x-wr-request-id': requestId,
+      'x-wr-signature': `v1=${sign(secret, timestamp, requestId, resource, query)}`,
+    },
+  })
+  if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(await res.json())}`)
+  return res.json()
+}
+
+module.exports = { sign, readPage }
+```
+
+### Paging
+
+Add `?limit=` (1 to 200, default 100). The answer is `{ "resource", "items", "has_more", "next_cursor" }`. While `has_more` is true, call again with `cursor=<next_cursor>` exactly as given (every call is signed again, with a new request id). Add `updated_since=2026-11-01T00:00:00Z` to get only what changed after that time; keep the latest `updated_at` you saw and use it next time. Pages are ordered by when a row changed, so nothing is skipped or repeated while data keeps changing.
+
+- **Orders**: the order, its customer, the money in whole minor units, WorkRelay's statuses next to the shop's own (`shop_status`...), the addresses, and the lines.
+- **Customers**: the people who ordered from this shop or signed up through it, with their order count here.
+- **Products**: `stock` is the best number WorkRelay has (the estimate when the shop is estimated, or when WorkRelay keeps the stock), `stock_reported` is what your shop last said. Orders move the estimate without changing the product row, so read products in full (no `updated_since`) when the stock matters.
+
+### Limits and refusals
+
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop. Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+
+## 9. When something is not showing up
 
 | What you see | Most likely cause |
 |---|---|

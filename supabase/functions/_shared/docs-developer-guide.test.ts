@@ -5,6 +5,7 @@ import { customerWebhookSchema } from './customer-contract.ts'
 import { handleCustomerWebhook } from './customer-ingest.ts'
 import { handleOrderWebhook } from './ingest.ts'
 import { PULL_MAX_PRODUCTS, PUSH_MAX_PRODUCTS, inventoryEnvelope, productSchema } from './inventory-contract.ts'
+import { canonicalQuery, signExport } from './export-api.ts'
 import { handleInventoryWebhook } from './inventory-ingest.ts'
 import type { Logger } from './log.ts'
 import { MemoryStore } from './memory-store.ts'
@@ -166,5 +167,27 @@ describe('the developer guide: its numbers and names are the real ones', () => {
     const base = 'https://wayktzmupzrdcwosgnfg.supabase.co/functions/v1'
     expect(doc).toContain(base)
     expect(read('documentation/shop-webhook-integration.md')).toContain(base)
+  })
+})
+
+describe('the developer guide: the export section is real', () => {
+  it('its signing snippet produces exactly what the export function verifies', async () => {
+    const code = [...doc.matchAll(/```js\n([\s\S]*?)```/g)].map((m) => m[1]).find((c) => c.includes('function sign('))
+    expect(code).toBeTruthy()
+    const mod = { exports: {} as Record<string, any> }
+    new Function('module', 'require', code!)(mod, (name: string) => (name === 'node:crypto' ? require('node:crypto') : undefined))
+    const params = new URLSearchParams({ updated_since: '2026-11-01T00:00:00Z', limit: '5', cursor: 'a b+c' })
+    const secret = `wr_export_${'a'.repeat(64)}`
+    expect(mod.exports.sign(secret, '1793620800', 'req-12345678', 'orders', params)).toBe(
+      await signExport(secret, '1793620800', 'req-12345678', 'orders', canonicalQuery(params)),
+    )
+  })
+
+  it('names the statuses and limits the function really uses', () => {
+    for (const word of ['signature_required', 'stale_timestamp', 'invalid_signature', 'export_off', 'request_id_used', 'rate_limited', 'invalid_cursor', 'unknown_resource', 'store_mismatch']) {
+      expect(doc).toContain(word)
+    }
+    expect(doc).toContain('120 calls an hour')
+    expect(doc).toContain('within 5 minutes')
   })
 })

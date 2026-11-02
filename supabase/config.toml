@@ -15,6 +15,10 @@ verify_jwt = false
 [functions.inventory-webhook]
 verify_jwt = false
 
+# Server to server and read-only: the shop key, a signed request and the owner's export secret are checked in the function itself.
+[functions.export]
+verify_jwt = false
+
 [functions.bind]
 verify_jwt = false
 

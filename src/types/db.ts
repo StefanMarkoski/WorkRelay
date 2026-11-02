@@ -33,6 +33,9 @@ export interface Integration {
   /** Why WorkRelay switched it off by itself, if it did. */
   stock_push_paused_reason: string | null
   stock_push_has_secret: boolean
+  /** The owner created an export secret, so the shop may read its data back (signed, read-only). */
+  export_has_secret: boolean
+  export_last_used_at: string | null
 }
 
 export interface WebhookEvent {

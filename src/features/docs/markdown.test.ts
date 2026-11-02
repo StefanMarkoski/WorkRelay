@@ -56,11 +56,11 @@ describe('the developer guide as the site shows it', () => {
   const blocks = parseMarkdown(guide)
   const html = renderToStaticMarkup(createElement(Blocks, { blocks }))
 
-  it('has a title, the eight sections, and the headings the "where to start" list points at', () => {
+  it('has a title, the nine sections, and the headings the "where to start" list points at', () => {
     expect(blocks.filter((b) => b.t === 'heading' && b.level === 1)).toHaveLength(1)
     const ids = blocks.filter((b) => b.t === 'heading').map((b) => (b as Extract<Block, { t: 'heading' }>).id)
-    expect(blocks.filter((b) => b.t === 'heading' && b.level === 2)).toHaveLength(8)
-    for (const id of ['start-here-the-order-webhook', 'customers', 'inventory', 'test-it', 'when-something-is-not-showing-up']) expect(ids).toContain(id)
+    expect(blocks.filter((b) => b.t === 'heading' && b.level === 2)).toHaveLength(9)
+    for (const id of ['start-here-the-order-webhook', 'customers', 'inventory', 'test-it', 'reading-your-data-back-export', 'when-something-is-not-showing-up']) expect(ids).toContain(id)
     expect(new Set(ids).size).toBe(ids.length) // anchors are unique
   })
 

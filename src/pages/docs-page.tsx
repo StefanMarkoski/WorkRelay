@@ -20,6 +20,7 @@ const PATHS: { id: string; title: string; line: string }[] = [
   { id: 'customers', title: 'Customers and signup alerts', line: 'How a person is made, and what you send to notify on every signup.' },
   { id: 'inventory', title: 'Stock, and alerts when it runs low', line: 'Let WorkRelay fetch your products, or push them from a button.' },
   { id: 'test-it', title: 'Trying it from a terminal', line: 'Five commands, with what each one should answer.' },
+  { id: 'reading-your-data-back-export', title: 'Reading your data back', line: 'Signed, read-only export of orders, customers and products.' },
   { id: 'when-something-is-not-showing-up', title: 'Something is not showing up', line: 'Symptoms and their most likely causes.' },
 ]
 

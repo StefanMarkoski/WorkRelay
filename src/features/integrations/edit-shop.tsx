@@ -10,6 +10,7 @@ import { timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration } from '@/types/db'
 import { functionsBaseUrl, useSignupAutomations } from './queries'
+import { ExportAccess } from './export-access'
 import { StockWriteBack } from './stock-write-back'
 
 const SAMPLE = `{
@@ -163,6 +164,8 @@ function EditShopForm({ shop, onClose }: { shop: Integration; onClose: () => voi
       </div>
 
       <StockWriteBack shop={shop} />
+
+      <ExportAccess shop={shop} />
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
