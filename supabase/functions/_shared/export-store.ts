@@ -15,6 +15,10 @@ export function createExportStore(db: SupabaseClient): ExportStore {
       const { error } = await db.rpc('export_finish', { p_call: callId, p_status: status, p_reason: reason, p_rows: rows })
       if (error) throw new Error(error.message)
     },
+    async refused(integrationId, resource, reason) {
+      const { error } = await db.rpc('export_note_refusal', { p_integration: integrationId, p_resource: resource, p_reason: reason })
+      if (error) throw new Error(error.message)
+    },
     async page(integrationId, resource, q) {
       const { data, error } = await db.rpc('export_page', {
         p_integration: integrationId,

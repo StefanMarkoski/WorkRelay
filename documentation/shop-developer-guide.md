@@ -363,7 +363,7 @@ Add `?limit=` (1 to 200, default 100). The answer is `{ "resource", "items", "ha
 
 ### Limits and refusals
 
-120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop. Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
 
 ## 9. When something is not showing up
 

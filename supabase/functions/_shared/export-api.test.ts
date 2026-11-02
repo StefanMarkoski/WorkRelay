@@ -32,6 +32,10 @@ class FakeExports implements ExportStore {
   async finish(callId: string, status: 'ok' | 'refused' | 'failed', reason: string | null, rows: number) {
     Object.assign(this.calls.find((c) => c.id === callId)!, { status, reason, rows })
   }
+  refusals: string[] = []
+  async refused(_i: string, _r: string, reason: string) {
+    this.refusals.push(reason)
+  }
   async page(_i: string, _r: string, q: { since: string | null; after: Cursor | null; limit: number }) {
     if (this.fail) throw new Error('database down')
     this.lastPage = q
@@ -216,5 +220,39 @@ describe('the query', () => {
   it('round-trips a cursor', () => {
     const c = { at: '2026-10-02T10:00:00.123456+00:00', id: 'a3000000-0000-0000-0000-0000000000e2' }
     expect(decodeCursor(encodeCursor(c))).toEqual(c)
+  })
+})
+
+describe('refusals are written to the history', () => {
+  it('records each refusal that comes after a real shop key', async () => {
+    await call(await signed('orders', { headers: { 'x-store-id': 'someone-else' } }))
+    await call(await signed('orders', { headers: { 'x-wr-signature': '' } }))
+    await call(await signed('orders', { ts: String(Number(TS) - 999) }))
+    await call(await signed('orders', { headers: { 'x-wr-request-id': 'short' } }))
+    await call(await signed('orders?limit=0'))
+    await call(await signed('orders?cursor=nonsense'))
+    const reuse = await signed('orders', { id: 'reused-12345678' })
+    await call(reuse.clone())
+    await call(reuse.clone())
+    exports.secret = null
+    await call(await signed('orders'))
+    expect(exports.refusals).toEqual([
+      'The X-Store-Id did not match this shop.',
+      'No signature or timestamp was sent.',
+      'The timestamp was too far from the current time.',
+      'The request id was missing or malformed.',
+      'The limit was not a number from 1 to 200.',
+      'The cursor was not one WorkRelay handed out.',
+      'The request id had been used before.',
+      'Export is switched off for this shop.',
+    ])
+  })
+
+  it('records nothing for a caller without a real shop key, and a refusal log failure never changes the answer', async () => {
+    await call(await signed('orders', { key: `wr_live_${'1'.repeat(64)}` }))
+    await call(await signed('secrets'))
+    expect(exports.refusals).toEqual([])
+    exports.refused = async () => { throw new Error('history down') }
+    expect((await call(await signed('orders?limit=0'))).status).toBe(400)
   })
 })

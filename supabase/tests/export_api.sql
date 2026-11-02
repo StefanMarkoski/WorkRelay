@@ -146,6 +146,24 @@ select ex_test.check('products are this shop''s only, with the estimate (10 repo
 select ex_test.check('an unknown resource is refused',
   ex_test.err($$select export_page('a1000000-0000-0000-0000-0000000000e1', 'secrets', null, null, null, 5)$$) = 'unknown resource');
 
+-- ---------------------------------------------------------------- refusals before the signature check (0053)
+select export_note_refusal('a1000000-0000-0000-0000-0000000000e1', 'orders', 'The X-Store-Id did not match this shop.');
+select ex_test.check('a refusal is written to the history with its reason',
+  (select count(*) = 1 from export_calls where status = 'refused' and reason = 'The X-Store-Id did not match this shop.' and request_id like 'refused-%'));
+select export_note_refusal('a1000000-0000-0000-0000-0000000000e1', 'secrets', 'x');
+select export_note_refusal(gen_random_uuid(), 'orders', 'x');
+select ex_test.check('an unknown resource or shop writes nothing', (select count(*) = 1 from export_calls where request_id like 'refused-%'));
+select export_note_refusal('a1000000-0000-0000-0000-0000000000e1', 'orders', 'noise') from generate_series(1, 150);
+select ex_test.check('at most 100 refusals an hour are kept, so noise cannot fill the table',
+  (select count(*) = 100 from export_calls where request_id like 'refused-%'));
+select ex_test.check('refusals do not use up the real caller''s allowance',
+  (select ok from export_begin('a1000000-0000-0000-0000-0000000000e1', 'req-gggggggg', 'orders')));
+select ex_test.as_user('00000000-0000-0000-0000-0000000000e1');
+select ex_test.check('a browser cannot write the history',
+  ex_test.err($$select export_note_refusal('a1000000-0000-0000-0000-0000000000e1', 'orders', 'x')$$) like 'permission denied%');
+reset role;
+delete from export_calls where request_id like 'refused-%';
+
 -- ---------------------------------------------------------------- switching off
 select ex_test.as_user('00000000-0000-0000-0000-0000000000e1');
 select clear_export_secret('a1000000-0000-0000-0000-0000000000e1');

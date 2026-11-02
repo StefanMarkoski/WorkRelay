@@ -23,6 +23,8 @@ export interface Cursor {
 export interface ExportStore {
   begin(integrationId: string, requestId: string, resource: ExportResource): Promise<{ ok: true; callId: string; secret: string } | { ok: false; reason: BeginRefusal }>
   finish(callId: string, status: 'ok' | 'refused' | 'failed', reason: string | null, rows: number): Promise<void>
+  /** Writes a refusal that happened before the signature check to the history. Best effort and capped by the database. */
+  refused(integrationId: string, resource: ExportResource, reason: string): Promise<void>
   page(integrationId: string, resource: ExportResource, q: { since: string | null; after: Cursor | null; limit: number }): Promise<{ items: unknown[]; next: Cursor | null }>
 }
 
@@ -95,39 +97,44 @@ export async function handleExport(req: Request, deps: ExportDeps): Promise<Resp
   if (!key) return respond(401, { error: 'invalid_key' })
   const integration = await deps.store.findIntegrationByKeyHash(await sha256Hex(key))
   if (!integration || integration.status === 'revoked') return respond(401, { error: 'invalid_key' })
-  if (integration.status !== 'connected' || !integration.externalStoreId) return respond(403, { error: 'integration_not_bound' })
-  if (req.headers.get('x-store-id') !== integration.externalStoreId) return respond(403, { error: 'store_mismatch' })
+  // From here the caller holds a real shop key, so a refusal is worth showing to the owner.
+  const deny = async (status: number, body: Record<string, unknown>, why: string) => {
+    await deps.exports.refused(integration.id, resource, why).catch(() => undefined)
+    return respond(status, body)
+  }
+  if (integration.status !== 'connected' || !integration.externalStoreId) return deny(403, { error: 'integration_not_bound' }, 'The shop is not connected.')
+  if (req.headers.get('x-store-id') !== integration.externalStoreId) return deny(403, { error: 'store_mismatch' }, 'The X-Store-Id did not match this shop.')
 
   const timestamp = req.headers.get('x-wr-timestamp') ?? ''
   const requestId = req.headers.get('x-wr-request-id') ?? ''
   const signature = /^v1=([0-9a-f]{64})$/.exec(req.headers.get('x-wr-signature') ?? '')?.[1]
-  if (!/^\d{10}$/.test(timestamp) || !signature) return respond(401, { error: 'signature_required' })
-  if (!REQUEST_ID.test(requestId)) return respond(400, { error: 'invalid_request_id', detail: 'X-WR-Request-Id: 8 to 100 letters, digits, - or _. Use a new one for every call.' })
+  if (!/^\d{10}$/.test(timestamp) || !signature) return deny(401, { error: 'signature_required' }, 'No signature or timestamp was sent.')
+  if (!REQUEST_ID.test(requestId)) return deny(400, { error: 'invalid_request_id', detail: 'X-WR-Request-Id: 8 to 100 letters, digits, - or _. Use a new one for every call.' }, 'The request id was missing or malformed.')
   const nowSeconds = Math.floor((deps.now?.() ?? new Date()).getTime() / 1000)
   if (Math.abs(nowSeconds - Number(timestamp)) > EXPORT_TOLERANCE_SECONDS) {
-    return respond(401, { error: 'stale_timestamp', detail: `X-WR-Timestamp must be within ${EXPORT_TOLERANCE_SECONDS} seconds of now (unix seconds).` })
+    return deny(401, { error: 'stale_timestamp', detail: `X-WR-Timestamp must be within ${EXPORT_TOLERANCE_SECONDS} seconds of now (unix seconds).` }, 'The timestamp was too far from the current time.')
   }
 
   // The query: only what the page needs. Anything else is a mistake worth telling the caller about.
   const known = new Set(['limit', 'cursor', 'updated_since'])
   for (const name of url.searchParams.keys()) {
-    if (!known.has(name)) return respond(400, { error: 'invalid_query', detail: `Unknown parameter "${name}". Use limit, cursor, updated_since.` })
+    if (!known.has(name)) return deny(400, { error: 'invalid_query', detail: `Unknown parameter "${name}". Use limit, cursor, updated_since.` }, 'The query had a parameter that does not exist.')
   }
   for (const name of known) {
-    if (url.searchParams.getAll(name).length > 1) return respond(400, { error: 'invalid_query', detail: `"${name}" is given more than once.` })
+    if (url.searchParams.getAll(name).length > 1) return deny(400, { error: 'invalid_query', detail: `"${name}" is given more than once.` }, 'The query repeated a parameter.')
   }
   const limitText = url.searchParams.get('limit')
   const limit = limitText === null ? DEFAULT_LIMIT : Number(limitText)
   if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
-    return respond(400, { error: 'invalid_query', detail: `limit is a whole number from 1 to ${MAX_LIMIT}.` })
+    return deny(400, { error: 'invalid_query', detail: `limit is a whole number from 1 to ${MAX_LIMIT}.` }, 'The limit was not a number from 1 to 200.')
   }
   const since = url.searchParams.get('updated_since')
   if (since !== null && (!ISO_TIME.test(since) || Number.isNaN(Date.parse(since)))) {
-    return respond(400, { error: 'invalid_query', detail: 'updated_since is an ISO time with a zone, like 2026-11-01T00:00:00Z.' })
+    return deny(400, { error: 'invalid_query', detail: 'updated_since is an ISO time with a zone, like 2026-11-01T00:00:00Z.' }, 'updated_since was not a valid time.')
   }
   const cursorText = url.searchParams.get('cursor')
   const after = cursorText === null ? null : decodeCursor(cursorText)
-  if (cursorText !== null && !after) return respond(400, { error: 'invalid_cursor', detail: 'Use next_cursor exactly as the last page gave it.' })
+  if (cursorText !== null && !after) return deny(400, { error: 'invalid_cursor', detail: 'Use next_cursor exactly as the last page gave it.' }, 'The cursor was not one WorkRelay handed out.')
 
   const begun = await deps.exports.begin(integration.id, requestId, resource)
   if (!begun.ok) {
@@ -138,6 +145,13 @@ export async function handleExport(req: Request, deps: ExportDeps): Promise<Resp
       replayed: [409, 'request_id_used'],
     }
     const [status, error] = answers[begun.reason]
+    // a refused call that begin already recorded (a wrong signature) is not repeated; these four never reached a row
+    await deps.exports.refused(integration.id, resource, {
+      not_connected: 'The shop is not connected.',
+      export_off: 'Export is switched off for this shop.',
+      rate_limited: 'Over 120 calls in the last hour.',
+      replayed: 'The request id had been used before.',
+    }[begun.reason]).catch(() => undefined)
     const res = respond(status, {
       error,
       ...(begun.reason === 'export_off' ? { detail: 'The shop owner has not switched export on in WorkRelay.' } : {}),
