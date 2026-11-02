@@ -190,7 +190,7 @@ export function AutomationsPage() {
                       {status.waiting && (
                         <p className="mt-1 text-xs">
                           {event === 'customer_signed_up' ? 'None of the shops this covers send signups' : 'None of the shops this covers is connected'}, so this will not run.{' '}
-                          <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Integrations</Link>
+                          <Link to="/shops" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Shops</Link>
                         </p>
                       )}
                       {!status.waiting && status.notes.length > 0 && (
@@ -293,7 +293,7 @@ export function AutomationsPage() {
                 )}
                 {editing.config.event === 'customer_signed_up' && signupShops.length === 0 && (
                   <p role="alert" className="-mt-2 text-xs text-destructive">
-                    No shop sends signups yet, so this would never run. Switch customer signups on under <Link to="/integrations" className="underline">Integrations</Link>, then come back.
+                    No shop sends signups yet, so this would never run. Switch customer signups on on the Customers tab of a <Link to="/shops" className="underline">shop</Link>, then come back.
                   </p>
                 )}
                 {(connectedShops.length > 1 || editing.shops !== null) && (

@@ -89,8 +89,7 @@ export function StockWriteBack({ shop: initial }: { shop: Integration }) {
           <p className="mt-0.5 text-xs text-muted-foreground">
             Optional, and off until the workspace owner switches it on. When an order, a cancellation or a return changes WorkRelay&apos;s estimate for a
             product, WorkRelay sends your shop the new number for that product: the SKU and the number, nothing else, signed with a secret only your
-            shop and WorkRelay know. Like git, it reads the shop&apos;s own numbers first (quietly, from the product feed address on the{' '}
-            <Link to="/api-calls/inventory" className="font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">API Calls</Link> page)
+            shop and WorkRelay know. Like git, it reads the shop&apos;s own numbers first (quietly, from the product feed address above)
             and again after sending. If they disagree with what WorkRelay believed, nothing is overwritten and the owner decides which number stays.
           </p>
         </div>

@@ -69,7 +69,7 @@ Dashboard -> Project Settings -> API: copy the **Project URL** and the **anon** 
 
 ## 7. First run through the UI
 1. Sign up, create a workspace.
-2. Integrations -> Connect store -> copy the key (shown once).
+2. Shops -> Connect shop -> copy the key (shown once).
 3. From the commerce app (or curl):
 ```bash
 KEY=wr_live_...; BASE=https://<ref>.supabase.co/functions/v1

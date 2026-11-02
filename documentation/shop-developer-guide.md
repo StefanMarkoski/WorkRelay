@@ -25,13 +25,13 @@ Some switches live with the WorkRelay team, not in your code. Ask them for the o
 
 | Setting | Who | Where |
 |---|---|---|
-| Create the connection, get the **secret key** (shown once) | Shop owner or admin, in WorkRelay | Integrations → Connect store |
-| The shop's **currency** (one per shop) | Shop owner or admin; WorkRelay can also set it | Choose it when connecting; change it in Integrations → Edit |
+| Create the connection, get the **secret key** (shown once) | Shop owner or admin, in WorkRelay | Shops → Connect shop |
+| The shop's **currency** (one per shop) | Shop owner or admin; WorkRelay can also set it | Choose it when connecting; change it under Shops → the shop → General |
 | **Bind** the key to your store id (once) | **You**, from code | `POST /bind` |
-| Receive customer signups (on/off per shop) | Shop owner or admin | Integrations → Edit → *Receive customer signups* |
+| Receive customer signups (on/off per shop) | Shop owner or admin | Shops → the shop → Customers → *Receive customer signups* |
 | Notifications ("a customer signs up", "a new order arrives", "a shop syncs its products"…) | Shop owner or admin | Automations |
 | **Schedule** for calls to your products endpoint (calls per days) | **WorkRelay** | Platform admin |
-| Your products **URL** and its **token** | Shop owner or admin | API Calls → Inventory |
+| Your products **URL** and its **token** | Shop owner or admin | Shops → the shop → Inventory |
 
 ## 3. Start here: the order webhook
 
@@ -128,7 +128,7 @@ If the team wants a notification for **every new account**, the shop has to tell
 
 **The shop owner (in WorkRelay):**
 
-1. Integrations → **Edit** on the shop → turn on *Receive customer signups*. It is **off by default and per shop**. While it is off, events are kept and shown as
+1. Shops → the shop → **Customers** tab → turn on *Receive customer signups*. It is **off by default and per shop**. While it is off, events are kept and shown as
    ignored (HTTP 202); resend them after switching it on.
 2. Automations → add one for **a customer signs up**, choose Discord, Slack or a webhook URL, and tick the shop(s) it should cover.
 
@@ -194,7 +194,7 @@ What to build:
 
 | Requirement | Detail |
 |---|---|
-| Method and URL | `GET`, **https**, a public address. The shop owner enters the URL in API Calls → Inventory |
+| Method and URL | `GET`, **https**, a public address. The shop owner enters the URL in Shops → the shop → Inventory |
 | Authentication | Create a **dedicated read-only token** just for this. The shop owner enters it in WorkRelay, and it is sent as the `Authorization` header exactly as entered (for example `Bearer abc123`). It is stored privately and never shown again. **Do not reuse the WorkRelay secret key**: that one lets anyone write stock into your workspace, this one only lets WorkRelay read your catalogue. Compare it in constant time, and refuse everything else with `401` |
 | Response | Any `2xx` with JSON: either `{"products":[...]}` or just the list `[...]` |
 | Content | The full catalogue, or at least every product whose stock should stay current. Products you leave out are untouched, never deleted |
@@ -203,8 +203,8 @@ What to build:
 | Pagination | None: one request returns everything |
 | Cost | Keep it cheap: read from a cache or a single query. A schedule can mean many calls a day |
 
-If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in API Calls → Inventory and in
-Integrations → Event history. A failed call still counts toward the schedule.
+If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in Shops → the shop → Inventory and in
+Shops → Event history. A failed call still counts toward the schedule.
 
 The shop owner (or the team) can also press **Sync now** on the Inventory page to run a check immediately. It only works where WorkRelay has set a schedule for the shop, the
 URL is entered, and the shop is not paused; each press uses one of the shop's scheduled calls, so it can never exceed the agreed number.
@@ -233,7 +233,7 @@ Content-Type: application/json
 - **WorkRelay decides who is notified, not the request.** There is nothing in the push to turn the notification on or off. The team controls it in WorkRelay: the automation can be switched
   off, or limited to some shops. If your shop also pushes automatically on a timer or after each sale, tell the team, so they can leave that shop out of the automation or have WorkRelay switch it off.
   Scheduled calls from WorkRelay and its **Sync now** button never announce.
-- Each push (and each scheduled call) appears in Integrations → Event history as `inventory.push` or `inventory.pull`, with a short summary, for 30 days.
+- Each push (and each scheduled call) appears in Shops → Event history as `inventory.push` or `inventory.pull`, with a short summary, for 30 days.
 - Every sync, pushed by the shop or asked for by WorkRelay, also appears in **Inventory → Sync history**: when, which shop, who started it (your `synced_by`), how many products, which ones changed (stock before and after, and price before and after), and the reason when it failed. Kept for 30 days.
 
 - **Stock write-back (optional, off by default).** A shop that estimates stock can also receive WorkRelay's number: after an order, a cancellation or a return, WorkRelay sends your shop a signed request with the SKU and the new absolute stock number. It works like `git pull` before `git push`: WorkRelay first reads your shop's own numbers from your product feed address (quietly, with no notification), sends only what is still right, and reads once more afterwards to check your shop took the numbers; so the shop needs a product feed address. The workspace owner switches it on per shop after a signed test, and switching it off in WorkRelay stops everything at once. Your shop must verify the signature, and the test checks that it refuses a wrong one (401 or 403). If your numbers disagree with what WorkRelay believed (for example after a restock), nothing is overwritten and the owner decides which number stays (**Inventory → Stock pushes**); every read, every request and every decision is in **Sync history**, which shows both directions. The request format, a Node and a PHP verification snippet and the retry rules are in the integration guide, under *Write-back*. A cancelled or `returned` order gives its pieces back to the estimate.
@@ -286,7 +286,7 @@ curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-
 curl -s -i "https://yourshop.com/workrelay/products" -H "Accept: application/json" -H "Authorization: Bearer YOUR_PRODUCTS_TOKEN"
 ```
 
-Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrations → Event history**, which lists every delivery with its status and the reason when something was refused.
+Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Shops → Event history**, which lists every delivery with its status and the reason when something was refused.
 
 ### Go-live checklist
 
@@ -302,7 +302,7 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 
 ## 8. Reading your data back (export)
 
-Optional, read-only, and off until the **workspace owner** switches it on for the shop (Edit shop, *Let this shop read its data back*, *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Shops → the shop → Export tab → *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
 
 ```
 GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
@@ -363,7 +363,7 @@ Add `?limit=` (1 to 200, default 100). The answer is `{ "resource", "items", "ha
 
 ### Limits and refusals
 
-120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner on the shop's Export tab, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: `401 invalid_key | signature_required | stale_timestamp | invalid_signature`, `403 store_mismatch | integration_not_bound | export_off`, `400 invalid_query | invalid_cursor | invalid_request_id`, `404 unknown_resource`, `405`, `409 request_id_used`, `429 rate_limited` (with `Retry-After`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
 
 ## 9. When something is not showing up
 

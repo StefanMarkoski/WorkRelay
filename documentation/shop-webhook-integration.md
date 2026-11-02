@@ -19,7 +19,7 @@ sends order events so that every order appears in the right WorkRelay workspace,
      |                                    4. POST /order-webhook  <------|   (every order event)
 ```
 
-1. A WorkRelay user of the tenant creates a connection under **Integrations → Connect store**. WorkRelay shows a
+1. A WorkRelay user of the tenant creates a connection under **Shops → Connect shop**. WorkRelay shows a
    **secret key** (`wr_live_` + 64 hex characters) **once**. It is stored only as a hash.
 2. The shop admin pastes that key into the shop. Treat it like a password: server-side only, never in browser code,
    never in logs or URLs.
@@ -49,7 +49,7 @@ Content-Type: application/json
 ```
 
 Use HTTPS only. There is no request signature yet: the bearer key over TLS is the only credential, so keep it secret
-and ask the WorkRelay tenant to **rotate** the key (Integrations → Rotate) if it may have leaked. A rotated key keeps the
+and ask the WorkRelay tenant to **rotate** the key (Shops → the shop → General → Rotate key) if it may have leaked. A rotated key keeps the
 store binding; update the shop with the new key.
 
 ## 3. Bind (once per connection)
@@ -275,7 +275,7 @@ Orders already create customers: WorkRelay's Customers page lists everyone who h
 tell WorkRelay about **accounts that were created before the first order** (for example to send a welcome message), it can use a second,
 optional endpoint. Nothing here is required, and it does nothing until someone switches it on for the shop.
 
-**Switching it on:** in WorkRelay, open **Integrations**, press **Edit** on the shop and turn on *Receive customer signups*.
+**Switching it on:** in WorkRelay, open **Shops**, open the shop, go to its **Customers** tab and turn on *Receive customer signups*.
 It is off by default and per shop. While it is off, events sent to this endpoint are kept and shown as ignored in Event history.
 If you resend the same event after switching it on, it is processed.
 
@@ -410,7 +410,7 @@ How WorkRelay uses it:
   product that is already low by the shop's own number is not announced twice. The estimate is checked once at the end of each order, so an order that takes many products to their level at once sends up to **3 single alerts per shop per 90 seconds** and one summary for the rest, and an order the shop later edits to other products re-arms the ones it lost. Every low-stock message ends with its **Source**: the shop's name
   for a number the shop reported, or *WorkRelay (estimated for <shop>)* for an estimate.
 - **Failures.** An event WorkRelay could not accept, and an automation run that failed, are listed under **Failures** with a plain explanation. They are kept for 90 days by default; an owner or admin sets 1 to 365 days under **Settings → Failures**, and the failures already older than that are removed the moment you save, and later ones as they age (events that went through and runs that succeeded are never removed by this).
-- **Event history.** Every push and every scheduled pull appears under **Integrations → Event history** as `inventory.push` or
+- **Event history.** Every push and every scheduled pull appears under **Shops → Event history** as `inventory.push` or
   `inventory.pull`, with a short summary (how many products, never the products themselves), so you can see that a feed arrived, was
   rejected or failed, and why. These entries are kept for 30 days.
 - **No deleting.** Products are never removed by a report. A product you stop sending simply keeps its last numbers.
@@ -420,7 +420,7 @@ How WorkRelay uses it:
 Same key and the same `X-Store-Id` as the order webhook (the key is already bound; there is no second bind). The body is the feed above:
 **up to 500 products and 1 MB per request.**
 
-**Nothing to switch on.** Any connected shop can push at any time and as often as it likes; there is no per-shop switch and no limit. The calls per days that WorkRelay sets (**API Calls → Inventory**) only limit WorkRelay's own calls to your products endpoint.
+**Nothing to switch on.** Any connected shop can push at any time and as often as it likes; there is no per-shop switch and no limit. The calls per days that WorkRelay sets (**Shops → the shop → Inventory**) only limit WorkRelay's own calls to your products endpoint.
 
 ```bash
 curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-Store-Id: $STORE" \
@@ -450,7 +450,7 @@ Every applied push also updates the shop's **"Synced 12m ago"** line on the Inve
 
 ### Pull: WorkRelay calls the shop
 
-Under **API Calls → Inventory**, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
+On the shop's **Inventory** tab, the workspace enters, per shop, the **Products URL** and, if the endpoint needs it, an **Authorization**
 value. WorkRelay then requests the URL on a schedule:
 
 ```
@@ -463,7 +463,7 @@ The shop answers `200` (any `2xx`) with the feed above, either `{"products":[...
 catalogue, or at least every product whose stock should be kept current.
 
 - **How often is set by WorkRelay**, per shop, as *calls per number of days* (for example 15 calls per day is about one call every
-  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on API Calls → Inventory. The fastest possible is one
+  1 hour 36 minutes, 200 per week about every 50 minutes). It is shown read-only on Shops → the shop → Inventory. The fastest possible is one
   call every 5 minutes. A call that fails still counts, and is not retried before the next scheduled time.
 - **Limits:** up to **5,000 products and 5 MB** per answer, **15 seconds** to respond. Larger catalogues are not supported yet.
 - **Safety rules:** the URL must be `https`, must resolve to a public address (no private networks or `localhost`), and **redirects are not
@@ -471,7 +471,7 @@ catalogue, or at least every product whose stock should be kept current.
   sent only to that URL.
 - **Timestamps:** each product is stamped with the moment WorkRelay *sent* the request unless it carries its own `updated_at`, so a push
   that happened while the answer was on its way is not overwritten.
-- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on API Calls → Inventory, and nothing from
+- **Failures** (non-2xx, not JSON, wrong shape, timeout) appear as *The last check failed: ...* on Shops → the shop → Inventory, and nothing from
   that answer is applied.
 - A schedule can be paused per shop. If no schedule has been set for a shop, WorkRelay does not call it; ask WorkRelay to set one.
 
@@ -498,7 +498,7 @@ estimate is the number that is sent.
   SKU your feed does not list is not sent to.
 - **Reads have a budget.** Reads before and after sending have their own hourly limit per shop (60 by default; only WorkRelay's platform admin can change
   it), separate from how often WorkRelay reads your feed on a schedule. When it is reached, numbers wait for the next hour.
-- **Set up in WorkRelay** (Integrations → Edit shop): the product feed address, the shop's public **https stock address** (the standard port 443, no
+- **Set up in WorkRelay** (Shops → the shop → Inventory): the product feed address, the shop's public **https stock address** (the standard port 443, no
   login in the address, and no secret in it either: the signature is the secret), a **signing secret** (`wr_sign_…`, shown once), then
   **Send test**, then the switch. Changing the address or the secret switches write-back off until the shop passes a new test.
 - **Turning it off in WorkRelay stops everything**, even if your shop is ready to receive: nothing queued is sent afterwards, and the check is made
@@ -614,8 +614,8 @@ curl -s -X POST "$BASE/order-webhook" -H "Authorization: Bearer $KEY" -H "X-Stor
 # 3. Repeat step 2: expect {"status":"duplicate"}
 ```
 
-In WorkRelay, check **Integrations → Event history** (every delivery with status, attempts and the error text) and
-**Orders**. The **Integrations → Test payload** tab validates a payload against the same rules before you send it.
+In WorkRelay, check **Shops → Event history** (every delivery with status, attempts and the error text) and
+**Orders**. The **Orders** tab of the shop (*Check an order payload*) validates a payload against the same rules before you send it.
 
 ### Go-live checklist
 

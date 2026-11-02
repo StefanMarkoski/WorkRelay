@@ -28,9 +28,9 @@ export function checkTriggerShops(trigger: WorkflowTrigger, shops: ShopRow[]): s
 
   if (trigger.type === 'customer_signup') {
     const off = (ids ?? []).map((id) => byId.get(id)!).filter((s) => !s.track_signups)
-    if (off.length) return `Customer signups are off for ${off.map((s) => s.name).join(', ')}. Switch them on under Integrations first.`
+    if (off.length) return `Customer signups are off for ${off.map((s) => s.name).join(', ')}. Switch them on first, on the shop's Customers tab.`
     if (!ids && !shops.some((s) => s.status === 'connected' && s.track_signups)) {
-      return 'Turn on customer signups for a shop first (Integrations, then Edit on the shop).'
+      return 'Turn on customer signups for a shop first (Shops, the shop, then its Customers tab).'
     }
   }
   return null

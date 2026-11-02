@@ -6,7 +6,7 @@ import type { Integration } from '@/types/db'
 export const INTEGRATION_COLUMNS =
   'id, organization_id, kind, name, status, key_prefix, external_store_id, external_base_url, bound_at, last_seen_at, created_at, track_signups, signups_enabled_at, currency, estimate_stock, stock_push_has_url, stock_authority, stock_push_enabled, stock_push_verified_at, stock_push_locked, stock_push_paused_reason, stock_push_has_secret, export_has_secret, export_last_used_at'
 
-/** `poll`: refresh every 5 s (the Integrations screen only). Elsewhere it is just a dropdown source. */
+/** `poll`: refresh every 5 s (the Shops screen only). Elsewhere it is just a dropdown source. */
 export function useIntegrations(opts: { poll?: boolean } = {}) {
   const { current } = useWorkspace()
   return useQuery({

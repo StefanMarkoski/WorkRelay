@@ -62,10 +62,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <nav aria-label="Main" className="flex-1 space-y-1 overflow-y-auto p-4">
       <Label>Main menu</Label>
       {visible('main').map(item)}
-      <Label>Management</Label>
-      {visible('management').map(item)}
+      <Label>Automation</Label>
+      {visible('automation').map(item)}
       <Label>Shops</Label>
       {visible('shops').map(item)}
+      <Label>Management</Label>
+      {visible('management').map(item)}
       {isAdmin && (
         <>
           <Label>Platform</Label>

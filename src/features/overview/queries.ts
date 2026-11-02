@@ -56,10 +56,10 @@ export function useOverview(shopId = '') {
       })
       const warnings: { id: string; text: string; to: string }[] = []
       for (const i of integ.filter((x) => x.status === 'awaiting_bind' && (!shopId || x.id === shopId))) {
-        warnings.push({ id: `bind-${i.id}`, text: `"${i.name}" has not been bound by its store yet.`, to: '/integrations' })
+        warnings.push({ id: `bind-${i.id}`, text: `"${i.name}" has not been bound by its store yet.`, to: `/shops/${i.id}/edit/general` })
       }
       for (const i of integ.filter((x) => x.status !== 'revoked' && !x.currency && (!shopId || x.id === shopId))) {
-        warnings.push({ id: `currency-${i.id}`, text: `"${i.name}" has no currency yet. Set one in its details so its orders are counted in the right currency.`, to: '/integrations' })
+        warnings.push({ id: `currency-${i.id}`, text: `"${i.name}" has no currency yet. Set one in its details so its orders are counted in the right currency.`, to: `/shops/${i.id}/edit/general` })
       }
       if ((failedEvents.count ?? 0) > 0) warnings.push({ id: 'failed-events', text: `${failedEvents.count} webhook ${failedEvents.count === 1 ? 'event' : 'events'} failed in the last 24 hours.`, to: '/failures' })
       if ((runsFailed.count ?? 0) > 0) warnings.push({ id: 'failed-runs', text: `${runsFailed.count} automation ${runsFailed.count === 1 ? 'run' : 'runs'} failed in the last 7 days.`, to: '/failures' })

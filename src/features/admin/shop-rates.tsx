@@ -13,7 +13,7 @@ import { useTenantShops, type Tenant } from './queries'
 
 /**
  * How often WorkRelay may call each shop of a tenant, as "calls per days". Only platform admins can change it (the
- * database refuses everyone else), so tenants see the result on API Calls → Inventory but cannot edit it.
+ * database refuses everyone else), so tenants see the result on the shop's Inventory tab but cannot edit it.
  */
 export function ShopRates({ tenants }: { tenants: Tenant[] }) {
   const [orgId, setOrgId] = useState('')

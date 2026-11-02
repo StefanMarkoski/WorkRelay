@@ -127,7 +127,7 @@ export function OrdersPage() {
             icon={ShoppingCart}
             title={filtered ? 'No orders match these filters' : 'No orders yet'}
             description={filtered ? 'Try widening the date range or clearing a filter.' : 'Orders appear here once a connected store starts sending events.'}
-            action={!filtered ? <Link to="/integrations"><Button variant="outline">Go to integrations</Button></Link> : undefined}
+            action={!filtered ? <Link to="/shops"><Button variant="outline">Go to shops</Button></Link> : undefined}
           />
         ) : (
           <>

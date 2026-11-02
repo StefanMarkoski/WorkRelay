@@ -103,9 +103,9 @@ export function OverviewPage() {
         <Card>
           <EmptyState
             icon={Plug}
-            title="Connect your first store"
+            title="Connect your first shop"
             description="Create a connection, paste its secret key into your shop, and orders will start appearing here. Then turn on an automation to act on them."
-            action={<Link to="/integrations"><Button>Go to integrations</Button></Link>}
+            action={<Link to="/shops"><Button>Go to shops</Button></Link>}
           />
         </Card>
       )}
@@ -224,7 +224,7 @@ export function OverviewPage() {
         <Card>
           <CardHeader>
             <CardTitle>Integration events</CardTitle>
-            <Link to="/integrations" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View all</Link>
+            <Link to="/shops?tab=events" className="text-xs font-medium text-foreground underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">View all</Link>
           </CardHeader>
           {d.recentEvents.length === 0 ? (
             <EmptyState icon={Inbox} title="No events received" description="Webhook deliveries from connected stores are listed here." />

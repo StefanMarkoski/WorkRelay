@@ -79,7 +79,7 @@ export function CustomersPage() {
       {shop && shop.signups_enabled_at === null && (
         <p className="mb-4 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{shop.name}</span> does not send signups, so only people who ordered from it appear.{' '}
-          <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Integrations</Link>
+          <Link to={`/shops/${shop.id}/edit/customers`} className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Shop setup</Link>
         </p>
       )}
       <Card className="mb-6 flex flex-wrap items-center gap-3 p-4">

@@ -10,14 +10,14 @@ import { ExecutionsPage } from '@/pages/executions-page'
 import { FailuresPage } from '@/pages/failures-page'
 import { InsightsPage } from '@/pages/insights-page'
 import { InventoryPage } from '@/pages/inventory-page'
-import { IntegrationsPage } from '@/pages/integrations-page'
+import { ShopPage } from '@/pages/shop-page'
+import { ShopsPage } from '@/pages/shops-page'
 import { ProductDetailPage } from '@/pages/product-detail-page'
 import { SyncHistoryPage } from '@/pages/sync-history-page'
 import { StockPushesPage } from '@/pages/stock-pushes-page'
 import { OrderDetailPage } from '@/pages/order-detail-page'
 import { OrdersPage } from '@/pages/orders-page'
 import { OverviewPage } from '@/pages/overview-page'
-import { ApiCallsPage } from '@/pages/api-calls-page'
 import { SettingsPage } from '@/pages/settings-page'
 
 export const router = createHashRouter([
@@ -31,7 +31,10 @@ export const router = createHashRouter([
       { path: 'executions/:id', element: <ExecutionDetailPage /> },
       { path: 'approvals', element: <ApprovalsPage /> },
       { path: 'failures', element: <FailuresPage /> },
-      { path: 'integrations', element: <IntegrationsPage /> },
+      { path: 'shops', element: <ShopsPage /> },
+      { path: 'shops/:id/edit/:tab?', element: <ShopPage /> },
+      // Shops used to be called Integrations, and API Calls lived on its own page: old links and bookmarks still land somewhere useful
+      { path: 'integrations', element: <Navigate to="/shops" replace /> },
       { path: 'orders', element: <OrdersPage /> },
       { path: 'orders/:id', element: <OrderDetailPage /> },
       { path: 'insights', element: <InsightsPage /> },
@@ -42,11 +45,10 @@ export const router = createHashRouter([
       { path: 'inventory/pushes', element: <StockPushesPage /> },
       { path: 'inventory/:id', element: <ProductDetailPage /> },
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'api-calls', element: <Navigate to="/api-calls/inventory" replace /> },
-      { path: 'api-calls/inventory', element: <ApiCallsPage /> },
-      // API Calls used to live under Settings: old links and bookmarks still land on it
-      { path: 'settings/api-calls', element: <Navigate to="/api-calls/inventory" replace /> },
-      { path: 'settings/api-calls/inventory', element: <Navigate to="/api-calls/inventory" replace /> },
+      { path: 'api-calls', element: <Navigate to="/shops" replace /> },
+      { path: 'api-calls/inventory', element: <Navigate to="/shops" replace /> },
+      { path: 'settings/api-calls', element: <Navigate to="/shops" replace /> },
+      { path: 'settings/api-calls/inventory', element: <Navigate to="/shops" replace /> },
       { path: 'admin/tenants', element: <AdminTenantsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

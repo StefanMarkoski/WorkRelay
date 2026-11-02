@@ -142,15 +142,15 @@ describe('the developer guide: its numbers and names are the real ones', () => {
   })
 
   it.each([
-    ['Receive customer signups', 'src/features/integrations/edit-shop.tsx'],
-    ['Connect store', 'src/pages/integrations-page.tsx'],
+    ['Receive customer signups', 'src/features/shops/customers-tab.tsx'],
+    ['Connect shop', 'src/pages/shops-page.tsx'],
     ['Placed an order', 'src/pages/customers-page.tsx'],
     ['Registered only', 'src/pages/customers-page.tsx'],
     ['a customer signs up', 'src/pages/automations-page.tsx'],
     ['a new customer places their first order', 'src/pages/automations-page.tsx'],
     ['Sync now', 'src/features/integrations/sync-now-button.tsx'],
     ['a shop syncs its products', 'src/pages/automations-page.tsx'],
-    ['The last check failed', 'src/pages/api-calls-page.tsx'],
+    ['The last check failed', 'src/features/integrations/product-feed.tsx'],
     ['Not reported', 'src/pages/inventory-page.tsx'],
   ])('refers to "%s", which is really in the app', (label, file) => {
     expect(doc.toLowerCase()).toContain(label.toLowerCase())

@@ -47,7 +47,7 @@ export function ShopPicker({ shops, event, value, onChange }: { shops: Shop[]; e
               <span className="[overflow-wrap:anywhere]">{shopLabel(s)}</span>
               <span className="block text-xs">
                 Signups are off for this shop.{' '}
-                <Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Switch them on</Link>
+                <Link to={`/shops/${s.id}/edit/customers`} className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Switch them on</Link>
               </span>
             </span>
           </label>

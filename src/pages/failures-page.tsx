@@ -64,7 +64,7 @@ function Details({ f }: { f: Failure }) {
           </Link>
         )}
         {f.kind === 'event' && (
-          <Link to="/integrations" className="mt-3 inline-block text-sm underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">
+          <Link to="/shops?tab=events" className="mt-3 inline-block text-sm underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">
             Open Event history for this shop
           </Link>
         )}

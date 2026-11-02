@@ -217,7 +217,7 @@ export function DeliveriesCard({ range, shopId }: P) {
         { key: 'failed', label: 'Failed', color: 'var(--destructive)', icon: ICON(XCircle, 'var(--destructive)') },
       ]}
       table={{ columns: ['Day', 'Processed', 'Ignored', 'Waiting', 'Failed'], rows: dayRows(keys, series) }}
-      footer={<Link to="/integrations" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Open Event history</Link>}
+      footer={<Link to="/shops?tab=events" className="underline decoration-muted-foreground/40 underline-offset-4 hover:decoration-foreground">Open Event history</Link>}
     >
       <BucketChart days={keys} series={series} kind="stacked" formatValue={formatFull} label={`Deliveries per day, last ${range} days`} emptyText="No deliveries in this period" />
     </ChartCard>

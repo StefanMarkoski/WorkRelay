@@ -204,7 +204,7 @@ export function StockPushesPage() {
       </Link>
       <PageHeader
         title="Stock pushes"
-        description="Every request WorkRelay sent to a shop with its stock numbers, newest first, and any disagreement between WorkRelay and a shop waiting for the owner. Switch it on per shop under Integrations → Edit. Kept for 30 days."
+        description="Every request WorkRelay sent to a shop with its stock numbers, newest first, and any disagreement between WorkRelay and a shop waiting for the owner. Switch it on per shop, on the shop's Inventory tab. Kept for 30 days."
       />
       <Waiting />
       <Conflicts />

@@ -1,58 +1,18 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Plug } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import { PageHeader } from '@/components/common/page-header'
-import { EmptyState, ErrorState, TableSkeleton } from '@/components/common/states'
-import { useIntegrations } from '@/features/integrations/queries'
-import { useIntegrationSyncs } from '@/features/integrations/sync'
-import { lastSynced } from '@/features/integrations/sync-freshness'
-import { SyncNowControl } from '@/features/integrations/sync-now-button'
-import { shopLabel } from '@/features/integrations/shop-label'
-import { ApiCallsTabs } from '@/features/api-calls/api-calls-tabs'
 import { useWorkspace } from '@/features/workspace/workspace-provider'
 import { formatDateTime, formatSyncPace, timeAgo } from '@/lib/format'
 import { errorMessage, supabase } from '@/lib/supabase'
 import type { Integration, IntegrationSync } from '@/types/db'
+import { lastSynced } from './sync-freshness'
+import { SyncNowControl } from './sync-now-button'
 
-export function ApiCallsPage() {
-  const integrations = useIntegrations()
-  const syncs = useIntegrationSyncs()
-  const shops = (integrations.data ?? []).filter((i) => i.status !== 'revoked')
-
-  return (
-    <>
-      <PageHeader title="API Calls" description="How WorkRelay talks to your shops' APIs, and how often." />
-      <ApiCallsTabs />
-      <div className="mb-5 max-w-3xl">
-        <h2 className="font-display text-lg font-semibold tracking-[-0.01em]">Inventory API calls</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          How WorkRelay keeps each shop's products and stock up to date. It can ask the shop for them on a schedule, and the shop can also send them
-          to WorkRelay. You say where to ask; how often, and whether the shop may send, is set by WorkRelay for your plan.
-        </p>
-      </div>
-      {integrations.isLoading || syncs.isLoading ? (
-        <TableSkeleton rows={3} />
-      ) : integrations.error || syncs.error ? (
-        <ErrorState onRetry={() => { void integrations.refetch(); void syncs.refetch() }} />
-      ) : shops.length === 0 ? (
-        <Card><EmptyState icon={Plug} title="No shops connected" description="Connect a shop under Integrations first, then set up its product feed here." /></Card>
-      ) : (
-        <div className="space-y-4">
-          {shops.map((shop) => (
-            <ShopCalls key={shop.id} shop={shop} sync={(syncs.data ?? []).find((s) => s.integration_id === shop.id) ?? null} />
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | null }) {
+/** How WorkRelay asks one shop for its products and stock: the products address, its token, the schedule and Sync now. */
+export function ProductFeed({ shop, sync }: { shop: Integration; sync: IntegrationSync | null }) {
   const { canManage } = useWorkspace()
   const qc = useQueryClient()
   const [url, setUrl] = useState(sync?.source_url ?? '')
@@ -87,9 +47,9 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-        <CardTitle>{shopLabel(shop)}</CardTitle>
+    <section aria-labelledby="product-feed-title">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="product-feed-title" className="font-display text-lg font-semibold tracking-[-0.01em]">Product feed</h2>
         {hasRate ? (
           <Badge tone={paused ? 'neutral' : sync?.last_error ? 'danger' : 'success'}>
             {paused ? 'Paused' : sync?.last_error ? 'Last check failed' : 'Scheduled'}
@@ -97,8 +57,12 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
         ) : (
           <Badge>Not scheduled</Badge>
         )}
-      </CardHeader>
-      <CardBody>
+      </div>
+      <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
+        How WorkRelay keeps this shop&apos;s products and stock up to date. It can ask the shop for them on a schedule, and the shop can also send them
+        to WorkRelay. You say where to ask; how often, and whether the shop may send, is set by WorkRelay for your plan.
+      </p>
+      <div>
         <dl className="mb-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt className="text-xs text-muted-foreground">Calls</dt>
@@ -188,8 +152,8 @@ function ShopCalls({ shop, sync }: { shop: Integration; sync: IntegrationSync | 
             <p className="text-xs text-muted-foreground">Only owners and admins can change this.</p>
           )}
         </form>
-      </CardBody>
-    </Card>
+      </div>
+    </section>
   )
 }
 

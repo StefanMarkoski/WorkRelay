@@ -15,13 +15,15 @@ import type { WebhookEvent } from '@/types/db'
 
 const PAGE_SIZE = 20
 
-export function EventHistory() {
+/** Everything shops sent. Pass `shopId` to show one shop only (its filter and column then go away). */
+export function EventHistory({ shopId: onlyShop }: { shopId?: string } = {}) {
   const { current } = useWorkspace()
   const [status, setStatus] = useState('')
-  const [shopId, setShopId] = useState('') // '' = all shops
+  const [pickedShop, setShopId] = useState('') // '' = all shops
+  const shopId = onlyShop ?? pickedShop
   const [page, setPage] = useState(0)
   const shops = useIntegrations().data ?? []
-  const showShop = shops.filter((i) => i.status !== 'revoked').length > 1 // only worth a column and a filter with several shops
+  const showShop = !onlyShop && shops.filter((i) => i.status !== 'revoked').length > 1 // only worth a column and a filter with several shops
 
   const query = useQuery({
     queryKey: ['webhook-events', current.id, status, shopId, page],
