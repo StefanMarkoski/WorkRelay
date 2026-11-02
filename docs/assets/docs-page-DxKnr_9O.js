@@ -1,4 +1,4 @@
-import{a as e,c as t,d as n,i as r,l as i,n as a,o,s,t as c,u as l}from"./index-A1OkdXkr.js";var u=n(l(),1);function d(e){return e.replace(/^\d+\.\s+/,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/^-+|-+$/g,``)}function f(e){let t=[],n=``,r=()=>{n&&t.push({t:`text`,v:n}),n=``},i=0;for(;i<e.length;){let a=e[i];if(a==="`"){let n=e.indexOf("`",i+1);if(n>i){r(),t.push({t:`code`,v:e.slice(i+1,n)}),i=n+1;continue}}if(a===`*`&&e[i+1]===`*`){let n=p(e,i+2,`**`);if(n>i+2){r(),t.push({t:`strong`,c:f(e.slice(i+2,n))}),i=n+2;continue}}if(a===`*`&&e[i+1]!==`*`&&e[i+1]!==` `){let n=p(e,i+1,`*`);if(n>i+1){r(),t.push({t:`em`,c:f(e.slice(i+1,n))}),i=n+1;continue}}if(a===`[`){let n=/^\[((?:[^\]`]|`[^`]*`)+)\]\(([^)\s]+)\)/.exec(e.slice(i));if(n){r(),t.push({t:`link`,href:n[2],c:f(n[1])}),i+=n[0].length;continue}}n+=a,i+=1}return r(),t}function p(e,t,n){let r=t;for(;r<e.length;)if(e[r]==="`"){let t=e.indexOf("`",r+1);if(t<0)return-1;r=t+1}else{if(e.startsWith(n,r)){if(n===`*`&&e[r+1]===`*`){r+=2;continue}return r}r+=1}return-1}var m=/^(\s*)```(\w*)\s*$/,h=/^(#{1,6})\s+(.*?)\s*$/,g=/^(\s*)([-*]|\d+\.)\s+(.*)$/,_=/^\s*\|?[\s:|-]+\|[\s:|-]*$/,v=e=>e.length-e.trimStart().length;function y(e){let t=e.trim().replace(/^\|/,``).replace(/\|$/,``),n=[],r=``,i=!1;for(let e=0;e<t.length;e++){let a=t[e];a==="`"&&(i=!i),a===`|`&&!i&&t[e-1]!==`\\`?(n.push(r.trim()),r=``):r+=a}return n.push(r.trim()),n}function b(e){let t=[],n=0;for(;n<e.length;){let r=e[n];if(r.trim()===``){n+=1;continue}let i=m.exec(r);if(i){let r=[];for(n+=1;n<e.length&&!m.test(e[n]);)r.push(e[n].startsWith(i[1])?e[n].slice(i[1].length):e[n]),n+=1;n+=1,t.push({t:`code`,lang:i[2],text:r.join(`
+import{a as e,c as t,d as n,i as r,l as i,n as a,o,s,t as c,u as l}from"./index-B1qDmCcl.js";var u=n(l(),1);function d(e){return e.replace(/^\d+\.\s+/,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/^-+|-+$/g,``)}function f(e){let t=[],n=``,r=()=>{n&&t.push({t:`text`,v:n}),n=``},i=0;for(;i<e.length;){let a=e[i];if(a==="`"){let n=e.indexOf("`",i+1);if(n>i){r(),t.push({t:`code`,v:e.slice(i+1,n)}),i=n+1;continue}}if(a===`*`&&e[i+1]===`*`){let n=p(e,i+2,`**`);if(n>i+2){r(),t.push({t:`strong`,c:f(e.slice(i+2,n))}),i=n+2;continue}}if(a===`*`&&e[i+1]!==`*`&&e[i+1]!==` `){let n=p(e,i+1,`*`);if(n>i+1){r(),t.push({t:`em`,c:f(e.slice(i+1,n))}),i=n+1;continue}}if(a===`[`){let n=/^\[((?:[^\]`]|`[^`]*`)+)\]\(([^)\s]+)\)/.exec(e.slice(i));if(n){r(),t.push({t:`link`,href:n[2],c:f(n[1])}),i+=n[0].length;continue}}n+=a,i+=1}return r(),t}function p(e,t,n){let r=t;for(;r<e.length;)if(e[r]==="`"){let t=e.indexOf("`",r+1);if(t<0)return-1;r=t+1}else{if(e.startsWith(n,r)){if(n===`*`&&e[r+1]===`*`){r+=2;continue}return r}r+=1}return-1}var m=/^(\s*)```(\w*)\s*$/,h=/^(#{1,6})\s+(.*?)\s*$/,g=/^(\s*)([-*]|\d+\.)\s+(.*)$/,_=/^\s*\|?[\s:|-]+\|[\s:|-]*$/,v=e=>e.length-e.trimStart().length;function y(e){let t=e.trim().replace(/^\|/,``).replace(/\|$/,``),n=[],r=``,i=!1;for(let e=0;e<t.length;e++){let a=t[e];a==="`"&&(i=!i),a===`|`&&!i&&t[e-1]!==`\\`?(n.push(r.trim()),r=``):r+=a}return n.push(r.trim()),n}function b(e){let t=[],n=0;for(;n<e.length;){let r=e[n];if(r.trim()===``){n+=1;continue}let i=m.exec(r);if(i){let r=[];for(n+=1;n<e.length&&!m.test(e[n]);)r.push(e[n].startsWith(i[1])?e[n].slice(i[1].length):e[n]),n+=1;n+=1,t.push({t:`code`,lang:i[2],text:r.join(`
 `)});continue}let a=h.exec(r);if(a){let e=a[2].replace(/`/g,``);t.push({t:`heading`,level:a[1].length,id:d(e),text:e,inline:f(a[2])}),n+=1;continue}if(r.trimStart().startsWith(`|`)&&n+1<e.length&&_.test(e[n+1])){let i=y(r).map(f);n+=2;let a=[];for(;n<e.length&&e[n].trimStart().startsWith(`|`);)a.push(y(e[n]).map(f)),n+=1;t.push({t:`table`,head:i,rows:a});continue}let o=g.exec(r);if(o){let r=o[1].length,i=/\d/.test(o[2]),a=i?parseInt(o[2],10):1,s=[];for(;n<e.length;){let t=g.exec(e[n]);if(!t||t[1].length!==r||/\d/.test(t[2])!==i)break;let a=t[1].length+t[2].length+1,o=[t[3]];for(n+=1;n<e.length;){let t=e[n];if(t.trim()===``){let t=n;for(;t<e.length&&e[t].trim()===``;)t+=1;if(t<e.length&&v(e[t])>r){o.push(``),n+=1;continue}break}if(v(t)>r)o.push(t.slice(Math.min(a,v(t)))),n+=1;else break}let[c,...l]=o,u=/^\[( |x|X)\]\s+/.exec(c),d=u?c.slice(u[0].length):c,p=0;for(;p<l.length&&l[p].trim()!==``&&!m.test(l[p])&&!g.test(l[p]);)p+=1;let h=[d,...l.slice(0,p)].join(` `);s.push({task:u?{checked:u[1]!==` `}:void 0,inline:f(h),blocks:b(l.slice(p))});let _=n;for(;_<e.length&&e[_].trim()===``;)_+=1;let y=_<e.length?g.exec(e[_]):null;y&&y[1].length===r&&/\d/.test(y[2])===i&&(n=_)}t.push({t:`list`,ordered:i,start:a,items:s});continue}let s=[r.trim()];for(n+=1;n<e.length&&e[n].trim()!==``&&!m.test(e[n])&&!h.test(e[n])&&!g.test(e[n])&&!e[n].trimStart().startsWith(`|`);)s.push(e[n].trim()),n+=1;t.push({t:`para`,inline:f(s.join(` `))})}return t}function x(e){return b(e.replace(/\r\n/g,`
 `).split(`
 `))}function S(e){return e.map(e=>e.t===`text`||e.t===`code`?e.v:S(e.c)).join(``)}var C=i(),w=`text-white/60`,T=`text-[oklch(0.82_0.1_150)]`,E=`text-white/45`;function D(e){let t=[],n=/("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?)|\b(true|false|null)\b/g,r=0;for(let i=n.exec(e);i;i=n.exec(e))i.index>r&&t.push(e.slice(r,i.index)),i[1]===void 0?t.push((0,C.jsx)(`span`,{children:i[0]},i.index)):(t.push((0,C.jsx)(`span`,{className:i[2]?w:T,children:i[1]},i.index)),i[2]&&t.push(i[2])),r=i.index+i[0].length;return r<e.length&&t.push(e.slice(r)),t}function O(e){if(e.trimStart().startsWith(`#`))return[(0,C.jsx)(`span`,{className:E,children:e},`c`)];let t=[],n=/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g,r=0;for(let i=n.exec(e);i;i=n.exec(e))i.index>r&&t.push(e.slice(r,i.index)),t.push((0,C.jsx)(`span`,{className:T,children:i[0]},i.index)),r=i.index+i[0].length;return r<e.length&&t.push(e.slice(r)),t}function k(e){let t=/^(GET|POST|PUT|DELETE)(\s.*)$/.exec(e);if(t)return[(0,C.jsx)(`span`,{className:T,children:t[1]},`m`),t[2]];let n=/^([A-Za-z-]+:)(\s.*)$/.exec(e);return n?[(0,C.jsx)(`span`,{className:w,children:n[1]},`h`),n[2]]:D(e)}function A(e,t){let n=t===`json`?D:t===`bash`||t===`sh`?O:k;return e.split(`
@@ -30,13 +30,13 @@ Some switches live with the WorkRelay team, not in your code. Ask them for the o
 
 | Setting | Who | Where |
 |---|---|---|
-| Create the connection, get the **secret key** (shown once) | Shop owner or admin, in WorkRelay | Integrations → Connect store |
-| The shop's **currency** (one per shop) | Shop owner or admin; WorkRelay can also set it | Choose it when connecting; change it in Integrations → Edit |
+| Create the connection, get the **secret key** (shown once) | Shop owner or admin, in WorkRelay | Shops → Connect shop |
+| The shop's **currency** (one per shop) | Shop owner or admin; WorkRelay can also set it | Choose it when connecting; change it under Shops → the shop → General |
 | **Bind** the key to your store id (once) | **You**, from code | \`POST /bind\` |
-| Receive customer signups (on/off per shop) | Shop owner or admin | Integrations → Edit → *Receive customer signups* |
+| Receive customer signups (on/off per shop) | Shop owner or admin | Shops → the shop → Customers → *Receive customer signups* |
 | Notifications ("a customer signs up", "a new order arrives", "a shop syncs its products"…) | Shop owner or admin | Automations |
 | **Schedule** for calls to your products endpoint (calls per days) | **WorkRelay** | Platform admin |
-| Your products **URL** and its **token** | Shop owner or admin | API Calls → Inventory |
+| Your products **URL** and its **token** | Shop owner or admin | Shops → the shop → Inventory |
 
 ## 3. Start here: the order webhook
 
@@ -133,7 +133,7 @@ If the team wants a notification for **every new account**, the shop has to tell
 
 **The shop owner (in WorkRelay):**
 
-1. Integrations → **Edit** on the shop → turn on *Receive customer signups*. It is **off by default and per shop**. While it is off, events are kept and shown as
+1. Shops → the shop → **Customers** tab → turn on *Receive customer signups*. It is **off by default and per shop**. While it is off, events are kept and shown as
    ignored (HTTP 202); resend them after switching it on.
 2. Automations → add one for **a customer signs up**, choose Discord, Slack or a webhook URL, and tick the shop(s) it should cover.
 
@@ -199,7 +199,7 @@ What to build:
 
 | Requirement | Detail |
 |---|---|
-| Method and URL | \`GET\`, **https**, a public address. The shop owner enters the URL in API Calls → Inventory |
+| Method and URL | \`GET\`, **https**, a public address. The shop owner enters the URL in Shops → the shop → Inventory |
 | Authentication | Create a **dedicated read-only token** just for this. The shop owner enters it in WorkRelay, and it is sent as the \`Authorization\` header exactly as entered (for example \`Bearer abc123\`). It is stored privately and never shown again. **Do not reuse the WorkRelay secret key**: that one lets anyone write stock into your workspace, this one only lets WorkRelay read your catalogue. Compare it in constant time, and refuse everything else with \`401\` |
 | Response | Any \`2xx\` with JSON: either \`{"products":[...]}\` or just the list \`[...]\` |
 | Content | The full catalogue, or at least every product whose stock should stay current. Products you leave out are untouched, never deleted |
@@ -208,8 +208,8 @@ What to build:
 | Pagination | None: one request returns everything |
 | Cost | Keep it cheap: read from a cache or a single query. A schedule can mean many calls a day |
 
-If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in API Calls → Inventory and in
-Integrations → Event history. A failed call still counts toward the schedule.
+If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in Shops → the shop → Inventory and in
+Shops → Event history. A failed call still counts toward the schedule.
 
 The shop owner (or the team) can also press **Sync now** on the Inventory page to run a check immediately. It only works where WorkRelay has set a schedule for the shop, the
 URL is entered, and the shop is not paused; each press uses one of the shop's scheduled calls, so it can never exceed the agreed number.
@@ -238,7 +238,7 @@ Content-Type: application/json
 - **WorkRelay decides who is notified, not the request.** There is nothing in the push to turn the notification on or off. The team controls it in WorkRelay: the automation can be switched
   off, or limited to some shops. If your shop also pushes automatically on a timer or after each sale, tell the team, so they can leave that shop out of the automation or have WorkRelay switch it off.
   Scheduled calls from WorkRelay and its **Sync now** button never announce.
-- Each push (and each scheduled call) appears in Integrations → Event history as \`inventory.push\` or \`inventory.pull\`, with a short summary, for 30 days.
+- Each push (and each scheduled call) appears in Shops → Event history as \`inventory.push\` or \`inventory.pull\`, with a short summary, for 30 days.
 - Every sync, pushed by the shop or asked for by WorkRelay, also appears in **Inventory → Sync history**: when, which shop, who started it (your \`synced_by\`), how many products, which ones changed (stock before and after, and price before and after), and the reason when it failed. Kept for 30 days.
 
 - **Stock write-back (optional, off by default).** A shop that estimates stock can also receive WorkRelay's number: after an order, a cancellation or a return, WorkRelay sends your shop a signed request with the SKU and the new absolute stock number. It works like \`git pull\` before \`git push\`: WorkRelay first reads your shop's own numbers from your product feed address (quietly, with no notification), sends only what is still right, and reads once more afterwards to check your shop took the numbers; so the shop needs a product feed address. The workspace owner switches it on per shop after a signed test, and switching it off in WorkRelay stops everything at once. Your shop must verify the signature, and the test checks that it refuses a wrong one (401 or 403). If your numbers disagree with what WorkRelay believed (for example after a restock), nothing is overwritten and the owner decides which number stays (**Inventory → Stock pushes**); every read, every request and every decision is in **Sync history**, which shows both directions. The request format, a Node and a PHP verification snippet and the retry rules are in the integration guide, under *Write-back*. A cancelled or \`returned\` order gives its pieces back to the estimate.
@@ -291,7 +291,7 @@ curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-
 curl -s -i "https://yourshop.com/workrelay/products" -H "Accept: application/json" -H "Authorization: Bearer YOUR_PRODUCTS_TOKEN"
 \`\`\`
 
-Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrations → Event history**, which lists every delivery with its status and the reason when something was refused.
+Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Shops → Event history**, which lists every delivery with its status and the reason when something was refused.
 
 ### Go-live checklist
 
@@ -307,7 +307,7 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 
 ## 8. Reading your data back (export)
 
-Optional, read-only, and off until the **workspace owner** switches it on for the shop (Edit shop, *Let this shop read its data back*, *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Shops → the shop → Export tab → *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
 
 \`\`\`
 GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
@@ -368,7 +368,7 @@ Add \`?limit=\` (1 to 200, default 100). The answer is \`{ "resource", "items", 
 
 ### Limits and refusals
 
-120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: \`401 invalid_key | signature_required | stale_timestamp | invalid_signature\`, \`403 store_mismatch | integration_not_bound | export_off\`, \`400 invalid_query | invalid_cursor | invalid_request_id\`, \`404 unknown_resource\`, \`405\`, \`409 request_id_used\`, \`429 rate_limited\` (with \`Retry-After\`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner on the shop's Export tab, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: \`401 invalid_key | signature_required | stale_timestamp | invalid_signature\`, \`403 store_mismatch | integration_not_bound | export_off\`, \`400 invalid_query | invalid_cursor | invalid_request_id\`, \`404 unknown_resource\`, \`405\`, \`409 request_id_used\`, \`429 rate_limited\` (with \`Retry-After\`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
 
 ## 9. When something is not showing up
 
@@ -415,13 +415,13 @@ Some switches live with the WorkRelay team, not in your code. Ask them for the o
 
 | Setting | Who | Where |
 |---|---|---|
-| Create the connection, get the **secret key** (shown once) | Shop owner or admin, in WorkRelay | Integrations → Connect store |
-| The shop's **currency** (one per shop) | Shop owner or admin; WorkRelay can also set it | Choose it when connecting; change it in Integrations → Edit |
+| Create the connection, get the **secret key** (shown once) | Shop owner or admin, in WorkRelay | Shops → Connect shop |
+| The shop's **currency** (one per shop) | Shop owner or admin; WorkRelay can also set it | Choose it when connecting; change it under Shops → the shop → General |
 | **Bind** the key to your store id (once) | **You**, from code | \`POST /bind\` |
-| Receive customer signups (on/off per shop) | Shop owner or admin | Integrations → Edit → *Receive customer signups* |
+| Receive customer signups (on/off per shop) | Shop owner or admin | Shops → the shop → Customers → *Receive customer signups* |
 | Notifications ("a customer signs up", "a new order arrives", "a shop syncs its products"…) | Shop owner or admin | Automations |
 | **Schedule** for calls to your products endpoint (calls per days) | **WorkRelay** | Platform admin |
-| Your products **URL** and its **token** | Shop owner or admin | API Calls → Inventory |
+| Your products **URL** and its **token** | Shop owner or admin | Shops → the shop → Inventory |
 
 ## 3. Start here: the order webhook
 
@@ -518,7 +518,7 @@ If the team wants a notification for **every new account**, the shop has to tell
 
 **The shop owner (in WorkRelay):**
 
-1. Integrations → **Edit** on the shop → turn on *Receive customer signups*. It is **off by default and per shop**. While it is off, events are kept and shown as
+1. Shops → the shop → **Customers** tab → turn on *Receive customer signups*. It is **off by default and per shop**. While it is off, events are kept and shown as
    ignored (HTTP 202); resend them after switching it on.
 2. Automations → add one for **a customer signs up**, choose Discord, Slack or a webhook URL, and tick the shop(s) it should cover.
 
@@ -584,7 +584,7 @@ What to build:
 
 | Requirement | Detail |
 |---|---|
-| Method and URL | \`GET\`, **https**, a public address. The shop owner enters the URL in API Calls → Inventory |
+| Method and URL | \`GET\`, **https**, a public address. The shop owner enters the URL in Shops → the shop → Inventory |
 | Authentication | Create a **dedicated read-only token** just for this. The shop owner enters it in WorkRelay, and it is sent as the \`Authorization\` header exactly as entered (for example \`Bearer abc123\`). It is stored privately and never shown again. **Do not reuse the WorkRelay secret key**: that one lets anyone write stock into your workspace, this one only lets WorkRelay read your catalogue. Compare it in constant time, and refuse everything else with \`401\` |
 | Response | Any \`2xx\` with JSON: either \`{"products":[...]}\` or just the list \`[...]\` |
 | Content | The full catalogue, or at least every product whose stock should stay current. Products you leave out are untouched, never deleted |
@@ -593,8 +593,8 @@ What to build:
 | Pagination | None: one request returns everything |
 | Cost | Keep it cheap: read from a cache or a single query. A schedule can mean many calls a day |
 
-If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in API Calls → Inventory and in
-Integrations → Event history. A failed call still counts toward the schedule.
+If a call fails (not 2xx, not JSON, wrong shape, timeout), nothing from it is applied and the reason appears as **"The last check failed"** in Shops → the shop → Inventory and in
+Shops → Event history. A failed call still counts toward the schedule.
 
 The shop owner (or the team) can also press **Sync now** on the Inventory page to run a check immediately. It only works where WorkRelay has set a schedule for the shop, the
 URL is entered, and the shop is not paused; each press uses one of the shop's scheduled calls, so it can never exceed the agreed number.
@@ -623,7 +623,7 @@ Content-Type: application/json
 - **WorkRelay decides who is notified, not the request.** There is nothing in the push to turn the notification on or off. The team controls it in WorkRelay: the automation can be switched
   off, or limited to some shops. If your shop also pushes automatically on a timer or after each sale, tell the team, so they can leave that shop out of the automation or have WorkRelay switch it off.
   Scheduled calls from WorkRelay and its **Sync now** button never announce.
-- Each push (and each scheduled call) appears in Integrations → Event history as \`inventory.push\` or \`inventory.pull\`, with a short summary, for 30 days.
+- Each push (and each scheduled call) appears in Shops → Event history as \`inventory.push\` or \`inventory.pull\`, with a short summary, for 30 days.
 - Every sync, pushed by the shop or asked for by WorkRelay, also appears in **Inventory → Sync history**: when, which shop, who started it (your \`synced_by\`), how many products, which ones changed (stock before and after, and price before and after), and the reason when it failed. Kept for 30 days.
 
 - **Stock write-back (optional, off by default).** A shop that estimates stock can also receive WorkRelay's number: after an order, a cancellation or a return, WorkRelay sends your shop a signed request with the SKU and the new absolute stock number. It works like \`git pull\` before \`git push\`: WorkRelay first reads your shop's own numbers from your product feed address (quietly, with no notification), sends only what is still right, and reads once more afterwards to check your shop took the numbers; so the shop needs a product feed address. The workspace owner switches it on per shop after a signed test, and switching it off in WorkRelay stops everything at once. Your shop must verify the signature, and the test checks that it refuses a wrong one (401 or 403). If your numbers disagree with what WorkRelay believed (for example after a restock), nothing is overwritten and the owner decides which number stays (**Inventory → Stock pushes**); every read, every request and every decision is in **Sync history**, which shows both directions. The request format, a Node and a PHP verification snippet and the retry rules are in the integration guide, under *Write-back*. A cancelled or \`returned\` order gives its pieces back to the estimate.
@@ -676,7 +676,7 @@ curl -s -X POST "$BASE/inventory-webhook" -H "Authorization: Bearer $KEY" -H "X-
 curl -s -i "https://yourshop.com/workrelay/products" -H "Accept: application/json" -H "Authorization: Bearer YOUR_PRODUCTS_TOKEN"
 \`\`\`
 
-Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrations → Event history**, which lists every delivery with its status and the reason when something was refused.
+Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Shops → Event history**, which lists every delivery with its status and the reason when something was refused.
 
 ### Go-live checklist
 
@@ -692,7 +692,7 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 
 ## 8. Reading your data back (export)
 
-Optional, read-only, and off until the **workspace owner** switches it on for the shop (Edit shop, *Let this shop read its data back*, *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Shops → the shop → Export tab → *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
 
 \`\`\`
 GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
@@ -753,7 +753,7 @@ Add \`?limit=\` (1 to 200, default 100). The answer is \`{ "resource", "items", 
 
 ### Limits and refusals
 
-120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: \`401 invalid_key | signature_required | stale_timestamp | invalid_signature\`, \`403 store_mismatch | integration_not_bound | export_off\`, \`400 invalid_query | invalid_cursor | invalid_request_id\`, \`404 unknown_resource\`, \`405\`, \`409 request_id_used\`, \`429 rate_limited\` (with \`Retry-After\`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner on the shop's Export tab, and so is every refused attempt made with this shop's key (up to 100 an hour; those do not use up your 120). Statuses: \`401 invalid_key | signature_required | stale_timestamp | invalid_signature\`, \`403 store_mismatch | integration_not_bound | export_off\`, \`400 invalid_query | invalid_cursor | invalid_request_id\`, \`404 unknown_resource\`, \`405\`, \`409 request_id_used\`, \`429 rate_limited\` (with \`Retry-After\`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
 
 ## 9. When something is not showing up
 
