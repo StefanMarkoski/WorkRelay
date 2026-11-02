@@ -149,5 +149,18 @@ select in_test.check('another workspace sees none of this workspace''s numbers t
   and (select low + ok + no_threshold + not_reported = 0 from insights_inventory_health('a0000000-0000-0000-0000-0000000000b1')));
 reset role;
 
+-- ---------------------------------------------------------------- zones with half-hour and 45-minute offsets (0055)
+savepoint slots;
+insert into orders (id, organization_id, integration_id, external_id, customer_email, placed_at, currency, total_minor, status, last_event_at) values
+  ('a3000000-0000-0000-0000-0000000000b9', 'a0000000-0000-0000-0000-0000000000b1', 'a1000000-0000-0000-0000-0000000000b1', 'slot1', 'slot@x.com', '2026-10-04 18:40+00', 'EUR', 100, 'completed', now());
+select in_test.check('an order at 18:40 UTC is on the next day in India (UTC+5:30) and in Nepal (UTC+5:45), and the same day in UTC',
+  (select orders = 1 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-04 00:00+00', 'UTC') where day = '2026-10-04')
+  and (select orders = 1 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-04 00:00+00', 'Asia/Kolkata') where day = '2026-10-05')
+  and (select orders = 1 from insights_orders_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-04 00:00+00', 'Asia/Kathmandu') where day = '2026-10-05')
+  and (select orders = 1 from insights_hourly('a0000000-0000-0000-0000-0000000000b1', '2026-10-04 00:00+00', 'Asia/Kolkata') where hour = 0)
+  and (select orders = 1 from insights_hourly('a0000000-0000-0000-0000-0000000000b1', '2026-10-04 00:00+00', 'Asia/Kathmandu') where hour = 0)
+  and (select new_customers = 1 from insights_customers_daily('a0000000-0000-0000-0000-0000000000b1', '2026-10-04 00:00+00', 'Asia/Kolkata') where day = '2026-10-05'));
+rollback to savepoint slots;
+
 select 'PASSED' as insights;
 rollback;
