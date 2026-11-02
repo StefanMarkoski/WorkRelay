@@ -1,4 +1,4 @@
-import{a as e,c as t,d as n,i as r,l as i,n as a,o,s,t as c,u as l}from"./index-BAU3MZ0W.js";var u=n(l(),1);function d(e){return e.replace(/^\d+\.\s+/,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/^-+|-+$/g,``)}function f(e){let t=[],n=``,r=()=>{n&&t.push({t:`text`,v:n}),n=``},i=0;for(;i<e.length;){let a=e[i];if(a==="`"){let n=e.indexOf("`",i+1);if(n>i){r(),t.push({t:`code`,v:e.slice(i+1,n)}),i=n+1;continue}}if(a===`*`&&e[i+1]===`*`){let n=p(e,i+2,`**`);if(n>i+2){r(),t.push({t:`strong`,c:f(e.slice(i+2,n))}),i=n+2;continue}}if(a===`*`&&e[i+1]!==`*`&&e[i+1]!==` `){let n=p(e,i+1,`*`);if(n>i+1){r(),t.push({t:`em`,c:f(e.slice(i+1,n))}),i=n+1;continue}}if(a===`[`){let n=/^\[((?:[^\]`]|`[^`]*`)+)\]\(([^)\s]+)\)/.exec(e.slice(i));if(n){r(),t.push({t:`link`,href:n[2],c:f(n[1])}),i+=n[0].length;continue}}n+=a,i+=1}return r(),t}function p(e,t,n){let r=t;for(;r<e.length;)if(e[r]==="`"){let t=e.indexOf("`",r+1);if(t<0)return-1;r=t+1}else{if(e.startsWith(n,r)){if(n===`*`&&e[r+1]===`*`){r+=2;continue}return r}r+=1}return-1}var m=/^(\s*)```(\w*)\s*$/,h=/^(#{1,6})\s+(.*?)\s*$/,g=/^(\s*)([-*]|\d+\.)\s+(.*)$/,_=/^\s*\|?[\s:|-]+\|[\s:|-]*$/,v=e=>e.length-e.trimStart().length;function y(e){let t=e.trim().replace(/^\|/,``).replace(/\|$/,``),n=[],r=``,i=!1;for(let e=0;e<t.length;e++){let a=t[e];a==="`"&&(i=!i),a===`|`&&!i&&t[e-1]!==`\\`?(n.push(r.trim()),r=``):r+=a}return n.push(r.trim()),n}function b(e){let t=[],n=0;for(;n<e.length;){let r=e[n];if(r.trim()===``){n+=1;continue}let i=m.exec(r);if(i){let r=[];for(n+=1;n<e.length&&!m.test(e[n]);)r.push(e[n].startsWith(i[1])?e[n].slice(i[1].length):e[n]),n+=1;n+=1,t.push({t:`code`,lang:i[2],text:r.join(`
+import{a as e,c as t,d as n,i as r,l as i,n as a,o,s,t as c,u as l}from"./index-vBPp-1cH.js";var u=n(l(),1);function d(e){return e.replace(/^\d+\.\s+/,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/^-+|-+$/g,``)}function f(e){let t=[],n=``,r=()=>{n&&t.push({t:`text`,v:n}),n=``},i=0;for(;i<e.length;){let a=e[i];if(a==="`"){let n=e.indexOf("`",i+1);if(n>i){r(),t.push({t:`code`,v:e.slice(i+1,n)}),i=n+1;continue}}if(a===`*`&&e[i+1]===`*`){let n=p(e,i+2,`**`);if(n>i+2){r(),t.push({t:`strong`,c:f(e.slice(i+2,n))}),i=n+2;continue}}if(a===`*`&&e[i+1]!==`*`&&e[i+1]!==` `){let n=p(e,i+1,`*`);if(n>i+1){r(),t.push({t:`em`,c:f(e.slice(i+1,n))}),i=n+1;continue}}if(a===`[`){let n=/^\[((?:[^\]`]|`[^`]*`)+)\]\(([^)\s]+)\)/.exec(e.slice(i));if(n){r(),t.push({t:`link`,href:n[2],c:f(n[1])}),i+=n[0].length;continue}}n+=a,i+=1}return r(),t}function p(e,t,n){let r=t;for(;r<e.length;)if(e[r]==="`"){let t=e.indexOf("`",r+1);if(t<0)return-1;r=t+1}else{if(e.startsWith(n,r)){if(n===`*`&&e[r+1]===`*`){r+=2;continue}return r}r+=1}return-1}var m=/^(\s*)```(\w*)\s*$/,h=/^(#{1,6})\s+(.*?)\s*$/,g=/^(\s*)([-*]|\d+\.)\s+(.*)$/,_=/^\s*\|?[\s:|-]+\|[\s:|-]*$/,v=e=>e.length-e.trimStart().length;function y(e){let t=e.trim().replace(/^\|/,``).replace(/\|$/,``),n=[],r=``,i=!1;for(let e=0;e<t.length;e++){let a=t[e];a==="`"&&(i=!i),a===`|`&&!i&&t[e-1]!==`\\`?(n.push(r.trim()),r=``):r+=a}return n.push(r.trim()),n}function b(e){let t=[],n=0;for(;n<e.length;){let r=e[n];if(r.trim()===``){n+=1;continue}let i=m.exec(r);if(i){let r=[];for(n+=1;n<e.length&&!m.test(e[n]);)r.push(e[n].startsWith(i[1])?e[n].slice(i[1].length):e[n]),n+=1;n+=1,t.push({t:`code`,lang:i[2],text:r.join(`
 `)});continue}let a=h.exec(r);if(a){let e=a[2].replace(/`/g,``);t.push({t:`heading`,level:a[1].length,id:d(e),text:e,inline:f(a[2])}),n+=1;continue}if(r.trimStart().startsWith(`|`)&&n+1<e.length&&_.test(e[n+1])){let i=y(r).map(f);n+=2;let a=[];for(;n<e.length&&e[n].trimStart().startsWith(`|`);)a.push(y(e[n]).map(f)),n+=1;t.push({t:`table`,head:i,rows:a});continue}let o=g.exec(r);if(o){let r=o[1].length,i=/\d/.test(o[2]),a=i?parseInt(o[2],10):1,s=[];for(;n<e.length;){let t=g.exec(e[n]);if(!t||t[1].length!==r||/\d/.test(t[2])!==i)break;let a=t[1].length+t[2].length+1,o=[t[3]];for(n+=1;n<e.length;){let t=e[n];if(t.trim()===``){let t=n;for(;t<e.length&&e[t].trim()===``;)t+=1;if(t<e.length&&v(e[t])>r){o.push(``),n+=1;continue}break}if(v(t)>r)o.push(t.slice(Math.min(a,v(t)))),n+=1;else break}let[c,...l]=o,u=/^\[( |x|X)\]\s+/.exec(c),d=u?c.slice(u[0].length):c,p=0;for(;p<l.length&&l[p].trim()!==``&&!m.test(l[p])&&!g.test(l[p]);)p+=1;let h=[d,...l.slice(0,p)].join(` `);s.push({task:u?{checked:u[1]!==` `}:void 0,inline:f(h),blocks:b(l.slice(p))});let _=n;for(;_<e.length&&e[_].trim()===``;)_+=1;let y=_<e.length?g.exec(e[_]):null;y&&y[1].length===r&&/\d/.test(y[2])===i&&(n=_)}t.push({t:`list`,ordered:i,start:a,items:s});continue}let s=[r.trim()];for(n+=1;n<e.length&&e[n].trim()!==``&&!m.test(e[n])&&!h.test(e[n])&&!g.test(e[n])&&!e[n].trimStart().startsWith(`|`);)s.push(e[n].trim()),n+=1;t.push({t:`para`,inline:f(s.join(` `))})}return t}function x(e){return b(e.replace(/\r\n/g,`
 `).split(`
 `))}function S(e){return e.map(e=>e.t===`text`||e.t===`code`?e.v:S(e.c)).join(``)}var C=i(),w=`text-white/60`,T=`text-[oklch(0.82_0.1_150)]`,E=`text-white/45`;function D(e){let t=[],n=/("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?)|\b(true|false|null)\b/g,r=0;for(let i=n.exec(e);i;i=n.exec(e))i.index>r&&t.push(e.slice(r,i.index)),i[1]===void 0?t.push((0,C.jsx)(`span`,{children:i[0]},i.index)):(t.push((0,C.jsx)(`span`,{className:i[2]?w:T,children:i[1]},i.index)),i[2]&&t.push(i[2])),r=i.index+i[0].length;return r<e.length&&t.push(e.slice(r)),t}function O(e){if(e.trimStart().startsWith(`#`))return[(0,C.jsx)(`span`,{className:E,children:e},`c`)];let t=[],n=/('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*")/g,r=0;for(let i=n.exec(e);i;i=n.exec(e))i.index>r&&t.push(e.slice(r,i.index)),t.push((0,C.jsx)(`span`,{className:T,children:i[0]},i.index)),r=i.index+i[0].length;return r<e.length&&t.push(e.slice(r)),t}function k(e){let t=/^(GET|POST|PUT|DELETE)(\s.*)$/.exec(e);if(t)return[(0,C.jsx)(`span`,{className:T,children:t[1]},`m`),t[2]];let n=/^([A-Za-z-]+:)(\s.*)$/.exec(e);return n?[(0,C.jsx)(`span`,{className:w,children:n[1]},`h`),n[2]]:D(e)}function A(e,t){let n=t===`json`?D:t===`bash`||t===`sh`?O:k;return e.split(`
@@ -305,7 +305,72 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 - [ ] (Inventory) if WorkRelay should also call you: WorkRelay set the schedule for this shop
 - [ ] A test order, a test signup and a test stock update each show up in WorkRelay
 
-## 8. When something is not showing up
+## 8. Reading your data back (export)
+
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Edit shop, *Let this shop read its data back*, *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+
+\`\`\`
+GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
+\`\`\`
+
+Every call needs all of these, or it gets nothing:
+
+| What | Where |
+|---|---|
+| The shop's key | \`Authorization: Bearer wr_live_...\` |
+| The store id | \`X-Store-Id: your-store-id\` |
+| A fresh timestamp (unix seconds, within 5 minutes of now) | \`X-WR-Timestamp\` |
+| A new id for this call (8 to 100 letters, digits, \`-\` or \`_\`; never reused) | \`X-WR-Request-Id\` |
+| The signature, made with the **export secret** the owner created | \`X-WR-Signature: v1=<hex>\` |
+
+The export secret is a second secret, separate from the shop key, shown once when the owner creates it. A leaked shop key alone cannot read anything. Replacing or removing the secret stops every old caller immediately.
+
+### Signing a request
+
+The signature is HMAC-SHA256 (hex), keyed with the export secret, over the text \`timestamp.requestId.GET.resource.query\`, where \`resource\` is \`orders\`, \`customers\` or \`products\`, and \`query\` is the query string with its parts sorted by name, each name and value percent-encoded (\`encodeURIComponent\`), joined with \`&\` (empty when there is none).
+
+\`\`\`js
+const { createHmac, randomUUID } = require('node:crypto')
+
+function sign(secret, timestamp, requestId, resource, params) {
+  const query = [...params].sort(([a, x], [b, y]) => (a === b ? (x < y ? -1 : x > y ? 1 : 0) : a < b ? -1 : 1))
+    .map(([k, v]) => \`\${encodeURIComponent(k)}=\${encodeURIComponent(v)}\`).join('&')
+  return createHmac('sha256', secret).update(\`\${timestamp}.\${requestId}.GET.\${resource}.\${query}\`).digest('hex')
+}
+
+async function readPage(base, key, storeId, secret, resource, params = {}) {
+  const query = new URLSearchParams(params)
+  const timestamp = String(Math.floor(Date.now() / 1000))
+  const requestId = randomUUID()
+  const res = await fetch(\`\${base}/export/\${resource}?\${query}\`, {
+    headers: {
+      authorization: \`Bearer \${key}\`,
+      'x-store-id': storeId,
+      'x-wr-timestamp': timestamp,
+      'x-wr-request-id': requestId,
+      'x-wr-signature': \`v1=\${sign(secret, timestamp, requestId, resource, query)}\`,
+    },
+  })
+  if (!res.ok) throw new Error(\`\${res.status} \${JSON.stringify(await res.json())}\`)
+  return res.json()
+}
+
+module.exports = { sign, readPage }
+\`\`\`
+
+### Paging
+
+Add \`?limit=\` (1 to 200, default 100). The answer is \`{ "resource", "items", "has_more", "next_cursor" }\`. While \`has_more\` is true, call again with \`cursor=<next_cursor>\` exactly as given (every call is signed again, with a new request id). Add \`updated_since=2026-11-01T00:00:00Z\` to get only what changed after that time; keep the latest \`updated_at\` you saw and use it next time. Pages are ordered by when a row changed, so nothing is skipped or repeated while data keeps changing.
+
+- **Orders**: the order, its customer, the money in whole minor units, WorkRelay's statuses next to the shop's own (\`shop_status\`...), the addresses, and the lines.
+- **Customers**: the people who ordered from this shop or signed up through it, with their order count here.
+- **Products**: \`stock\` is the best number WorkRelay has (the estimate when the shop is estimated, or when WorkRelay keeps the stock), \`stock_reported\` is what your shop last said. Orders move the estimate without changing the product row, so read products in full (no \`updated_since\`) when the stock matters.
+
+### Limits and refusals
+
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop. Statuses: \`401 invalid_key | signature_required | stale_timestamp | invalid_signature\`, \`403 store_mismatch | integration_not_bound | export_off\`, \`400 invalid_query | invalid_cursor | invalid_request_id\`, \`404 unknown_resource\`, \`405\`, \`409 request_id_used\`, \`429 rate_limited\` (with \`Retry-After\`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+
+## 9. When something is not showing up
 
 | What you see | Most likely cause |
 |---|---|
@@ -625,7 +690,72 @@ Then look in WorkRelay: **Orders**, **Customers**, **Inventory**, and **Integrat
 - [ ] (Inventory) if WorkRelay should also call you: WorkRelay set the schedule for this shop
 - [ ] A test order, a test signup and a test stock update each show up in WorkRelay
 
-## 8. When something is not showing up
+## 8. Reading your data back (export)
+
+Optional, read-only, and off until the **workspace owner** switches it on for the shop (Edit shop, *Let this shop read its data back*, *Create secret*). It lets your shop, or a script you run, fetch what WorkRelay holds for **that shop only**: its orders, its customers and its products with stock.
+
+\`\`\`
+GET {BASE}/export/orders      GET {BASE}/export/customers      GET {BASE}/export/products
+\`\`\`
+
+Every call needs all of these, or it gets nothing:
+
+| What | Where |
+|---|---|
+| The shop's key | \`Authorization: Bearer wr_live_...\` |
+| The store id | \`X-Store-Id: your-store-id\` |
+| A fresh timestamp (unix seconds, within 5 minutes of now) | \`X-WR-Timestamp\` |
+| A new id for this call (8 to 100 letters, digits, \`-\` or \`_\`; never reused) | \`X-WR-Request-Id\` |
+| The signature, made with the **export secret** the owner created | \`X-WR-Signature: v1=<hex>\` |
+
+The export secret is a second secret, separate from the shop key, shown once when the owner creates it. A leaked shop key alone cannot read anything. Replacing or removing the secret stops every old caller immediately.
+
+### Signing a request
+
+The signature is HMAC-SHA256 (hex), keyed with the export secret, over the text \`timestamp.requestId.GET.resource.query\`, where \`resource\` is \`orders\`, \`customers\` or \`products\`, and \`query\` is the query string with its parts sorted by name, each name and value percent-encoded (\`encodeURIComponent\`), joined with \`&\` (empty when there is none).
+
+\`\`\`js
+const { createHmac, randomUUID } = require('node:crypto')
+
+function sign(secret, timestamp, requestId, resource, params) {
+  const query = [...params].sort(([a, x], [b, y]) => (a === b ? (x < y ? -1 : x > y ? 1 : 0) : a < b ? -1 : 1))
+    .map(([k, v]) => \`\${encodeURIComponent(k)}=\${encodeURIComponent(v)}\`).join('&')
+  return createHmac('sha256', secret).update(\`\${timestamp}.\${requestId}.GET.\${resource}.\${query}\`).digest('hex')
+}
+
+async function readPage(base, key, storeId, secret, resource, params = {}) {
+  const query = new URLSearchParams(params)
+  const timestamp = String(Math.floor(Date.now() / 1000))
+  const requestId = randomUUID()
+  const res = await fetch(\`\${base}/export/\${resource}?\${query}\`, {
+    headers: {
+      authorization: \`Bearer \${key}\`,
+      'x-store-id': storeId,
+      'x-wr-timestamp': timestamp,
+      'x-wr-request-id': requestId,
+      'x-wr-signature': \`v1=\${sign(secret, timestamp, requestId, resource, query)}\`,
+    },
+  })
+  if (!res.ok) throw new Error(\`\${res.status} \${JSON.stringify(await res.json())}\`)
+  return res.json()
+}
+
+module.exports = { sign, readPage }
+\`\`\`
+
+### Paging
+
+Add \`?limit=\` (1 to 200, default 100). The answer is \`{ "resource", "items", "has_more", "next_cursor" }\`. While \`has_more\` is true, call again with \`cursor=<next_cursor>\` exactly as given (every call is signed again, with a new request id). Add \`updated_since=2026-11-01T00:00:00Z\` to get only what changed after that time; keep the latest \`updated_at\` you saw and use it next time. Pages are ordered by when a row changed, so nothing is skipped or repeated while data keeps changing.
+
+- **Orders**: the order, its customer, the money in whole minor units, WorkRelay's statuses next to the shop's own (\`shop_status\`...), the addresses, and the lines.
+- **Customers**: the people who ordered from this shop or signed up through it, with their order count here.
+- **Products**: \`stock\` is the best number WorkRelay has (the estimate when the shop is estimated, or when WorkRelay keeps the stock), \`stock_reported\` is what your shop last said. Orders move the estimate without changing the product row, so read products in full (no \`updated_since\`) when the stock matters.
+
+### Limits and refusals
+
+120 calls an hour per shop (every call that reaches the signature check counts, accepted or not). Every call is listed for the owner under Edit shop. Statuses: \`401 invalid_key | signature_required | stale_timestamp | invalid_signature\`, \`403 store_mismatch | integration_not_bound | export_off\`, \`400 invalid_query | invalid_cursor | invalid_request_id\`, \`404 unknown_resource\`, \`405\`, \`409 request_id_used\`, \`429 rate_limited\` (with \`Retry-After\`). Answers are never cached and contain personal data of your customers: keep the export secret out of web pages and repositories, and store what you fetch like any customer data.
+
+## 9. When something is not showing up
 
 | What you see | Most likely cause |
 |---|---|
@@ -643,4 +773,4 @@ section 7 of the [reference](./shop-webhook-integration.md).
 
 Machine-readable schemas: [\`order-webhook.schema.json\`](./order-webhook.schema.json), [\`customer-webhook.schema.json\`](./customer-webhook.schema.json),
 [\`product-feed.schema.json\`](./product-feed.schema.json).
-`)?.[1]??``;function W(e){document.getElementById(e)?.scrollIntoView({behavior:window.matchMedia(`(prefers-reduced-motion: reduce)`).matches?`auto`:`smooth`})}var G=[{id:`start-here-the-order-webhook`,title:`Connecting a shop for the first time`,line:`Bind the key and send your first order.`},{id:`customers`,title:`Customers and signup alerts`,line:`How a person is made, and what you send to notify on every signup.`},{id:`inventory`,title:`Stock, and alerts when it runs low`,line:`Let WorkRelay fetch your products, or push them from a button.`},{id:`test-it`,title:`Trying it from a terminal`,line:`Five commands, with what each one should answer.`},{id:`when-something-is-not-showing-up`,title:`Something is not showing up`,line:`Symptoms and their most likely causes.`}];function K(e){let[t,n]=(0,u.useState)(e[0]??``);return(0,u.useEffect)(()=>{let t=new Map,r=new IntersectionObserver(r=>{for(let e of r)t.set(e.target.id,e.isIntersecting);let i=e.find(e=>t.get(e));i&&n(i)},{rootMargin:`-80px 0px -70% 0px`});return e.forEach(e=>{let t=document.getElementById(e);t&&r.observe(t)}),()=>r.disconnect()},[e]),t}function q({sections:e,active:t,onPick:n}){return(0,C.jsx)(`ul`,{className:`space-y-0.5`,children:e.map(e=>{let r=e.id===t;return(0,C.jsx)(`li`,{children:(0,C.jsxs)(`button`,{type:`button`,"aria-current":r?`location`:void 0,onClick:()=>{W(e.id),n?.()},className:`group flex w-full items-start gap-3 rounded py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring`,children:[(0,C.jsx)(`span`,{"aria-hidden":!0,className:`lamp mt-[0.5em] size-1.5 shrink-0 rounded-full`,"data-on":r}),(0,C.jsx)(`span`,{className:r?`font-medium text-foreground`:`text-muted-foreground transition-colors group-hover:text-foreground`,children:e.text})]})},e.id)})})}function J(e){let t=e.find(e=>e.t===`heading`&&e.level===1),n=e.findIndex(e=>e.t===`heading`&&e.level===2),r=e.indexOf(t)+1,i=e.slice(r,n).map(e=>e.t===`list`?{...e,items:e.items.filter(e=>!S(e.inline).startsWith(`Base URL`))}:e),a=e.slice(n),o=a.filter(e=>e.t===`heading`&&e.level===2).map(e=>({id:e.id,text:e.text}));return{title:t&&t.t===`heading`?t.text:`Developer guide`,intro:i,body:a,sections:o}}function Y(){let{title:e,intro:n,body:i,sections:o}=(0,u.useMemo)(()=>J(H),[]),s=K((0,u.useMemo)(()=>o.map(e=>e.id),[o])),[l,d]=(0,u.useState)(!1);return(0,u.useEffect)(()=>(document.title=`Dev Docs · WorkRelay`,()=>{document.title=`WorkRelay`}),[]),(0,C.jsxs)(`div`,{className:`world min-h-dvh`,children:[(0,C.jsx)(c,{nav:(0,C.jsxs)(C.Fragment,{children:[(0,C.jsx)(`a`,{href:`#/`,className:a,children:`Overview`}),(0,C.jsx)(`a`,{href:`#/docs`,"aria-current":`page`,className:a,children:`Dev Docs`})]})}),(0,C.jsxs)(`main`,{className:`mx-auto max-w-[1200px] px-6 pt-12 pb-24 sm:pt-16 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16`,children:[(0,C.jsxs)(`aside`,{className:`lg:sticky lg:top-24 lg:self-start`,children:[(0,C.jsxs)(`details`,{open:l,onToggle:e=>d(e.currentTarget.open),className:`mb-10 border-y py-3 lg:hidden`,children:[(0,C.jsx)(`summary`,{className:`cursor-pointer text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring`,children:`On this page`}),(0,C.jsx)(`div`,{className:`mt-3`,children:(0,C.jsx)(q,{sections:o,active:s,onPick:()=>d(!1)})})]}),(0,C.jsxs)(`nav`,{"aria-label":`On this page`,className:`hidden lg:block`,children:[(0,C.jsx)(`p`,{className:`mb-3 text-sm font-medium`,children:`On this page`}),(0,C.jsx)(q,{sections:o,active:s}),(0,C.jsxs)(`p`,{className:`mt-8 text-sm text-muted-foreground`,children:[`Every field, status code and limit is in the`,` `,(0,C.jsx)(`a`,{href:`https://github.com/StefanMarkoski/WorkRelay/blob/main/documentation/shop-webhook-integration.md`,target:`_blank`,rel:`noopener noreferrer`,className:`font-medium text-foreground underline decoration-muted-foreground/50 underline-offset-4 hover:decoration-foreground`,children:`full reference`}),`.`]})]})]}),(0,C.jsxs)(`article`,{className:`min-w-0`,children:[(0,C.jsx)(`h1`,{className:`max-w-[20ch] font-display text-balance text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.03em] sm:text-5xl`,children:e}),(0,C.jsx)(`div`,{className:`mt-6 space-y-4 text-lg text-muted-foreground [&_a]:text-foreground [&_p]:max-w-[60ch] [&_strong]:text-foreground`,children:(0,C.jsx)(V,{blocks:n})}),U&&(0,C.jsxs)(`div`,{className:`housing mt-8 flex max-w-xl items-center justify-between gap-3 py-2.5 pr-2 pl-4`,children:[(0,C.jsxs)(`div`,{className:`min-w-0`,children:[(0,C.jsx)(`p`,{className:`font-mono text-[11px] tracking-wide text-muted-foreground`,children:`BASE URL`}),(0,C.jsx)(`p`,{className:`truncate font-mono text-[13px]`,children:U})]}),(0,C.jsx)(F,{text:U,label:`Copy the base URL`})]}),(0,C.jsxs)(`nav`,{"aria-label":`Where to start`,className:`mt-12`,children:[(0,C.jsx)(`h2`,{className:`font-display text-xl font-semibold tracking-tight`,children:`Where to start`}),(0,C.jsx)(`ul`,{className:`mt-4 divide-y border-y`,children:G.map(e=>(0,C.jsx)(`li`,{children:(0,C.jsxs)(`button`,{type:`button`,onClick:()=>W(e.id),className:`group flex w-full items-center justify-between gap-4 py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring`,children:[(0,C.jsxs)(`span`,{children:[(0,C.jsx)(`span`,{className:`block font-medium`,children:e.title}),(0,C.jsx)(`span`,{className:`block text-sm text-muted-foreground`,children:e.line})]}),(0,C.jsx)(t,{"aria-hidden":!0,className:`size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground`})]})},e.id))})]}),(0,C.jsx)(`div`,{className:`mt-20 space-y-5`,children:(0,C.jsx)(V,{blocks:i})})]})]}),(0,C.jsx)(`footer`,{className:`border-t`,children:(0,C.jsxs)(`div`,{className:`mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground`,children:[(0,C.jsxs)(`span`,{children:[`© `,new Date().getFullYear(),` WorkRelay`]}),(0,C.jsx)(`span`,{children:`Examples in these docs use sample keys and invented data.`}),(0,C.jsx)(`div`,{className:`sm:hidden`,children:(0,C.jsx)(r,{})})]})})]})}export{Y as default};
+`)?.[1]??``;function W(e){document.getElementById(e)?.scrollIntoView({behavior:window.matchMedia(`(prefers-reduced-motion: reduce)`).matches?`auto`:`smooth`})}var G=[{id:`start-here-the-order-webhook`,title:`Connecting a shop for the first time`,line:`Bind the key and send your first order.`},{id:`customers`,title:`Customers and signup alerts`,line:`How a person is made, and what you send to notify on every signup.`},{id:`inventory`,title:`Stock, and alerts when it runs low`,line:`Let WorkRelay fetch your products, or push them from a button.`},{id:`test-it`,title:`Trying it from a terminal`,line:`Five commands, with what each one should answer.`},{id:`reading-your-data-back-export`,title:`Reading your data back`,line:`Signed, read-only export of orders, customers and products.`},{id:`when-something-is-not-showing-up`,title:`Something is not showing up`,line:`Symptoms and their most likely causes.`}];function K(e){let[t,n]=(0,u.useState)(e[0]??``);return(0,u.useEffect)(()=>{let t=new Map,r=new IntersectionObserver(r=>{for(let e of r)t.set(e.target.id,e.isIntersecting);let i=e.find(e=>t.get(e));i&&n(i)},{rootMargin:`-80px 0px -70% 0px`});return e.forEach(e=>{let t=document.getElementById(e);t&&r.observe(t)}),()=>r.disconnect()},[e]),t}function q({sections:e,active:t,onPick:n}){return(0,C.jsx)(`ul`,{className:`space-y-0.5`,children:e.map(e=>{let r=e.id===t;return(0,C.jsx)(`li`,{children:(0,C.jsxs)(`button`,{type:`button`,"aria-current":r?`location`:void 0,onClick:()=>{W(e.id),n?.()},className:`group flex w-full items-start gap-3 rounded py-1.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring`,children:[(0,C.jsx)(`span`,{"aria-hidden":!0,className:`lamp mt-[0.5em] size-1.5 shrink-0 rounded-full`,"data-on":r}),(0,C.jsx)(`span`,{className:r?`font-medium text-foreground`:`text-muted-foreground transition-colors group-hover:text-foreground`,children:e.text})]})},e.id)})})}function J(e){let t=e.find(e=>e.t===`heading`&&e.level===1),n=e.findIndex(e=>e.t===`heading`&&e.level===2),r=e.indexOf(t)+1,i=e.slice(r,n).map(e=>e.t===`list`?{...e,items:e.items.filter(e=>!S(e.inline).startsWith(`Base URL`))}:e),a=e.slice(n),o=a.filter(e=>e.t===`heading`&&e.level===2).map(e=>({id:e.id,text:e.text}));return{title:t&&t.t===`heading`?t.text:`Developer guide`,intro:i,body:a,sections:o}}function Y(){let{title:e,intro:n,body:i,sections:o}=(0,u.useMemo)(()=>J(H),[]),s=K((0,u.useMemo)(()=>o.map(e=>e.id),[o])),[l,d]=(0,u.useState)(!1);return(0,u.useEffect)(()=>(document.title=`Dev Docs · WorkRelay`,()=>{document.title=`WorkRelay`}),[]),(0,C.jsxs)(`div`,{className:`world min-h-dvh`,children:[(0,C.jsx)(c,{nav:(0,C.jsxs)(C.Fragment,{children:[(0,C.jsx)(`a`,{href:`#/`,className:a,children:`Overview`}),(0,C.jsx)(`a`,{href:`#/docs`,"aria-current":`page`,className:a,children:`Dev Docs`})]})}),(0,C.jsxs)(`main`,{className:`mx-auto max-w-[1200px] px-6 pt-12 pb-24 sm:pt-16 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-16`,children:[(0,C.jsxs)(`aside`,{className:`lg:sticky lg:top-24 lg:self-start`,children:[(0,C.jsxs)(`details`,{open:l,onToggle:e=>d(e.currentTarget.open),className:`mb-10 border-y py-3 lg:hidden`,children:[(0,C.jsx)(`summary`,{className:`cursor-pointer text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring`,children:`On this page`}),(0,C.jsx)(`div`,{className:`mt-3`,children:(0,C.jsx)(q,{sections:o,active:s,onPick:()=>d(!1)})})]}),(0,C.jsxs)(`nav`,{"aria-label":`On this page`,className:`hidden lg:block`,children:[(0,C.jsx)(`p`,{className:`mb-3 text-sm font-medium`,children:`On this page`}),(0,C.jsx)(q,{sections:o,active:s}),(0,C.jsxs)(`p`,{className:`mt-8 text-sm text-muted-foreground`,children:[`Every field, status code and limit is in the`,` `,(0,C.jsx)(`a`,{href:`https://github.com/StefanMarkoski/WorkRelay/blob/main/documentation/shop-webhook-integration.md`,target:`_blank`,rel:`noopener noreferrer`,className:`font-medium text-foreground underline decoration-muted-foreground/50 underline-offset-4 hover:decoration-foreground`,children:`full reference`}),`.`]})]})]}),(0,C.jsxs)(`article`,{className:`min-w-0`,children:[(0,C.jsx)(`h1`,{className:`max-w-[20ch] font-display text-balance text-[2.5rem] leading-[1.02] font-semibold tracking-[-0.03em] sm:text-5xl`,children:e}),(0,C.jsx)(`div`,{className:`mt-6 space-y-4 text-lg text-muted-foreground [&_a]:text-foreground [&_p]:max-w-[60ch] [&_strong]:text-foreground`,children:(0,C.jsx)(V,{blocks:n})}),U&&(0,C.jsxs)(`div`,{className:`housing mt-8 flex max-w-xl items-center justify-between gap-3 py-2.5 pr-2 pl-4`,children:[(0,C.jsxs)(`div`,{className:`min-w-0`,children:[(0,C.jsx)(`p`,{className:`font-mono text-[11px] tracking-wide text-muted-foreground`,children:`BASE URL`}),(0,C.jsx)(`p`,{className:`truncate font-mono text-[13px]`,children:U})]}),(0,C.jsx)(F,{text:U,label:`Copy the base URL`})]}),(0,C.jsxs)(`nav`,{"aria-label":`Where to start`,className:`mt-12`,children:[(0,C.jsx)(`h2`,{className:`font-display text-xl font-semibold tracking-tight`,children:`Where to start`}),(0,C.jsx)(`ul`,{className:`mt-4 divide-y border-y`,children:G.map(e=>(0,C.jsx)(`li`,{children:(0,C.jsxs)(`button`,{type:`button`,onClick:()=>W(e.id),className:`group flex w-full items-center justify-between gap-4 py-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring`,children:[(0,C.jsxs)(`span`,{children:[(0,C.jsx)(`span`,{className:`block font-medium`,children:e.title}),(0,C.jsx)(`span`,{className:`block text-sm text-muted-foreground`,children:e.line})]}),(0,C.jsx)(t,{"aria-hidden":!0,className:`size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground`})]})},e.id))})]}),(0,C.jsx)(`div`,{className:`mt-20 space-y-5`,children:(0,C.jsx)(V,{blocks:i})})]})]}),(0,C.jsx)(`footer`,{className:`border-t`,children:(0,C.jsxs)(`div`,{className:`mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground`,children:[(0,C.jsxs)(`span`,{children:[`© `,new Date().getFullYear(),` WorkRelay`]}),(0,C.jsx)(`span`,{children:`Examples in these docs use sample keys and invented data.`}),(0,C.jsx)(`div`,{className:`sm:hidden`,children:(0,C.jsx)(r,{})})]})})]})}export{Y as default};
